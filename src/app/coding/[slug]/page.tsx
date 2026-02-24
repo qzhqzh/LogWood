@@ -5,6 +5,14 @@ import { ReviewList } from '@/components/review-list'
 
 export const dynamic = 'force-dynamic'
 
+function parseFeatures(features: string): string[] {
+  try {
+    return JSON.parse(features)
+  } catch {
+    return []
+  }
+}
+
 interface TargetPageProps {
   params: Promise<{ slug: string }>
 }
@@ -26,6 +34,7 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
     notFound()
   }
 
+  const features = parseFeatures(target.features)
   const ratings = target.reviews.map((r) => r.rating)
   const avgRating = ratings.length > 0
     ? ratings.reduce((a, b) => a + b, 0) / ratings.length
@@ -42,21 +51,29 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
   const totalReviews = target.reviews.length
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+      </div>
+
+      <nav className="border-b border-purple-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="text-2xl font-bold text-primary-600">
-              LogWood
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
+                <span className="text-black font-bold text-sm">LW</span>
+              </div>
+              <span className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
             </Link>
             <div className="flex items-center gap-6">
-              <Link href="/editor" className="text-gray-600 hover:text-gray-900">
+              <Link href="/editor" className="text-gray-400 hover:text-cyan-400 transition-colors font-medium tracking-wide">
                 AI Editor
               </Link>
-              <Link href="/coding" className="text-primary-600 font-medium">
+              <Link href="/coding" className="text-purple-400 font-medium tracking-wide">
                 AI Coding
               </Link>
-              <Link href="/submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700">
+              <Link href="/submit" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">
                 发布评测
               </Link>
             </div>
@@ -64,30 +81,32 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border p-8 mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
+        <div className="cyber-card rounded-3xl p-8 mb-8" style={{ borderColor: 'rgba(191, 0, 255, 0.2)' }}>
           <div className="flex items-start gap-6">
             {target.logoUrl && (
-              <img
-                src={target.logoUrl}
-                alt={target.name}
-                className="w-20 h-20 rounded-xl object-contain"
-              />
+              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 p-3 flex items-center justify-center">
+                <img
+                  src={target.logoUrl}
+                  alt={target.name}
+                  className="w-14 h-14 rounded object-contain"
+                />
+              </div>
             )}
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900">{target.name}</h1>
+              <h1 className="text-3xl font-bold font-['Orbitron'] text-white mb-2">{target.name}</h1>
               {target.developer && (
-                <p className="text-gray-500 mt-1">开发者: {target.developer}</p>
+                <p className="text-gray-500">开发者: {target.developer}</p>
               )}
               {target.description && (
-                <p className="text-gray-600 mt-3">{target.description}</p>
+                <p className="text-gray-400 mt-3">{target.description}</p>
               )}
               {target.websiteUrl && (
                 <a
                   href={target.websiteUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-600 hover:underline mt-2 inline-block"
+                  className="text-purple-400 hover:text-purple-300 mt-2 inline-block transition-colors"
                 >
                   访问官网 →
                 </a>
@@ -95,22 +114,22 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
             </div>
             <div className="text-right">
               {avgRating && (
-                <div className="text-4xl font-bold text-gray-900">
-                  <span className="text-yellow-500">★</span> {avgRating.toFixed(1)}
+                <div className="text-4xl font-bold font-['Orbitron']">
+                  <span className="text-yellow-400">★</span> <span className="text-white">{avgRating.toFixed(1)}</span>
                 </div>
               )}
               <div className="text-gray-500 mt-1">{totalReviews} 条评测</div>
             </div>
           </div>
 
-          {target.features.length > 0 && (
-            <div className="mt-6 pt-6 border-t">
-              <h3 className="text-sm font-medium text-gray-500 mb-3">功能标签</h3>
+          {features.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-purple-500/10">
+              <h3 className="text-sm font-medium text-gray-500 mb-3 tracking-wide">功能标签</h3>
               <div className="flex flex-wrap gap-2">
-                {target.features.map((feature) => (
+                {features.map((feature) => (
                   <span
                     key={feature}
-                    className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm"
+                    className="px-3 py-1 bg-purple-500/10 text-purple-400 rounded-full text-sm"
                   >
                     {feature}
                   </span>
@@ -122,12 +141,12 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm border p-6">
+            <div className="cyber-card rounded-2xl p-6" style={{ borderColor: 'rgba(191, 0, 255, 0.2)' }}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">评测列表</h2>
+                <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测列表</h2>
                 <Link
                   href={`/submit?targetId=${target.id}`}
-                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
+                  className="cyber-button px-4 py-2 rounded-lg text-sm"
                 >
                   发布评测
                 </Link>
@@ -137,19 +156,19 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">评分分布</h3>
+            <div className="cyber-card rounded-2xl p-6" style={{ borderColor: 'rgba(191, 0, 255, 0.2)' }}>
+              <h3 className="text-lg font-semibold font-['Orbitron'] text-white mb-4">评分分布</h3>
               {totalReviews > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {[5, 4, 3, 2, 1].map((rating) => {
                     const count = ratingDistribution[rating]
                     const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0
                     return (
-                      <div key={rating} className="flex items-center gap-2">
+                      <div key={rating} className="flex items-center gap-3">
                         <span className="w-8 text-sm text-gray-500">{rating}分</span>
-                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-yellow-400 rounded-full"
+                            className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -166,15 +185,15 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
             </div>
 
             {Object.keys(categoryStats).length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">功能分类</h3>
+              <div className="cyber-card rounded-2xl p-6" style={{ borderColor: 'rgba(191, 0, 255, 0.2)' }}>
+                <h3 className="text-lg font-semibold font-['Orbitron'] text-white mb-4">功能分类</h3>
                 <div className="space-y-2">
                   {Object.entries(categoryStats)
                     .sort(([, a], [, b]) => b - a)
                     .map(([category, count]) => (
                       <div key={category} className="flex items-center justify-between">
-                        <span className="text-gray-600">{category}</span>
-                        <span className="text-gray-500 text-sm">{count} 条</span>
+                        <span className="text-gray-400">{category}</span>
+                        <span className="text-purple-400 text-sm">{count} 条</span>
                       </div>
                     ))}
                 </div>

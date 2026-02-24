@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { CustomSelect } from '@/components/custom-select'
 
 const CATEGORIES = [
   '代码补全',
@@ -86,6 +87,17 @@ function SubmitForm() {
     }
   }
 
+  const targetGroups = [
+    {
+      label: 'AI Editor',
+      options: targets.filter(t => t.type === 'editor').map(t => ({ value: t.id, label: t.name })),
+    },
+    {
+      label: 'AI Coding',
+      options: targets.filter(t => t.type === 'coding').map(t => ({ value: t.id, label: t.name })),
+    },
+  ]
+
   if (success) {
     return (
       <div className="text-center py-12">
@@ -111,24 +123,12 @@ function SubmitForm() {
         {loading ? (
           <div className="text-gray-500 cyber-card rounded-xl p-4">加载中...</div>
         ) : (
-          <select
+          <CustomSelect
+            groups={targetGroups}
             value={formData.targetId}
-            onChange={(e) => setFormData({ ...formData, targetId: e.target.value })}
-            className="w-full px-4 py-3 cyber-input rounded-xl text-white"
-            required
-          >
-            <option value="">请选择...</option>
-            <optgroup label="AI Editor">
-              {targets.filter(t => t.type === 'editor').map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </optgroup>
-            <optgroup label="AI Coding">
-              {targets.filter(t => t.type === 'coding').map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </optgroup>
-          </select>
+            onChange={(value) => setFormData({ ...formData, targetId: value })}
+            placeholder="请选择 AI 工具..."
+          />
         )}
       </div>
 
