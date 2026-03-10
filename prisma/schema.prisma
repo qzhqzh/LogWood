@@ -10,6 +10,7 @@ datasource db {
 enum TargetType {
   editor
   coding
+  model
 }
 
 enum ReviewStatus {
@@ -26,9 +27,17 @@ enum CommentStatus {
   deleted
 }
 
+enum ArticleStatus {
+  draft
+  published
+  archived
+}
+
 enum ReportTargetType {
   review
   comment
+  article
+  article_comment
 }
 
 enum ReportStatus {
@@ -64,6 +73,10 @@ model User {
   reviewLikes   ReviewLike[]
   commentLikes  CommentLike[]
   reports       Report[]
+  articles      Article[]
+  articleComments ArticleComment[]
+  accounts      Account[]
+  sessions      Session[]
 
   @@map("users")
 }
@@ -82,6 +95,7 @@ model AnonymousUser {
   reviewLikes         ReviewLike[]
   commentLikes        CommentLike[]
   reports             Report[]
+  articleComments     ArticleComment[]
 
   @@map("anonymous_users")
 }
@@ -189,6 +203,49 @@ model CommentLike {
   @@map("comment_likes")
 }
 
+model Article {
+  id            String        @id @default(cuid())
+  title         String
+  slug          String        @unique
+  excerpt       String?
+  content       String
+  coverImageUrl String?
+  status        ArticleStatus @default(draft)
+  authorUserId  String?
+  publishedAt   DateTime?
+  viewCount     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  author        User?         @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  comments      ArticleComment[]
+
+  @@index([status, publishedAt])
+  @@index([createdAt])
+  @@map("articles")
+}
+
+model ArticleComment {
+  id               String          @id @default(cuid())
+  articleId        String
+  userId           String?
+  anonymousUserId  String?
+  content          String
+  language         String          @default("zh")
+  status           CommentStatus   @default(published)
+  likesCount       Int             @default(0)
+  reportsCount     Int             @default(0)
+  createdAt        DateTime        @default(now())
+
+  article          Article         @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anonymousUser    AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([status])
+  @@map("article_comments")
+}
+
 model Report {
   id                    String              @id @default(cuid())
   targetType            ReportTargetType
@@ -248,6 +305,8 @@ model Account {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
   @@index([userId])
   @@map("accounts")
@@ -260,6 +319,8 @@ model Session {
   expires      DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")

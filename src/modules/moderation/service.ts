@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { ReportTargetType, ReportStatus, ReviewStatus, CommentStatus } from '@prisma/client'
+import { ReportTargetType, ReportStatus, ReviewStatus, CommentStatus, ArticleStatus } from '@prisma/client'
 import { ActorContext } from '@/modules/identity'
 import { checkAndConsume } from '@/modules/rate-limit'
 
@@ -33,6 +33,18 @@ export async function createReport(
       select: { id: true, status: true },
     })
     targetExists = !!comment && comment.status !== CommentStatus.deleted
+  } else if (input.targetType === ReportTargetType.article) {
+    const article = await prisma.article.findUnique({
+      where: { id: input.targetId },
+      select: { id: true, status: true },
+    })
+    targetExists = !!article && article.status !== ArticleStatus.archived
+  } else if (input.targetType === ReportTargetType.article_comment) {
+    const articleComment = await prisma.articleComment.findUnique({
+      where: { id: input.targetId },
+      select: { id: true, status: true },
+    })
+    targetExists = !!articleComment && articleComment.status !== CommentStatus.deleted
   }
 
   if (!targetExists) {
@@ -86,6 +98,16 @@ export async function applyAutoHideIfThresholdReached(
         where: { id: targetId },
         data: { status: CommentStatus.hidden, reportsCount: openReportsCount },
       })
+    } else if (targetType === ReportTargetType.article_comment) {
+      await prisma.articleComment.update({
+        where: { id: targetId },
+        data: { status: CommentStatus.hidden, reportsCount: openReportsCount },
+      })
+    } else if (targetType === ReportTargetType.article) {
+      await prisma.article.update({
+        where: { id: targetId },
+        data: { status: ArticleStatus.archived },
+      })
     }
     return true
   }
@@ -97,6 +119,11 @@ export async function applyAutoHideIfThresholdReached(
     })
   } else if (targetType === ReportTargetType.comment) {
     await prisma.comment.update({
+      where: { id: targetId },
+      data: { reportsCount: openReportsCount },
+    })
+  } else if (targetType === ReportTargetType.article_comment) {
+    await prisma.articleComment.update({
       where: { id: targetId },
       data: { reportsCount: openReportsCount },
     })
@@ -171,6 +198,16 @@ export async function resolveReport(
       await prisma.comment.update({
         where: { id: report.targetId },
         data: { status: CommentStatus.hidden },
+      })
+    } else if (report.targetType === ReportTargetType.article_comment) {
+      await prisma.articleComment.update({
+        where: { id: report.targetId },
+        data: { status: CommentStatus.hidden },
+      })
+    } else if (report.targetType === ReportTargetType.article) {
+      await prisma.article.update({
+        where: { id: report.targetId },
+        data: { status: ArticleStatus.archived },
       })
     }
   }

@@ -5,7 +5,7 @@ import { ReportTargetType } from '@prisma/client'
 import { z } from 'zod'
 
 const createReportSchema = z.object({
-  targetType: z.enum(['review', 'comment']),
+  targetType: z.enum(['review', 'comment', 'article', 'article_comment']),
   targetId: z.string(),
   reason: z.string().min(5).max(500),
   deviceFingerprint: z.string().optional(),

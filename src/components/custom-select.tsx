@@ -8,14 +8,14 @@ interface Option {
 }
 
 interface CustomSelectProps {
-  options: Option[]
+  options?: Option[]
   groups?: { label: string; options: Option[] }[]
   value: string
   onChange: (value: string) => void
   placeholder?: string
 }
 
-export function CustomSelect({ options, groups, value, onChange, placeholder = '请选择...' }: CustomSelectProps) {
+export function CustomSelect({ options = [], groups, value, onChange, placeholder = '请选择...' }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -57,8 +57,8 @@ export function CustomSelect({ options, groups, value, onChange, placeholder = '
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 cyber-card rounded-xl overflow-hidden shadow-xl shadow-cyan-500/10">
-          <div className="max-h-60 overflow-y-auto">
+        <div className="absolute z-[100] w-full mt-2 bg-[#12121a] border border-cyan-500/30 rounded-xl overflow-hidden shadow-2xl shadow-cyan-500/20">
+          <div className="max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-transparent">
             {!groups && options.map((option) => (
               <button
                 key={option.value}
@@ -79,33 +79,37 @@ export function CustomSelect({ options, groups, value, onChange, placeholder = '
 
             {groups?.map((group, groupIndex) => (
               <div key={groupIndex}>
-                <div className="px-4 py-2 text-xs font-semibold text-cyan-400 uppercase tracking-wider bg-cyan-500/5 border-b border-cyan-500/10">
+                <div className="px-4 py-2 text-xs font-semibold text-cyan-400 uppercase tracking-wider bg-cyan-500/10 border-b border-cyan-500/20 sticky top-0">
                   {group.label}
                 </div>
-                {group.options.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      onChange(option.value)
-                      setIsOpen(false)
-                    }}
-                    className={`w-full px-4 py-3 text-left transition-all duration-200 ${
-                      option.value === value
-                        ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-400'
-                        : 'text-gray-300 hover:bg-cyan-500/10 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {option.value === value && (
-                        <span className="text-cyan-400">✓</span>
-                      )}
-                      <span className={option.value === value ? 'pl-0' : 'pl-5'}>
-                        {option.label}
-                      </span>
-                    </div>
-                  </button>
-                ))}
+                {group.options.length === 0 ? (
+                  <div className="px-4 py-3 text-gray-500 text-sm">暂无工具</div>
+                ) : (
+                  group.options.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        onChange(option.value)
+                        setIsOpen(false)
+                      }}
+                      className={`w-full px-4 py-3 text-left transition-all duration-200 ${
+                        option.value === value
+                          ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-400'
+                          : 'text-gray-300 hover:bg-cyan-500/10 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {option.value === value && (
+                          <span className="text-cyan-400">✓</span>
+                        )}
+                        <span className={option.value === value ? 'pl-0' : 'pl-5'}>
+                          {option.label}
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             ))}
           </div>

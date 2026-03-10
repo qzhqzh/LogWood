@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -31,7 +32,7 @@ export default async function HomePage() {
     prisma.review.findMany({
       where: { status: 'published' },
       orderBy: { createdAt: 'desc' },
-      take: 5,
+      take: 3,
       include: {
         user: { select: { name: true } },
         anonymousUser: { select: { displayName: true } },
@@ -82,6 +83,9 @@ export default async function HomePage() {
               <Link href="/coding" className="text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide">
                 AI Coding
               </Link>
+              <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide">
+                社区文章
+              </Link>
               <Link href="/submit" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">
                 发布评测
               </Link>
@@ -114,6 +118,9 @@ export default async function HomePage() {
             </Link>
             <Link href="/coding" className="px-8 py-3 rounded-lg font-semibold text-lg tracking-wide border border-purple-500/50 text-purple-400 hover:bg-purple-500/10 transition-all">
               探索 AI Coding
+            </Link>
+            <Link href="/articles" className="px-8 py-3 rounded-lg font-semibold text-lg tracking-wide border border-pink-500/50 text-pink-400 hover:bg-pink-500/10 transition-all">
+              阅读社区文章
             </Link>
           </div>
 
@@ -157,9 +164,11 @@ export default async function HomePage() {
                 <div className="flex items-start gap-4 mb-4">
                   {target.logoUrl && (
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 p-2 flex items-center justify-center">
-                      <img
+                      <Image
                         src={target.logoUrl}
                         alt={target.name}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded object-contain"
                       />
                     </div>

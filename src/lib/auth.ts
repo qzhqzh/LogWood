@@ -2,7 +2,13 @@ import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import EmailProvider from 'next-auth/providers/email'
 import GitHubProvider from 'next-auth/providers/github'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+
+const adminEmail = process.env.ADMIN_EMAIL
+const adminPassword = process.env.ADMIN_PASSWORD
+const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -23,6 +29,54 @@ export const authOptions: NextAuthOptions = {
           GitHubProvider({
             clientId: process.env.GITHUB_CLIENT_ID,
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    ...(adminEmail && (adminPassword || adminPasswordHash)
+      ? [
+          CredentialsProvider({
+            id: 'admin-credentials',
+            name: 'Admin Credentials',
+            credentials: {
+              email: { label: 'Email', type: 'email' },
+              password: { label: 'Password', type: 'password' },
+            },
+            async authorize(credentials) {
+              const email = credentials?.email?.trim().toLowerCase()
+              const password = credentials?.password || ''
+
+              if (!email || !password || email !== adminEmail.toLowerCase()) {
+                return null
+              }
+
+              const plainMatched = adminPassword ? password === adminPassword : false
+              const hashMatched = adminPasswordHash
+                ? await bcrypt.compare(password, adminPasswordHash)
+                : false
+
+              if (!plainMatched && !hashMatched) {
+                return null
+              }
+
+              // Ensure admin-credentials session maps to a real user row.
+              // This avoids FK failures when creating records linked to users.
+              const adminUser = await prisma.user.upsert({
+                where: { email: adminEmail },
+                update: {
+                  name: '管理员',
+                },
+                create: {
+                  email: adminEmail,
+                  name: '管理员',
+                },
+              })
+
+              return {
+                id: adminUser.id,
+                email: adminUser.email,
+                name: adminUser.name || '管理员',
+              }
+            },
           }),
         ]
       : []),

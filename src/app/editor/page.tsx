@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { ReviewList } from '@/components/review-list'
 
@@ -96,9 +97,11 @@ export default async function EditorPage() {
               <div className="flex items-start gap-4 mb-4">
                 {target.logoUrl && (
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 p-2 flex items-center justify-center">
-                    <img
+                    <Image
                       src={target.logoUrl}
                       alt={target.name}
+                      width={40}
+                      height={40}
                       className="w-10 h-10 rounded object-contain"
                     />
                   </div>

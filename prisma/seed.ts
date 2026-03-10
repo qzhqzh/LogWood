@@ -85,6 +85,54 @@ const targets = [
   },
 ]
 
+const articles = [
+  {
+    title: '2026 AI Editor 选型指南：Cursor、Windsurf、Zed 怎么选',
+    slug: 'ai-editor-selection-guide-2026',
+    excerpt: '从团队协作、代码库规模、插件生态和成本四个维度，快速判断哪款 AI Editor 更适合你。',
+    content: `## 为什么你需要一份选型框架
+
+当团队从单人试用走向多人协作时，AI Editor 的差异会被迅速放大。
+
+## 四个关键维度
+
+1. 大仓库上下文理解能力
+2. 多语言与框架覆盖
+3. 团队协作与权限能力
+4. 成本与扩展性
+
+## 结论
+
+先用 2 周试点，采集效率指标后再做组织级切换。`,
+    status: 'published' as const,
+    publishedAt: new Date(),
+  },
+  {
+    title: 'AI Coding 助手评测方法论：如何做可复现的基准测试',
+    slug: 'ai-coding-benchmark-methodology',
+    excerpt: '避免主观印象，建立任务集、评分标准和复现实验流程，让评测可比较、可追踪。',
+    content: `## 目标
+
+构建一套稳定、可迭代的 AI Coding 评测基线。
+
+## 任务集建议
+
+- Bug 修复
+- 新功能实现
+- 测试补全
+- 重构与文档
+
+## 评分指标
+
+- 首次可运行率
+- 任务完成时长
+- 代码变更质量
+- 回归问题数量`,
+    status: 'published' as const,
+    publishedAt: new Date(),
+  },
+]
+
 async function main() {
   console.log('Seeding targets...')
 
@@ -95,6 +143,17 @@ async function main() {
       create: target,
     })
     console.log(`Created/Updated: ${target.name}`)
+  }
+
+  console.log('Seeding articles...')
+
+  for (const article of articles) {
+    await prisma.article.upsert({
+      where: { slug: article.slug },
+      update: article,
+      create: article,
+    })
+    console.log(`Created/Updated article: ${article.title}`)
   }
 
   console.log('Seeding completed!')

@@ -16,6 +16,7 @@ LogWood 的目标是构建一个高质量、可持续迭代的评测平台：
 - 工具目录与详情：`/editor`、`/coding`、`/:type/[slug]`
 - 评测闭环：发布、列表、详情、排序（latest/hot）
 - 互动能力：点赞（幂等）、评论、举报
+- 社区文章：文章发布管理、文章列表、文章详情展示
 - 身份体系：匿名用户 + 登录用户（Email Magic Link + 可选 GitHub OAuth）
 - 治理机制：限流、敏感词、风险转 `pending`、举报折叠
 - 多语言内容：界面中文，内容支持多语言输入与检索
@@ -27,6 +28,73 @@ LogWood 的目标是构建一个高质量、可持续迭代的评测平台：
 - Database: PostgreSQL + Prisma ORM
 - Auth: NextAuth.js
 - Deploy: Vercel
+
+## Run With Docker Compose
+
+项目已支持通过 Docker Compose 同时启动前端（Next.js）和数据库（PostgreSQL）。
+
+1. 准备环境变量（可选 GitHub OAuth）：
+
+```bash
+cp .env.example .env
+```
+
+2. 一键启动：
+
+```bash
+docker compose up --build
+```
+
+首次部署会自动完成：
+- Prisma Client 生成
+- 数据库结构同步（`prisma db push`）
+- 当数据库为空时初始化种子数据（工具目录 + 示例文章）
+
+3. 访问服务：
+- Frontend: `http://localhost:3000`
+- PostgreSQL: 仅容器内部访问（`web` 通过 `postgres:5432` 连接）
+
+说明：
+- `web` 容器启动时会自动执行 `prisma generate` 和 `prisma db push`，用于初始化/同步数据库结构。
+- 种子数据仅在检测到空库时自动执行，避免每次重启都重复初始化。
+- 如需强制重新导入种子，可临时设置 `FORCE_DB_SEED=1` 后重启 `web` 服务。
+- 如果你需要停止并清理容器和网络：
+
+```bash
+docker compose down
+```
+
+## Database Update Workflow
+
+当前项目的数据库结构管理由 Prisma CLI 完成，业务数据读写走 Next.js Route Handlers（即项目内后端逻辑）。
+
+常用命令（在 Compose 环境内执行）：
+
+```bash
+# 修改 prisma/schema.prisma 后，同步结构到数据库
+docker compose exec web npx prisma db push
+
+# 生成 Prisma Client
+docker compose exec web npx prisma generate
+
+# 初始化或补充测试数据
+docker compose exec web npm run db:seed
+```
+
+## Article Feature
+
+已内置文章能力：
+- 展示页：`/articles`
+- 详情页：`/articles/[slug]`
+- 管理页：`/articles/manage`
+
+说明：
+- 管理接口（创建/编辑/归档）需登录会话。
+- 当前内容字段先使用纯文本/Markdown 方式，后续可平滑升级为富文本 JSON。
+
+建议：
+- 本地开发可以使用 `db push` 快速迭代。
+- 当需要可追踪、可回滚的正式变更时，使用 Prisma migration（`prisma migrate`）管理版本化 SQL。
 
 ## Architecture (Modular Monolith)
 
@@ -197,6 +265,35 @@ src/
 - API 契约与错误码规范
 - 模块规范模板与测试模板
 - 可观测与风控策略落地方案
+
+## Testing Strategy (Recommended)
+
+随着功能增多和模块重构，建议尽早建立测试体系，优先顺序如下：
+
+1. 先覆盖高价值单元测试（必要）
+- 覆盖 `src/modules/*/service.ts` 的核心业务规则：校验、状态流转、限流、排序、幂等逻辑。
+- 这些逻辑最容易在重构时回归，且测试成本低、反馈快。
+
+2. 再补 API 集成测试（强烈建议）
+- 覆盖关键路由：`/api/reviews`、`/api/comments`、`/api/articles`。
+- 验证请求参数、错误码、鉴权和数据库写入行为。
+
+3. 最后补少量 E2E（按闭环）
+- 例如“发布文章 -> 列表可见 -> 详情可读”。
+- 保持数量少但覆盖主流程，避免维护成本过高。
+
+单元测试细粒度建议（平衡点）：
+- 以“函数行为”为粒度（service 层 public function 一条用例组）。
+- 每个函数至少覆盖：成功路径、参数非法、权限/限流失败、边界值。
+- 不建议为纯展示组件写大量细碎测试，可由 E2E 覆盖。
+
+目标不是追求 100% 覆盖率，而是优先守住高风险模块回归。
+
+执行单元测试（Compose 环境）：
+
+```bash
+docker compose exec web npm run test
+```
 
 ## License
 

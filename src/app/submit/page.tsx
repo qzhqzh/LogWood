@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CustomSelect } from '@/components/custom-select'
 
@@ -25,7 +25,6 @@ interface Target {
 
 function SubmitForm() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const preselectedTargetId = searchParams.get('targetId')
 
   const [targets, setTargets] = useState<Target[]>([])
@@ -78,7 +77,8 @@ function SubmitForm() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push('/')
+        // Force a fresh homepage request to show the just-published review.
+        window.location.href = `/?refresh=${Date.now()}`
       }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : '提交失败')
@@ -95,6 +95,10 @@ function SubmitForm() {
     {
       label: 'AI Coding',
       options: targets.filter(t => t.type === 'coding').map(t => ({ value: t.id, label: t.name })),
+    },
+    {
+      label: 'AI Model',
+      options: targets.filter(t => t.type === 'model').map(t => ({ value: t.id, label: t.name })),
     },
   ]
 
