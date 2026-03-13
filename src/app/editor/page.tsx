@@ -102,6 +102,7 @@ export default async function EditorPage() {
                       alt={target.name}
                       width={40}
                       height={40}
+                      unoptimized
                       className="w-10 h-10 rounded object-contain"
                     />
                   </div>

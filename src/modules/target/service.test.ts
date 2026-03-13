@@ -5,17 +5,21 @@ vi.mock('@/lib/prisma', () => ({
     target: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
     },
   },
 }))
 
 import { prisma } from '@/lib/prisma'
-import { getFeatures, getTargetBySlug, listTargets } from './service'
+import { createTarget, getFeatures, getTargetBySlug, listTargets } from './service'
 
 const prismaMock = prisma as unknown as {
   target: {
     findMany: ReturnType<typeof vi.fn>
     findFirst: ReturnType<typeof vi.fn>
+    findUnique: ReturnType<typeof vi.fn>
+    create: ReturnType<typeof vi.fn>
   }
 }
 
@@ -80,5 +84,34 @@ describe('target/service', () => {
     const result = await getFeatures()
 
     expect(result).toEqual(['agent', 'chat', 'completion'])
+  })
+
+  it('creates target with unique slug suffix and prompt type', async () => {
+    prismaMock.target.findUnique
+      .mockResolvedValueOnce({ id: 'existing', slug: 'prompt-deck' })
+      .mockResolvedValueOnce(null)
+    prismaMock.target.create.mockResolvedValue({
+      id: 't3',
+      name: 'Prompt Deck',
+      slug: 'prompt-deck-2',
+      type: 'prompt' as any,
+    })
+
+    const result = await createTarget({
+      name: 'Prompt Deck',
+      type: 'prompt',
+      features: ['模板', '版本'],
+    })
+
+    expect(prismaMock.target.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          slug: 'prompt-deck-2',
+          type: 'prompt',
+          features: '["模板","版本"]',
+        }),
+      })
+    )
+    expect(result.slug).toBe('prompt-deck-2')
   })
 })

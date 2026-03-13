@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { encodeArticleSlug, listArticles } from '@/modules/article'
+import { SiteNav } from '@/components/site-nav'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,23 +14,20 @@ export default async function ArticlesPage() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
-      <nav className="border-b border-cyan-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</Link>
-            <div className="flex items-center gap-5">
-              <Link href="/editor" className="text-gray-300 hover:text-cyan-400">AI Editor</Link>
-              <Link href="/coding" className="text-gray-300 hover:text-purple-400">AI Coding</Link>
-              <Link href="/articles/manage" className="text-cyan-300 hover:text-cyan-200">文章管理</Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+      </div>
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold font-['Orbitron'] gradient-text mb-3">社区文章</h1>
-          <p className="text-gray-400">沉淀方法论、使用经验与最佳实践。</p>
+      <SiteNav active="articles" actionLabel="文章管理" actionHref="/articles/manage" />
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
+        <div className="mb-12">
+          <div className="inline-block mb-4 px-4 py-1 border border-pink-500/30 rounded-full bg-pink-500/5">
+            <span className="text-pink-400 text-sm tracking-widest uppercase">COMMUNITY ARTICLES</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">社区文章</h1>
+          <p className="text-gray-400 text-lg max-w-2xl">沉淀方法论、使用经验与最佳实践。</p>
         </div>
 
         {articles.length === 0 ? (

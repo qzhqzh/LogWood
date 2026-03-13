@@ -54,6 +54,25 @@ export default async function ArticleDetailPage({
         <div className="absolute bottom-[-240px] left-[20%] w-[620px] h-[620px] rounded-full bg-blue-500/10 blur-3xl" />
       </div>
 
+      <nav className="relative border-b border-cyan-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
+                <span className="text-black font-bold text-sm">LW</span>
+              </div>
+              <span className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
+            </Link>
+            <div className="flex items-center gap-6">
+              <Link href="/coding" className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide">AI Coding</Link>
+              <Link href="/app" className="text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide">应用工坊</Link>
+              <Link href="/articles" className="text-pink-400 font-medium tracking-wide">社区文章</Link>
+              <Link href="/articles/manage" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">文章管理</Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
       <div className="relative max-w-5xl mx-auto px-5 sm:px-8 lg:px-10 pt-10 pb-16">
         <Link href="/articles" className="inline-flex items-center text-cyan-300 hover:text-cyan-200 text-sm tracking-wide mb-8">
           ← 返回文章列表

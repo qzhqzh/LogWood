@@ -22,11 +22,42 @@ export interface TargetWithStats {
   avgRating?: number
 }
 
+export interface CreateTargetInput {
+  name: string
+  type: TargetType
+  logoUrl?: string
+  description?: string
+  websiteUrl?: string
+  developer?: string
+  features?: string[]
+}
+
 function parseFeatures(features: string): string[] {
   try {
     return JSON.parse(features)
   } catch {
     return []
+  }
+}
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\u4e00-\u9fa5\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-') || `target-${Date.now()}`
+}
+
+async function ensureUniqueTargetSlug(baseSlug: string): Promise<string> {
+  let slug = baseSlug
+  let suffix = 1
+
+  while (true) {
+    const existing = await prisma.target.findUnique({ where: { slug } })
+    if (!existing) return slug
+    suffix += 1
+    slug = `${baseSlug}-${suffix}`
   }
 }
 
@@ -70,6 +101,30 @@ export async function listTargets(filter?: TargetFilter): Promise<TargetWithStat
       _count: target._count,
       avgRating: avgRating ? Math.round(avgRating * 10) / 10 : undefined,
     }
+  })
+}
+
+export async function createTarget(input: CreateTargetInput) {
+  const baseSlug = slugify(input.name)
+  const slug = await ensureUniqueTargetSlug(baseSlug)
+
+  return prisma.target.create({
+    data: {
+      name: input.name,
+      slug,
+      type: input.type,
+      logoUrl: input.logoUrl || null,
+      description: input.description || null,
+      websiteUrl: input.websiteUrl || null,
+      developer: input.developer || null,
+      features: JSON.stringify(input.features || []),
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      type: true,
+    },
   })
 }
 

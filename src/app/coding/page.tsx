@@ -1,9 +1,22 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
-import { ReviewList } from '@/components/review-list'
+import { TargetType } from '@prisma/client'
+import { SiteNav } from '@/components/site-nav'
 
 export const dynamic = 'force-dynamic'
+
+const CATEGORY_CONFIG: Array<{
+  key: TargetType
+  label: string
+  badge: string
+  emptyText: string
+}> = [
+  { key: 'editor', label: 'AI Editor', badge: 'EDITOR', emptyText: '当前还没有 AI Editor 评测目标' },
+  { key: 'coding', label: 'AI Coding', badge: 'CODING', emptyText: '当前还没有 AI Coding 评测目标' },
+  { key: 'model', label: 'AI Model', badge: 'MODEL', emptyText: '当前还没有 AI Model 评测目标' },
+  { key: 'prompt', label: 'AI Prompt', badge: 'PROMPT', emptyText: '当前还没有 AI Prompt 评测目标' },
+]
 
 function parseFeatures(features: string): string[] {
   try {
@@ -13,9 +26,16 @@ function parseFeatures(features: string): string[] {
   }
 }
 
-export default async function CodingPage() {
+interface CodingPageProps {
+  searchParams: Promise<{ category?: string }>
+}
+
+export default async function CodingPage({ searchParams }: CodingPageProps) {
+  const { category } = await searchParams
   const targets = await prisma.target.findMany({
-    where: { type: 'coding' },
+    where: {
+      type: { in: ['editor', 'coding', 'model', 'prompt'] },
+    },
     include: {
       _count: {
         select: { reviews: { where: { status: 'published' } } },
@@ -27,6 +47,10 @@ export default async function CodingPage() {
     },
     orderBy: { name: 'asc' },
   })
+
+  const selectedCategory = CATEGORY_CONFIG.some((item) => item.key === category)
+    ? category as TargetType
+    : 'coding'
 
   const targetsWithStats = targets.map((target) => {
     const ratings = target.reviews.map((r) => r.rating)
@@ -42,6 +66,13 @@ export default async function CodingPage() {
     }
   })
 
+  const groupedTargets = CATEGORY_CONFIG.map((item) => ({
+    ...item,
+    targets: targetsWithStats.filter((target) => target.type === item.key),
+  }))
+
+  const activeGroup = groupedTargets.find((item) => item.key === selectedCategory) || groupedTargets[1]
+
   return (
     <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
@@ -49,29 +80,7 @@ export default async function CodingPage() {
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
 
-      <nav className="border-b border-purple-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">LW</span>
-              </div>
-              <span className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
-            </Link>
-            <div className="flex items-center gap-6">
-              <Link href="/editor" className="text-gray-400 hover:text-cyan-400 transition-colors font-medium tracking-wide">
-                AI Editor
-              </Link>
-              <Link href="/coding" className="text-purple-400 font-medium tracking-wide">
-                AI Coding
-              </Link>
-              <Link href="/submit" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">
-                发布评测
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SiteNav active="coding" actionLabel="发布评测" actionHref="/submit" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="mb-12">
@@ -82,15 +91,54 @@ export default async function CodingPage() {
             <span className="gradient-text">AI Coding</span>
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl">
-            AI 编程助手评测 - 探索 GitHub Copilot、Claude Code、CodeWhisperer 等智能编程工具
+            AI Coding 聚合入口，统一查看 AI Editor、AI Coding、AI Model、AI Prompt 4 个类别下的不同评测目标。
           </p>
         </div>
 
+        <div className="flex flex-wrap items-center gap-3 mb-8">
+          {groupedTargets.map((group) => (
+            <Link
+              key={group.key}
+              href={`/coding?category=${group.key}`}
+              className={`px-4 py-2 rounded-full border text-sm tracking-wide transition-colors ${
+                selectedCategory === group.key
+                  ? 'border-purple-400 bg-purple-500/10 text-purple-300'
+                  : 'border-white/10 text-gray-400 hover:border-purple-500/40 hover:text-white'
+              }`}
+            >
+              {group.label} · {group.targets.length}
+            </Link>
+          ))}
+          <Link href="/targets/manage" className="ml-auto cyber-button px-4 py-2 rounded-lg text-sm font-semibold">
+            新增评测目标
+          </Link>
+        </div>
+
+        <div className="mb-8 cyber-card rounded-2xl p-6">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs tracking-[0.3em] text-purple-300 uppercase mb-2">当前分类</p>
+              <h2 className="text-2xl font-bold text-white">{activeGroup.label}</h2>
+              <p className="text-gray-500 mt-2">不同分类下展示不同的评测目标，你也可以从管理入口继续补充目标池。</p>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold font-['Orbitron'] text-purple-300">{activeGroup.targets.length}</div>
+              <div className="text-gray-500 text-sm">当前分类目标数</div>
+            </div>
+          </div>
+        </div>
+
+        {activeGroup.targets.length === 0 ? (
+          <div className="cyber-card rounded-2xl p-12 text-center">
+            <p className="text-gray-400 mb-5">{activeGroup.emptyText}</p>
+            <Link href="/targets/manage" className="cyber-button px-5 py-2 rounded-lg inline-block">去新增目标</Link>
+          </div>
+        ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {targetsWithStats.map((target, index) => (
+          {activeGroup.targets.map((target, index) => (
             <Link
               key={target.id}
-              href={`/coding/${target.slug}`}
+              href={`/${target.type}/${target.slug}`}
               className="cyber-card rounded-2xl p-6 group transition-all duration-300 hover:scale-105"
               style={{ animationDelay: `${index * 100}ms` }}
             >
@@ -102,6 +150,7 @@ export default async function CodingPage() {
                       alt={target.name}
                       width={40}
                       height={40}
+                      unoptimized
                       className="w-10 h-10 rounded object-contain"
                     />
                   </div>
@@ -110,6 +159,9 @@ export default async function CodingPage() {
                   <h2 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">
                     {target.name}
                   </h2>
+                  <span className="inline-flex mt-2 px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 text-xs tracking-wide">
+                    {CATEGORY_CONFIG.find((item) => item.key === target.type)?.badge || target.type.toUpperCase()}
+                  </span>
                   {target.developer && (
                     <p className="text-sm text-gray-500">{target.developer}</p>
                   )}
@@ -159,6 +211,7 @@ export default async function CodingPage() {
             </Link>
           ))}
         </div>
+        )}
       </div>
     </main>
   )

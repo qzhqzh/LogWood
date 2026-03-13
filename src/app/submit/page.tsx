@@ -100,6 +100,10 @@ function SubmitForm() {
       label: 'AI Model',
       options: targets.filter(t => t.type === 'model').map(t => ({ value: t.id, label: t.name })),
     },
+    {
+      label: 'AI Prompt',
+      options: targets.filter(t => t.type === 'prompt').map(t => ({ value: t.id, label: t.name })),
+    },
   ]
 
   if (success) {

@@ -57,6 +57,12 @@
   - 增加生产环境 NEXTAUTH_URL 启动校验。
 - 增补核心模块单元测试：comment、target、rate-limit、identity callback URL。
 - 部署入口策略调整为 web 直接暴露 80:3000，由外部代理层接管后续转发策略。
+- 首页信息架构调整为 3 个主入口：AI Coding、应用工坊、阅读社区文章。
+- 首页统计口径同步调整：展示 AI Coding 4 个分区、收录工具总数、内容沉淀总量（评测 + 文章）。
+- AI Coding 页面改造为四分类聚合入口：AI Editor、AI Coding、AI Model、AI Prompt。
+- 新增评测目标管理入口与应用工坊 `/app`、`/app/manage` 页面及基础数据结构。
+- 社区文章导航调整为与首页一致，并额外保留“文章管理”入口。
+- 抽取统一站点导航组件，复用于 AI Coding / 应用工坊 / 社区文章，统一间距、字体权重与按钮宽度，降低页面切换时的视觉晃动。
 
 ## 9. 下阶段计划（简版）
 1. 部署模式切换为生产运行（Next.js build + start），拆分 dev/prod compose。

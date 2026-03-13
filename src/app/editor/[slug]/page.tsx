@@ -92,6 +92,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
                   alt={target.name}
                   width={56}
                   height={56}
+                  unoptimized
                   className="w-14 h-14 rounded object-contain"
                 />
               </div>

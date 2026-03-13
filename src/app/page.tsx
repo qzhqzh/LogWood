@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
+import { listArticles } from '@/modules/article'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 
@@ -15,7 +16,7 @@ function parseFeatures(features: string): string[] {
 }
 
 export default async function HomePage() {
-  const [targets, reviews] = await Promise.all([
+  const [targets, reviews, totalReviews, totalTargets, articleListResult] = await Promise.all([
     prisma.target.findMany({
       include: {
         _count: {
@@ -39,7 +40,12 @@ export default async function HomePage() {
         target: { select: { name: true, slug: true, type: true } },
       },
     }),
+    prisma.review.count({ where: { status: 'published' } }),
+    prisma.target.count(),
+    listArticles({ page: 1, pageSize: 1 }),
   ])
+
+  const totalArticles = articleListResult.total
 
   const targetsWithStats = targets.map((target) => {
     const ratings = target.reviews.map((r) => r.rating)
@@ -54,10 +60,6 @@ export default async function HomePage() {
       reviewCount: target._count.reviews,
     }
   })
-
-  const totalReviews = await prisma.review.count({ where: { status: 'published' } })
-  const totalTargets = await prisma.target.count()
-
   return (
     <main className="min-h-screen bg-[#0a0a0f] grid-bg relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none">
@@ -77,11 +79,11 @@ export default async function HomePage() {
               </span>
             </Link>
             <div className="flex items-center gap-6">
-              <Link href="/editor" className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide">
-                AI Editor
-              </Link>
-              <Link href="/coding" className="text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide">
+              <Link href="/coding" className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide">
                 AI Coding
+              </Link>
+              <Link href="/app" className="text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide">
+                应用工坊
               </Link>
               <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide">
                 社区文章
@@ -107,17 +109,18 @@ export default async function HomePage() {
           </h1>
           
           <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            沉淀真实评测数据，帮助开发者比较{' '}
-            <span className="text-cyan-400">AI Editor</span> 和{' '}
-            <span className="text-purple-400">AI Coding</span> 工具在不同能力维度上的表现
+            沉淀真实评测数据，帮助开发者在{' '}
+            <span className="text-cyan-400">AI Coding</span> 视角下统一比较{' '}
+            <span className="text-white">AI Editor、AI Coding、AI Model、AI Prompt</span>
+            {' '}4 个分区的工具、方法与实践内容
           </p>
 
           <div className="flex justify-center gap-4 mb-16">
-            <Link href="/editor" className="cyber-button px-8 py-3 rounded-lg font-semibold text-lg tracking-wide">
-              探索 AI Editor
+            <Link href="/coding" className="cyber-button px-8 py-3 rounded-lg font-semibold text-lg tracking-wide">
+              AI Coding
             </Link>
-            <Link href="/coding" className="px-8 py-3 rounded-lg font-semibold text-lg tracking-wide border border-purple-500/50 text-purple-400 hover:bg-purple-500/10 transition-all">
-              探索 AI Coding
+            <Link href="/app" className="px-8 py-3 rounded-lg font-semibold text-lg tracking-wide border border-purple-500/50 text-purple-400 hover:bg-purple-500/10 transition-all">
+              应用工坊
             </Link>
             <Link href="/articles" className="px-8 py-3 rounded-lg font-semibold text-lg tracking-wide border border-pink-500/50 text-pink-400 hover:bg-pink-500/10 transition-all">
               阅读社区文章
@@ -126,16 +129,16 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
             <div className="cyber-card rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold font-['Orbitron'] text-cyan-400 mb-2">{totalTargets}</div>
-              <div className="text-gray-400 text-sm tracking-wide">AI 工具</div>
+              <div className="text-4xl font-bold font-['Orbitron'] text-cyan-400 mb-2">4</div>
+              <div className="text-gray-400 text-sm tracking-wide">AI Coding 分区</div>
             </div>
             <div className="cyber-card rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold font-['Orbitron'] text-purple-400 mb-2">{totalReviews}</div>
-              <div className="text-gray-400 text-sm tracking-wide">真实评测</div>
+              <div className="text-4xl font-bold font-['Orbitron'] text-purple-400 mb-2">{totalTargets}</div>
+              <div className="text-gray-400 text-sm tracking-wide">收录工具</div>
             </div>
             <div className="cyber-card rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold font-['Orbitron'] text-pink-400 mb-2">8+</div>
-              <div className="text-gray-400 text-sm tracking-wide">功能维度</div>
+              <div className="text-4xl font-bold font-['Orbitron'] text-pink-400 mb-2">{totalReviews + totalArticles}</div>
+              <div className="text-gray-400 text-sm tracking-wide">内容沉淀</div>
             </div>
           </div>
         </div>
@@ -169,6 +172,7 @@ export default async function HomePage() {
                         alt={target.name}
                         width={32}
                         height={32}
+                        unoptimized
                         className="w-8 h-8 rounded object-contain"
                       />
                     </div>
@@ -317,9 +321,9 @@ export default async function HomePage() {
               </p>
             </div>
             <div className="flex gap-6 text-gray-500 text-sm">
-              <Link href="/editor" className="hover:text-cyan-400 transition-colors">AI Editor</Link>
-              <Link href="/coding" className="hover:text-purple-400 transition-colors">AI Coding</Link>
-              <Link href="/submit" className="hover:text-pink-400 transition-colors">发布评测</Link>
+              <Link href="/coding" className="hover:text-cyan-400 transition-colors">AI Coding</Link>
+              <Link href="/app" className="hover:text-purple-400 transition-colors">应用工坊</Link>
+              <Link href="/articles" className="hover:text-pink-400 transition-colors">社区文章</Link>
             </div>
           </div>
         </div>

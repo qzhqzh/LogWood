@@ -1,0 +1,117 @@
+import Link from 'next/link'
+import Image from 'next/image'
+import { notFound } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import { ReviewList } from '@/components/review-list'
+
+export const dynamic = 'force-dynamic'
+
+function parseFeatures(features: string): string[] {
+  try {
+    return JSON.parse(features)
+  } catch {
+    return []
+  }
+}
+
+interface TargetPageProps {
+  params: Promise<{ slug: string }>
+}
+
+export default async function ModelDetailPage({ params }: TargetPageProps) {
+  const { slug } = await params
+
+  const target = await prisma.target.findFirst({
+    where: { slug, type: 'model' },
+    include: {
+      reviews: {
+        where: { status: 'published' },
+        select: { rating: true, category: true },
+      },
+    },
+  })
+
+  if (!target) {
+    notFound()
+  }
+
+  const features = parseFeatures(target.features)
+  const ratings = target.reviews.map((r) => r.rating)
+  const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null
+  const totalReviews = target.reviews.length
+  const categoryStats: Record<string, number> = {}
+
+  target.reviews.forEach((r) => {
+    categoryStats[r.category] = (categoryStats[r.category] || 0) + 1
+  })
+
+  return (
+    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+      <nav className="border-b border-purple-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center">
+            <Link href="/" className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</Link>
+            <div className="flex items-center gap-6">
+              <Link href="/coding?category=model" className="text-purple-300 font-medium tracking-wide">AI Model</Link>
+              <Link href="/app" className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide">应用工坊</Link>
+              <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide">社区文章</Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
+        <div className="cyber-card rounded-3xl p-8 mb-8" style={{ borderColor: 'rgba(191, 0, 255, 0.2)' }}>
+          <div className="flex items-start gap-6">
+            {target.logoUrl && (
+              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 p-3 flex items-center justify-center">
+                <Image src={target.logoUrl} alt={target.name} width={56} height={56} unoptimized className="w-14 h-14 rounded object-contain" />
+              </div>
+            )}
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold font-['Orbitron'] text-white mb-2">{target.name}</h1>
+              {target.developer && <p className="text-gray-500">开发者: {target.developer}</p>}
+              {target.description && <p className="text-gray-400 mt-3">{target.description}</p>}
+              {target.websiteUrl && <a href={target.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-purple-300 hover:text-purple-200 mt-2 inline-block transition-colors">访问官网 →</a>}
+            </div>
+            <div className="text-right">
+              {avgRating && <div className="text-4xl font-bold font-['Orbitron']"><span className="text-yellow-400">★</span> <span className="text-white">{avgRating.toFixed(1)}</span></div>}
+              <div className="text-gray-500 mt-1">{totalReviews} 条评测</div>
+            </div>
+          </div>
+          {features.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-purple-500/10">
+              <div className="flex flex-wrap gap-2">
+                {features.map((feature) => (
+                  <span key={feature} className="px-3 py-1 bg-purple-500/10 text-purple-300 rounded-full text-sm">{feature}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 cyber-card rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测列表</h2>
+              <Link href={`/submit?targetId=${target.id}`} className="cyber-button px-4 py-2 rounded-lg text-sm">发布评测</Link>
+            </div>
+            <ReviewList targetId={target.id} />
+          </div>
+          <div className="cyber-card rounded-2xl p-6">
+            <h3 className="text-lg font-semibold font-['Orbitron'] text-white mb-4">功能分类</h3>
+            <div className="space-y-2">
+              {Object.entries(categoryStats).map(([category, count]) => (
+                <div key={category} className="flex items-center justify-between">
+                  <span className="text-gray-400">{category}</span>
+                  <span className="text-purple-300 text-sm">{count} 条</span>
+                </div>
+              ))}
+              {Object.keys(categoryStats).length === 0 && <p className="text-gray-500 text-sm">暂无分类数据</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}

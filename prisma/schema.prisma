@@ -11,6 +11,13 @@ enum TargetType {
   editor
   coding
   model
+  prompt
+}
+
+enum AppStatus {
+  draft
+  published
+  archived
 }
 
 enum ReviewStatus {
@@ -74,6 +81,7 @@ model User {
   commentLikes  CommentLike[]
   reports       Report[]
   articles      Article[]
+  apps          App[]
   articleComments ArticleComment[]
   accounts      Account[]
   sessions      Session[]
@@ -223,6 +231,27 @@ model Article {
   @@index([status, publishedAt])
   @@index([createdAt])
   @@map("articles")
+}
+
+model App {
+  id              String    @id @default(cuid())
+  name            String
+  slug            String    @unique
+  appUrl          String
+  title           String
+  summary         String
+  description     String
+  previewImageUrl String?
+  tags            String    @default("[]")
+  status          AppStatus @default(published)
+  authorUserId    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  author          User?     @relation(fields: [authorUserId], references: [id])
+
+  @@index([status, createdAt])
+  @@map("apps")
 }
 
 model ArticleComment {

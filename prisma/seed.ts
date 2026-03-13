@@ -83,6 +83,26 @@ const targets = [
     developer: 'Tabnine',
     features: JSON.stringify(['代码补全', '多语言支持']),
   },
+  {
+    name: 'Claude 3.7 Sonnet',
+    slug: 'claude-3-7-sonnet',
+    type: TargetType.model,
+    logoUrl: 'https://www.anthropic.com/images/icons/apple-touch-icon.png',
+    description: '适合代码生成、复杂推理与长上下文理解的通用模型',
+    websiteUrl: 'https://www.anthropic.com/claude',
+    developer: 'Anthropic',
+    features: JSON.stringify(['长上下文', '代码生成', '推理能力', '多轮对话']),
+  },
+  {
+    name: 'PromptLayer Prompt Library',
+    slug: 'promptlayer-prompt-library',
+    type: TargetType.prompt,
+    logoUrl: 'https://promptlayer.com/favicon.ico',
+    description: '面向应用开发的 Prompt 模板与版本管理目标',
+    websiteUrl: 'https://promptlayer.com',
+    developer: 'PromptLayer',
+    features: JSON.stringify(['Prompt 模板', '版本管理', '团队协作']),
+  },
 ]
 
 const articles = [
@@ -133,6 +153,20 @@ const articles = [
   },
 ]
 
+const apps = [
+  {
+    name: 'PR Review Radar',
+    slug: 'pr-review-radar',
+    appUrl: 'https://example.com/pr-review-radar',
+    title: 'PR Review Radar',
+    summary: '帮助团队聚合 PR 风险、审查建议与发布前检查项。',
+    description: 'PR Review Radar 是一个围绕代码审查工作流构建的应用，整合了 AI 风险提示、变更摘要、测试提醒和上线检查列表，适合研发团队在提测和合并前进行统一审查。',
+    previewImageUrl: null,
+    tags: JSON.stringify(['review', 'workflow', 'team']),
+    status: 'published' as const,
+  },
+]
+
 async function main() {
   console.log('Seeding targets...')
 
@@ -154,6 +188,17 @@ async function main() {
       create: article,
     })
     console.log(`Created/Updated article: ${article.title}`)
+  }
+
+  console.log('Seeding apps...')
+
+  for (const app of apps) {
+    await prisma.app.upsert({
+      where: { slug: app.slug },
+      update: app,
+      create: app,
+    })
+    console.log(`Created/Updated app: ${app.title}`)
   }
 
   console.log('Seeding completed!')

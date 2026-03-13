@@ -19,7 +19,7 @@ const rajdhani = Rajdhani({
 
 export const metadata: Metadata = {
   title: 'LogWood - AI 编码工具评测社区',
-  description: '专注于 AI 编码工具的深度评测社区，帮助用户比较 AI Editor 和 AI Coding 工具',
+  description: '专注于 AI Coding 生态的评测社区，统一收录 AI Editor、AI Coding、AI Model 与 AI Prompt 工具和实践内容',
 }
 
 export default function RootLayout({

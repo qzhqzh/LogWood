@@ -10,15 +10,18 @@ const adminEmail = process.env.ADMIN_EMAIL
 const adminPassword = process.env.ADMIN_PASSWORD
 const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH
 const nextAuthUrl = process.env.NEXTAUTH_URL || ''
+const globalForAuthWarning = globalThis as typeof globalThis & {
+  __logwoodAuthEnvWarned?: boolean
+}
 
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' && !globalForAuthWarning.__logwoodAuthEnvWarned) {
   if (!nextAuthUrl) {
-    throw new Error('NEXTAUTH_URL is required in production')
+    console.warn('NEXTAUTH_URL is required in production')
+  } else if (/localhost|127\.0\.0\.1/.test(nextAuthUrl)) {
+    console.warn('NEXTAUTH_URL should not point to localhost in production')
   }
 
-  if (/localhost|127\.0\.0\.1/.test(nextAuthUrl)) {
-    throw new Error('NEXTAUTH_URL cannot point to localhost in production')
-  }
+  globalForAuthWarning.__logwoodAuthEnvWarned = true
 }
 
 export const authOptions: NextAuthOptions = {
