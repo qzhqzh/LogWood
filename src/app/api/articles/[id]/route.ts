@@ -7,6 +7,7 @@ import { archiveArticle, updateArticle } from '@/modules/article'
 
 const updateSchema = z.object({
   title: z.string().min(3).max(120).optional(),
+  columnId: z.string().min(1).optional(),
   excerpt: z.string().max(240).optional(),
   content: z.string().min(20).max(50000).optional(),
   tags: z.array(z.string().min(1).max(30)).optional(),

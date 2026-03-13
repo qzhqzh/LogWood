@@ -5,7 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { signIn, useSession } from 'next-auth/react'
 import type { ArticleStatus as PrismaArticleStatus } from '@prisma/client'
-import { encodeArticleSlug } from '@/modules/article'
+import { encodeArticleSlug } from '@/modules/article/slug'
 import { TagPicker } from '@/components/tag-picker'
 
 const RichTextEditor = dynamic(() => import('@/components/rich-text-editor'), {
@@ -17,11 +17,22 @@ const RichTextEditor = dynamic(() => import('@/components/rich-text-editor'), {
 
 type ArticleStatus = 'draft' | 'published' | 'archived'
 
+interface ArticleColumnItem {
+  id: string
+  name: string
+  slug: string
+}
+
 interface ArticleItem {
   id: string
   title: string
   slug: string
+  columnId: string | null
+  column: ArticleColumnItem | null
+  excerpt: string | null
+  content: string
   tags: string[]
+  coverImageUrl: string | null
   status: ArticleStatus
   updatedAt: string
   publishedAt: string | null
@@ -35,9 +46,14 @@ export default function ManageArticlesPage() {
   const [content, setContent] = useState('<p></p>')
   const [contentTextLength, setContentTextLength] = useState(0)
   const [coverImageUrl, setCoverImageUrl] = useState('')
+  const [columnId, setColumnId] = useState('')
+  const [columns, setColumns] = useState<ArticleColumnItem[]>([])
+  const [newColumnName, setNewColumnName] = useState('')
+  const [creatingColumn, setCreatingColumn] = useState(false)
   const [tags, setTags] = useState<string[]>([])
   const [status, setStatus] = useState<ArticleStatus>('draft')
   const [articles, setArticles] = useState<ArticleItem[]>([])
+  const [editingArticleId, setEditingArticleId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -55,6 +71,14 @@ export default function ManageArticlesPage() {
     return '未知用户'
   }, [session])
 
+  function getTextLengthFromHtml(html: string) {
+    return html
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim().length
+  }
+
   async function loadArticles() {
     const res = await fetch('/api/articles?manage=true', { cache: 'no-store' })
     const data = await res.json()
@@ -64,9 +88,18 @@ export default function ManageArticlesPage() {
     setArticles(data.articles)
   }
 
+  async function loadColumns() {
+    const res = await fetch('/api/article-columns', { cache: 'no-store' })
+    const data = await res.json()
+    if (!res.ok) {
+      throw new Error(data.error || '专栏加载失败')
+    }
+    setColumns(data.columns || [])
+  }
+
   useEffect(() => {
     if (sessionStatus !== 'authenticated') return
-    loadArticles().catch((e) => setError(e.message))
+    Promise.all([loadArticles(), loadColumns()]).catch((e) => setError(e.message))
   }, [sessionStatus])
 
   if (sessionStatus === 'loading') {
@@ -106,13 +139,16 @@ export default function ManageArticlesPage() {
     setError(null)
 
     try {
-      const res = await fetch('/api/articles', {
-        method: 'POST',
+      const url = editingArticleId ? `/api/articles/${editingArticleId}` : '/api/articles'
+      const method = editingArticleId ? 'PATCH' : 'POST'
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
           excerpt: excerpt || undefined,
           content,
+          columnId: columnId || undefined,
           coverImageUrl: coverImageUrl.trim() || undefined,
           tags,
           status,
@@ -120,7 +156,7 @@ export default function ManageArticlesPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || '创建失败（请先登录）')
+        throw new Error(data.error || (editingArticleId ? '编辑失败（请先登录）' : '创建失败（请先登录）'))
       }
 
       setTitle('')
@@ -128,13 +164,77 @@ export default function ManageArticlesPage() {
       setContent('<p></p>')
       setContentTextLength(0)
       setCoverImageUrl('')
+      setColumnId('')
       setTags([])
       setStatus('draft')
+      setEditingArticleId(null)
       await loadArticles()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '创建失败')
+      setError(e instanceof Error ? e.message : (editingArticleId ? '编辑失败' : '创建失败'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  function resetForm() {
+    setTitle('')
+    setExcerpt('')
+    setContent('<p></p>')
+    setContentTextLength(0)
+    setCoverImageUrl('')
+    setColumnId('')
+    setTags([])
+    setStatus('draft')
+    setEditingArticleId(null)
+    setError(null)
+  }
+
+  function editArticle(item: ArticleItem) {
+    if (item.status === 'archived') return
+
+    setTitle(item.title)
+    setExcerpt(item.excerpt || '')
+    const nextContent = item.content || '<p></p>'
+    setContent(nextContent)
+    setContentTextLength(getTextLengthFromHtml(nextContent))
+    setCoverImageUrl(item.coverImageUrl || '')
+    setColumnId(item.columnId || '')
+    setTags(item.tags)
+    setStatus(item.status)
+    setEditingArticleId(item.id)
+    setError(null)
+  }
+
+  async function createColumn() {
+    const normalized = newColumnName.trim()
+    if (!normalized) return
+
+    try {
+      setCreatingColumn(true)
+      setError(null)
+      const res = await fetch('/api/article-columns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: normalized }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || '创建专栏失败')
+      }
+
+      const created = data as ArticleColumnItem
+      setColumns((prev) => {
+        if (prev.some((item) => item.id === created.id)) {
+          return prev
+        }
+        return [...prev, created]
+      })
+      setColumnId(created.id)
+      setNewColumnName('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '创建专栏失败')
+    } finally {
+      setCreatingColumn(false)
     }
   }
 
@@ -198,6 +298,18 @@ export default function ManageArticlesPage() {
         </div>
 
         <form onSubmit={submitArticle} className="cyber-card rounded-2xl p-6 mb-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">{editingArticleId ? '编辑文章' : '新建文章'}</h2>
+            {editingArticleId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="text-sm text-gray-300 hover:text-white"
+              >
+                取消编辑
+              </button>
+            )}
+          </div>
           <div>
             <label className="block text-sm mb-2 text-gray-300">标题</label>
             <input
@@ -226,6 +338,38 @@ export default function ManageArticlesPage() {
               className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
               placeholder="https://..."
             />
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm mb-2 text-gray-300">专栏</label>
+              <select
+                value={columnId}
+                onChange={(e) => setColumnId(e.target.value)}
+                className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+              >
+                <option value="">未归入专栏</option>
+                {columns.map((column) => (
+                  <option key={column.id} value={column.id}>{column.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid md:grid-cols-[1fr_120px] gap-2">
+              <input
+                value={newColumnName}
+                onChange={(e) => setNewColumnName(e.target.value)}
+                className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+                placeholder="新建专栏（例如 vibe coding / Vision / Robot）"
+              />
+              <button
+                type="button"
+                onClick={createColumn}
+                disabled={creatingColumn || newColumnName.trim().length === 0}
+                className="cyber-button px-4 py-2 rounded-lg disabled:opacity-60"
+              >
+                {creatingColumn ? '创建中...' : '新增专栏'}
+              </button>
+            </div>
           </div>
 
           <div>
@@ -260,7 +404,7 @@ export default function ManageArticlesPage() {
             disabled={loading}
             className="cyber-button px-5 py-2 rounded-lg disabled:opacity-60"
           >
-            {loading ? '提交中...' : '创建文章'}
+            {loading ? '提交中...' : (editingArticleId ? '保存修改' : '创建文章')}
           </button>
 
           {!canSubmit && (
@@ -281,6 +425,9 @@ export default function ManageArticlesPage() {
                   <p className="text-xs text-gray-500">
                     /articles/{item.slug} · {item.status} · {item.viewCount} 阅读
                   </p>
+                  {item.column && (
+                    <p className="text-xs text-cyan-300 mt-1">专栏：{item.column.name}</p>
+                  )}
                   {item.tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {item.tags.slice(0, 4).map((tag) => (
@@ -291,6 +438,15 @@ export default function ManageArticlesPage() {
                 </div>
                 <div className="flex gap-3 items-center">
                   <Link className="text-cyan-400 hover:text-cyan-300" href={`/articles/${encodeArticleSlug(item.slug)}`}>查看</Link>
+                  {item.status !== 'archived' && (
+                    <button
+                      type="button"
+                      onClick={() => editArticle(item)}
+                      className="text-indigo-300 hover:text-indigo-200"
+                    >
+                      编辑
+                    </button>
+                  )}
                   {item.status === 'draft' && (
                     <button
                       type="button"

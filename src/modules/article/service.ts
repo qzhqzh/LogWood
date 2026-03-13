@@ -12,6 +12,7 @@ export interface ArticleListQuery {
 
 export interface CreateArticleInput {
   title: string
+  columnId?: string
   excerpt?: string
   content: string
   tags?: string[]
@@ -21,6 +22,7 @@ export interface CreateArticleInput {
 
 export interface UpdateArticleInput {
   title?: string
+  columnId?: string
   excerpt?: string
   content?: string
   tags?: string[]
@@ -86,6 +88,13 @@ export async function listArticles(query: ArticleListQuery) {
         id: true,
         title: true,
         slug: true,
+        column: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
         excerpt: true,
         tags: true,
         coverImageUrl: true,
@@ -122,7 +131,18 @@ export async function listAllArticlesForManage() {
       id: true,
       title: true,
       slug: true,
+      columnId: true,
+      column: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+      excerpt: true,
+      content: true,
       tags: true,
+      coverImageUrl: true,
       status: true,
       updatedAt: true,
       publishedAt: true,
@@ -176,6 +196,7 @@ export async function createArticle(input: CreateArticleInput, authorUserId?: st
     data: {
       title: input.title,
       slug,
+      columnId: input.columnId,
       excerpt: input.excerpt,
       content: input.content,
       tags: JSON.stringify(input.tags || []),
@@ -212,6 +233,7 @@ export async function updateArticle(id: string, input: UpdateArticleInput) {
     data: {
       title: input.title,
       slug,
+      columnId: input.columnId,
       excerpt: input.excerpt,
       content: input.content,
       tags: input.tags ? JSON.stringify(input.tags) : undefined,

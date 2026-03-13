@@ -13,6 +13,19 @@ export default async function ArticlesPage() {
     pageSize: 24,
   })
 
+  const groupedArticles = new Map<string, { label: string; items: (typeof articles) }>()
+
+  for (const article of articles) {
+    const key = article.column?.id || 'unassigned'
+    const label = article.column?.name || '未归入专栏'
+    const group = groupedArticles.get(key)
+    if (!group) {
+      groupedArticles.set(key, { label, items: [article] })
+    } else {
+      group.items.push(article)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
@@ -34,25 +47,32 @@ export default async function ArticlesPage() {
         {articles.length === 0 ? (
           <div className="cyber-card rounded-2xl p-10 text-center text-gray-400">暂无文章，先去创建第一篇吧。</div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            {articles.map((article: (typeof articles)[number]) => (
-              <Link
-                key={article.id}
-                href={`/articles/${encodeArticleSlug(article.slug)}`}
-                className="cyber-card rounded-2xl p-6 hover:scale-[1.01] transition-transform"
-              >
-                <h2 className="text-2xl font-semibold text-white mb-3">{article.title}</h2>
-                {article.excerpt && <p className="text-gray-300 mb-4 line-clamp-3">{article.excerpt}</p>}
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <span>
-                    {formatDistanceToNow(new Date(article.publishedAt || article.createdAt), {
-                      addSuffix: true,
-                      locale: zhCN,
-                    })}
-                  </span>
-                  <span>{article.viewCount} 次阅读</span>
+          <div className="space-y-10">
+            {Array.from(groupedArticles.entries()).map(([key, group]) => (
+              <section key={key}>
+                <h2 className="text-xl font-semibold text-cyan-200 mb-4">专栏：{group.label}</h2>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {group.items.map((article: (typeof articles)[number]) => (
+                    <Link
+                      key={article.id}
+                      href={`/articles/${encodeArticleSlug(article.slug)}`}
+                      className="cyber-card rounded-2xl p-6 hover:scale-[1.01] transition-transform"
+                    >
+                      <h3 className="text-2xl font-semibold text-white mb-3">{article.title}</h3>
+                      {article.excerpt && <p className="text-gray-300 mb-4 line-clamp-3">{article.excerpt}</p>}
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <span>
+                          {formatDistanceToNow(new Date(article.publishedAt || article.createdAt), {
+                            addSuffix: true,
+                            locale: zhCN,
+                          })}
+                        </span>
+                        <span>{article.viewCount} 次阅读</span>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-              </Link>
+              </section>
             ))}
           </div>
         )}

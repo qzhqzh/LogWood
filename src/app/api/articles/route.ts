@@ -7,6 +7,7 @@ import { createArticle, listAllArticlesForManage, listArticles } from '@/modules
 
 const createArticleSchema = z.object({
   title: z.string().min(3).max(120),
+  columnId: z.string().min(1).optional(),
   excerpt: z.string().max(240).optional(),
   content: z.string().min(20).max(50000),
   tags: z.array(z.string().min(1).max(30)).optional(),

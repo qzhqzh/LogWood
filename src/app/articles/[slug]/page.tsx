@@ -83,6 +83,7 @@ export default async function ArticleDetailPage({
             {article.title}
           </h1>
           <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-300">
+            {article.column && <span className="px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-200">专栏：{article.column.name}</span>}
             <span className="px-3 py-1 rounded-full bg-white/10">发布于 {format(new Date(article.publishedAt || article.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}</span>
             <span className="px-3 py-1 rounded-full bg-white/10">{article.viewCount + 1} 次阅读</span>
             <span className="px-3 py-1 rounded-full bg-white/10">{article._count.comments} 条评论</span>

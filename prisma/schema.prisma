@@ -220,6 +220,7 @@ model Article {
   id            String        @id @default(cuid())
   title         String
   slug          String        @unique
+  columnId      String?
   excerpt       String?
   content       String
   tags          String        @default("[]")
@@ -232,11 +233,25 @@ model Article {
   updatedAt     DateTime      @updatedAt
 
   author        User?         @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  column        ArticleColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
   comments      ArticleComment[]
 
+  @@index([columnId])
   @@index([status, publishedAt])
   @@index([createdAt])
   @@map("articles")
+}
+
+model ArticleColumn {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  articles  Article[]
+
+  @@map("article_columns")
 }
 
 model Tag {

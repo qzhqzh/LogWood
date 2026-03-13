@@ -127,6 +127,7 @@ const articles = [
     status: 'published' as const,
     publishedAt: new Date(),
     tags: JSON.stringify(['选型', '实践方法']),
+    columnSlug: 'vibe-coding',
   },
   {
     title: 'AI Coding 助手评测方法论：如何做可复现的基准测试',
@@ -152,8 +153,15 @@ const articles = [
     status: 'published' as const,
     publishedAt: new Date(),
     tags: JSON.stringify(['评测体系', '工程化']),
+    columnSlug: 'vision',
   },
 ]
+
+const articleColumns = [
+  { name: 'vibe coding', slug: 'vibe-coding' },
+  { name: 'Vision', slug: 'vision' },
+  { name: 'Robot', slug: 'robot' },
+] as const
 
 const tags = [
   { name: '高效', slug: 'efficient', sentiment: 'good' },
@@ -182,6 +190,22 @@ const apps = [
 ]
 
 async function main() {
+  console.log('Seeding article columns...')
+
+  for (const column of articleColumns) {
+    await (prisma as any).articleColumn.upsert({
+      where: { slug: column.slug },
+      update: column,
+      create: column,
+    })
+    console.log(`Created/Updated article column: ${column.name}`)
+  }
+
+  const columns = await (prisma as any).articleColumn.findMany({
+    select: { id: true, slug: true },
+  })
+  const columnBySlug = new Map<string, string>(columns.map((c: { id: string; slug: string }) => [c.slug, c.id]))
+
   console.log('Seeding targets...')
 
   for (const target of targets) {
@@ -196,10 +220,29 @@ async function main() {
   console.log('Seeding articles...')
 
   for (const article of articles) {
+    const columnId = article.columnSlug ? columnBySlug.get(article.columnSlug) : undefined
     await prisma.article.upsert({
       where: { slug: article.slug },
-      update: article,
-      create: article,
+      update: {
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt,
+        content: article.content,
+        status: article.status,
+        publishedAt: article.publishedAt,
+        tags: article.tags,
+        columnId,
+      },
+      create: {
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt,
+        content: article.content,
+        status: article.status,
+        publishedAt: article.publishedAt,
+        tags: article.tags,
+        columnId,
+      },
     })
     console.log(`Created/Updated article: ${article.title}`)
   }
