@@ -308,9 +308,14 @@ export default async function HomePage() {
               </div>
               <span className="text-xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
             </div>
-            <p className="text-gray-500 text-sm">
-              © 2024 LogWood. AI 编码工具评测社区
-            </p>
+            <div className="text-center">
+              <p className="text-gray-500 text-sm">
+                © 2024 LogWood. AI 编码工具评测社区
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                鄂ICP备2026011298号-1
+              </p>
+            </div>
             <div className="flex gap-6 text-gray-500 text-sm">
               <Link href="/editor" className="hover:text-cyan-400 transition-colors">AI Editor</Link>
               <Link href="/coding" className="hover:text-purple-400 transition-colors">AI Coding</Link>
