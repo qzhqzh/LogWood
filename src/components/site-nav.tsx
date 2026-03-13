@@ -15,7 +15,7 @@ function navBarTintClass(active: NavSection): string {
 }
 
 function navLinkClass(section: NavSection, active: NavSection): string {
-  const base = 'transition-colors font-medium tracking-wide'
+  const base = 'transition-colors font-semibold tracking-wide'
   if (section === active) {
     if (section === 'coding') return `${base} text-cyan-300`
     if (section === 'app') return `${base} text-purple-300`

@@ -30,10 +30,6 @@ export default async function AppWorkshopPage() {
           </div>
         </div>
 
-        <div className="mb-8 flex justify-end">
-          <Link href="/app/manage" className="cyber-button px-6 py-3 rounded-lg font-semibold">进入 App 管理</Link>
-        </div>
-
         {apps.length === 0 ? (
           <div className="cyber-card rounded-2xl p-10 text-center">
             <p className="text-gray-400 mb-4">当前还没有上架的 App。</p>
