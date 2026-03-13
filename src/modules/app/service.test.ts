@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppStatus } from '@prisma/client'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     app: {
       findUnique: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
       findMany: vi.fn(),
       count: vi.fn(),
     },
@@ -13,12 +13,13 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 import { prisma } from '@/lib/prisma'
-import { createApp, getAppBySlug, listApps } from './service'
+import { createApp, getAppBySlug, listAllAppsForManage, listApps, updateApp } from './service'
 
 const prismaMock = prisma as unknown as {
   app: {
     findUnique: ReturnType<typeof vi.fn>
     create: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
     findMany: ReturnType<typeof vi.fn>
     count: ReturnType<typeof vi.fn>
   }
@@ -38,7 +39,7 @@ describe('app/service', () => {
       name: 'Dev Toolbox',
       slug: 'dev-toolbox-2',
       title: 'Dev Toolbox',
-      status: AppStatus.published,
+      status: 'published',
     })
 
     const result = await createApp({
@@ -68,7 +69,7 @@ describe('app/service', () => {
 
     expect(prismaMock.app.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: AppStatus.published },
+        where: { status: 'published' },
       })
     )
     expect(result.total).toBe(0)
@@ -85,7 +86,7 @@ describe('app/service', () => {
       description: 'description',
       previewImageUrl: null,
       tags: '["workflow","tooling"]',
-      status: AppStatus.published,
+      status: 'published',
       createdAt: new Date('2026-03-13T00:00:00.000Z'),
       updatedAt: new Date('2026-03-13T00:00:00.000Z'),
     })
@@ -93,5 +94,65 @@ describe('app/service', () => {
     const result = await getAppBySlug('dev-toolbox')
 
     expect(result?.tags).toEqual(['workflow', 'tooling'])
+  })
+
+  it('returns parsed tags in manage list', async () => {
+    prismaMock.app.findMany.mockResolvedValue([
+      {
+        id: 'app1',
+        name: 'Dev Toolbox',
+        slug: 'dev-toolbox',
+        appUrl: 'https://example.com',
+        title: 'Dev Toolbox',
+        summary: 'summary',
+        description: 'description',
+        previewImageUrl: null,
+        tags: '["workflow","tooling"]',
+        status: 'published',
+        updatedAt: new Date('2026-03-13T00:00:00.000Z'),
+      },
+    ])
+
+    const result = await listAllAppsForManage()
+
+    expect(result[0]?.tags).toEqual(['workflow', 'tooling'])
+  })
+
+  it('updates slug when app name changes', async () => {
+    prismaMock.app.findUnique
+      .mockResolvedValueOnce({ id: 'app1', name: 'Dev Toolbox' })
+      .mockResolvedValueOnce(null)
+    prismaMock.app.update.mockResolvedValue({
+      id: 'app1',
+      name: 'Dev Toolbox Pro',
+      slug: 'dev-toolbox-pro',
+      title: 'Dev Toolbox Pro',
+      status: 'archived',
+    })
+
+    const result = await updateApp({
+      id: 'app1',
+      name: 'Dev Toolbox Pro',
+      appUrl: 'https://example.com/pro',
+      title: 'Dev Toolbox Pro',
+      summary: 'updated summary',
+      description: 'updated description with enough length',
+      previewImageUrl: '',
+      tags: ['workflow', 'pro'],
+      status: 'archived',
+    })
+
+    expect(prismaMock.app.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'app1' },
+        data: expect.objectContaining({
+          slug: 'dev-toolbox-pro',
+          previewImageUrl: null,
+          tags: '["workflow","pro"]',
+          status: 'archived',
+        }),
+      })
+    )
+    expect(result.slug).toBe('dev-toolbox-pro')
   })
 })

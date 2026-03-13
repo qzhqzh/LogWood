@@ -32,6 +32,17 @@ export interface CreateTargetInput {
   features?: string[]
 }
 
+export interface UpdateTargetInput {
+  id: string
+  name: string
+  type: TargetType
+  logoUrl?: string
+  description?: string
+  websiteUrl?: string
+  developer?: string
+  features?: string[]
+}
+
 function parseFeatures(features: string): string[] {
   try {
     return JSON.parse(features)
@@ -112,6 +123,36 @@ export async function createTarget(input: CreateTargetInput) {
     data: {
       name: input.name,
       slug,
+      type: input.type,
+      logoUrl: input.logoUrl || null,
+      description: input.description || null,
+      websiteUrl: input.websiteUrl || null,
+      developer: input.developer || null,
+      features: JSON.stringify(input.features || []),
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      type: true,
+    },
+  })
+}
+
+export async function updateTarget(input: UpdateTargetInput) {
+  const existing = await prisma.target.findUnique({
+    where: { id: input.id },
+    select: { id: true },
+  })
+
+  if (!existing) {
+    throw new Error('ERR_TARGET_NOT_FOUND')
+  }
+
+  return prisma.target.update({
+    where: { id: input.id },
+    data: {
+      name: input.name,
       type: input.type,
       logoUrl: input.logoUrl || null,
       description: input.description || null,

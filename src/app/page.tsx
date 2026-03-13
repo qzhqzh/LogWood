@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { listArticles } from '@/modules/article'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import { SiteFooter } from '@/components/site-footer'
 
 export const dynamic = 'force-dynamic'
 
@@ -303,31 +304,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <footer className="border-t border-cyan-500/10 py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">LW</span>
-              </div>
-              <span className="text-xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-500 text-sm">
-                © 2024 LogWood. AI 编码工具评测社区
-              </p>
-              <p className="text-gray-500 text-xs mt-1">
-                鄂ICP备2026011298号-1
-              </p>
-            </div>
-            <div className="flex gap-6 text-gray-500 text-sm">
-              <Link href="/coding" className="hover:text-cyan-400 transition-colors">AI Coding</Link>
-              <Link href="/app" className="hover:text-purple-400 transition-colors">应用工坊</Link>
-              <Link href="/articles" className="hover:text-pink-400 transition-colors">社区文章</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   )
 }

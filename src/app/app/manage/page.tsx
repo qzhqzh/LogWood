@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
+import { TagPicker } from '@/components/tag-picker'
 
 type AppStatus = 'draft' | 'published' | 'archived'
 
@@ -13,19 +14,23 @@ interface AppItem {
   appUrl: string
   title: string
   summary: string
+  description: string
+  previewImageUrl: string | null
+  tags: string[]
   status: AppStatus
   updatedAt: string
 }
 
 export default function ManageAppsPage() {
   const { data: session, status: sessionStatus } = useSession()
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [appUrl, setAppUrl] = useState('')
   const [title, setTitle] = useState('')
   const [summary, setSummary] = useState('')
   const [description, setDescription] = useState('')
   const [previewImageUrl, setPreviewImageUrl] = useState('')
-  const [tags, setTags] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [status, setStatus] = useState<AppStatus>('published')
   const [apps, setApps] = useState<AppItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -38,6 +43,31 @@ export default function ManageAppsPage() {
       && description.trim().length >= 20
       && appUrl.trim().length > 0
   }, [name, title, summary, description, appUrl])
+
+  function resetForm() {
+    setEditingId(null)
+    setName('')
+    setAppUrl('')
+    setTitle('')
+    setSummary('')
+    setDescription('')
+    setPreviewImageUrl('')
+    setTags([])
+    setStatus('published')
+  }
+
+  function startEditing(app: AppItem) {
+    setEditingId(app.id)
+    setName(app.name)
+    setAppUrl(app.appUrl)
+    setTitle(app.title)
+    setSummary(app.summary)
+    setDescription(app.description)
+    setPreviewImageUrl(app.previewImageUrl || '')
+    setTags(app.tags)
+    setStatus(app.status)
+    setError(null)
+  }
 
   async function loadApps() {
     const res = await fetch('/api/apps?manage=true', { cache: 'no-store' })
@@ -80,35 +110,29 @@ export default function ManageAppsPage() {
       setLoading(true)
       setError(null)
       const res = await fetch('/api/apps', {
-        method: 'POST',
+        method: editingId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: editingId || undefined,
           name,
           appUrl,
           title,
           summary,
           description,
           previewImageUrl: previewImageUrl.trim() || undefined,
-          tags: tags.split(',').map((item) => item.trim()).filter(Boolean),
+          tags,
           status,
         }),
       })
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || '创建失败')
+        throw new Error(data.error || (editingId ? '更新失败' : '创建失败'))
       }
 
-      setName('')
-      setAppUrl('')
-      setTitle('')
-      setSummary('')
-      setDescription('')
-      setPreviewImageUrl('')
-      setTags('')
-      setStatus('published')
+      resetForm()
       await loadApps()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '创建失败')
+      setError(e instanceof Error ? e.message : (editingId ? '更新失败' : '创建失败'))
     } finally {
       setLoading(false)
     }
@@ -123,6 +147,17 @@ export default function ManageAppsPage() {
         </div>
 
         <form onSubmit={submitApp} className="cyber-card rounded-2xl p-6 mb-8 space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white">{editingId ? '编辑历史 App' : '新增 App'}</h2>
+              <p className="text-sm text-gray-400 mt-1">历史应用可回填到表单中继续维护，slug 保持不变。</p>
+            </div>
+            {editingId && (
+              <button type="button" onClick={resetForm} className="rounded-lg border border-cyan-500/30 px-4 py-2 text-sm text-cyan-300 hover:border-cyan-400/50 hover:text-cyan-200">
+                取消编辑
+              </button>
+            )}
+          </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm mb-2 text-gray-300">名称</label>
@@ -151,18 +186,19 @@ export default function ManageAppsPage() {
               <input value={previewImageUrl} onChange={(e) => setPreviewImageUrl(e.target.value)} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="https://..." />
             </div>
             <div>
-              <label className="block text-sm mb-2 text-gray-300">标签</label>
-              <input value={tags} onChange={(e) => setTags(e.target.value)} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="逗号分隔，如 workflow,agent" />
-            </div>
-            <div>
               <label className="block text-sm mb-2 text-gray-300">状态</label>
               <select value={status} onChange={(e) => setStatus(e.target.value as AppStatus)} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white">
                 <option value="draft">草稿</option>
                 <option value="published">发布</option>
+                <option value="archived">归档</option>
               </select>
             </div>
           </div>
-          <button type="submit" disabled={loading || !canSubmit} className="cyber-button px-5 py-2 rounded-lg disabled:opacity-60">{loading ? '提交中...' : '新增 App'}</button>
+          <div>
+            <label className="block text-sm mb-2 text-gray-300">标签</label>
+            <TagPicker value={tags} onChange={setTags} disabled={loading} allowCreate={false} />
+          </div>
+          <button type="submit" disabled={loading || !canSubmit} className="cyber-button px-5 py-2 rounded-lg disabled:opacity-60">{loading ? (editingId ? '保存中...' : '提交中...') : (editingId ? '保存修改' : '新增 App')}</button>
           {error && <p className="text-red-400 text-sm">{error}</p>}
         </form>
 
@@ -175,7 +211,10 @@ export default function ManageAppsPage() {
                   <p className="text-white">{item.title}</p>
                   <p className="text-xs text-gray-500">/app/{item.slug} · {item.status}</p>
                 </div>
-                <a className="text-cyan-400 hover:text-cyan-300" href={item.appUrl} target="_blank" rel="noopener noreferrer">打开</a>
+                <div className="flex items-center gap-4">
+                  <button type="button" onClick={() => startEditing(item)} className="text-cyan-400 hover:text-cyan-300">编辑</button>
+                  <a className="text-cyan-400 hover:text-cyan-300" href={item.appUrl} target="_blank" rel="noopener noreferrer">打开</a>
+                </div>
               </div>
             ))}
             {apps.length === 0 && <p className="text-gray-500 text-sm">暂无 App，先创建一个。</p>}

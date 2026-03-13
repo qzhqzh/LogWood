@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { listApps } from '@/modules/app'
 import { SiteNav } from '@/components/site-nav'
+import { SiteFooter } from '@/components/site-footer'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,6 +58,7 @@ export default async function AppWorkshopPage() {
           </div>
         )}
       </section>
+      <SiteFooter />
     </main>
   )
 }

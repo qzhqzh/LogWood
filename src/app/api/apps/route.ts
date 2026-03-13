@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { AppStatus } from '@prisma/client'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
-import { createApp, listAllAppsForManage, listApps } from '@/modules/app'
+import { APP_STATUSES, createApp, listAllAppsForManage, listApps, updateApp } from '@/modules/app'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,10 +17,16 @@ const createAppSchema = z.object({
     z.string().url().optional()
   ),
   tags: z.array(z.string().min(1).max(30)).optional(),
-  status: z.nativeEnum(AppStatus).optional(),
+  status: z.enum(APP_STATUSES).optional(),
 })
 
 type CreateAppPayload = z.infer<typeof createAppSchema>
+
+const updateAppSchema = createAppSchema.extend({
+  id: z.string().min(1),
+})
+
+type UpdateAppPayload = z.infer<typeof updateAppSchema>
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = parseInt(searchParams.get('pageSize') || '12')
-    const result = await listApps({ page, pageSize, status: AppStatus.published })
+    const result = await listApps({ page, pageSize, status: 'published' })
 
     return NextResponse.json(result)
   } catch (error) {
@@ -70,6 +75,35 @@ export async function POST(request: NextRequest) {
     }
 
     console.error('POST /api/apps error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'ERR_UNAUTHORIZED' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const validated: UpdateAppPayload = updateAppSchema.parse(body)
+    const app = await updateApp(validated)
+
+    return NextResponse.json(app)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'ERR_APP_VALIDATION', details: error.errors },
+        { status: 400 }
+      )
+    }
+
+    if (error instanceof Error && error.message === 'ERR_APP_NOT_FOUND') {
+      return NextResponse.json({ error: error.message }, { status: 404 })
+    }
+
+    console.error('PATCH /api/apps error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

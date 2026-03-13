@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { encodeArticleSlug, listArticles } from '@/modules/article'
 import { SiteNav } from '@/components/site-nav'
+import { SiteFooter } from '@/components/site-footer'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +35,7 @@ export default async function ArticlesPage() {
           <div className="cyber-card rounded-2xl p-10 text-center text-gray-400">暂无文章，先去创建第一篇吧。</div>
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
-            {articles.map((article) => (
+            {articles.map((article: (typeof articles)[number]) => (
               <Link
                 key={article.id}
                 href={`/articles/${encodeArticleSlug(article.slug)}`}
@@ -56,6 +57,7 @@ export default async function ArticlesPage() {
           </div>
         )}
       </section>
+      <SiteFooter />
     </main>
   )
 }

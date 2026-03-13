@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { signIn, useSession } from 'next-auth/react'
 import type { ArticleStatus as PrismaArticleStatus } from '@prisma/client'
 import { encodeArticleSlug } from '@/modules/article'
+import { TagPicker } from '@/components/tag-picker'
 
 const RichTextEditor = dynamic(() => import('@/components/rich-text-editor'), {
   ssr: false,
@@ -20,6 +21,7 @@ interface ArticleItem {
   id: string
   title: string
   slug: string
+  tags: string[]
   status: ArticleStatus
   updatedAt: string
   publishedAt: string | null
@@ -33,6 +35,7 @@ export default function ManageArticlesPage() {
   const [content, setContent] = useState('<p></p>')
   const [contentTextLength, setContentTextLength] = useState(0)
   const [coverImageUrl, setCoverImageUrl] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [status, setStatus] = useState<ArticleStatus>('draft')
   const [articles, setArticles] = useState<ArticleItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -111,6 +114,7 @@ export default function ManageArticlesPage() {
           excerpt: excerpt || undefined,
           content,
           coverImageUrl: coverImageUrl.trim() || undefined,
+          tags,
           status,
         }),
       })
@@ -124,6 +128,7 @@ export default function ManageArticlesPage() {
       setContent('<p></p>')
       setContentTextLength(0)
       setCoverImageUrl('')
+      setTags([])
       setStatus('draft')
       await loadArticles()
     } catch (e) {
@@ -245,6 +250,11 @@ export default function ManageArticlesPage() {
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm mb-2 text-gray-300">标签</label>
+            <TagPicker value={tags} onChange={setTags} disabled={loading} />
+          </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -271,6 +281,13 @@ export default function ManageArticlesPage() {
                   <p className="text-xs text-gray-500">
                     /articles/{item.slug} · {item.status} · {item.viewCount} 阅读
                   </p>
+                  {item.tags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {item.tags.slice(0, 4).map((tag) => (
+                        <span key={tag} className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 text-xs">{tag}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3 items-center">
                   <Link className="text-cyan-400 hover:text-cyan-300" href={`/articles/${encodeArticleSlug(item.slug)}`}>查看</Link>

@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { ArticleStatus } from '@prisma/client'
 
+const articleModel = (prisma as any).article
+
 export interface ArticleListQuery {
   page?: number
   pageSize?: number
@@ -12,6 +14,7 @@ export interface CreateArticleInput {
   title: string
   excerpt?: string
   content: string
+  tags?: string[]
   coverImageUrl?: string
   status?: ArticleStatus
 }
@@ -20,8 +23,17 @@ export interface UpdateArticleInput {
   title?: string
   excerpt?: string
   content?: string
+  tags?: string[]
   coverImageUrl?: string
   status?: ArticleStatus
+}
+
+function parseTags(tags: string): string[] {
+  try {
+    return JSON.parse(tags)
+  } catch {
+    return []
+  }
 }
 
 function slugify(input: string): string {
@@ -40,7 +52,7 @@ async function ensureUniqueSlug(baseSlug: string, articleIdToIgnore?: string): P
   let i = 1
 
   while (true) {
-    const existing = await prisma.article.findUnique({ where: { slug } })
+    const existing = await articleModel.findUnique({ where: { slug } })
     if (!existing || existing.id === articleIdToIgnore) return slug
     i += 1
     slug = `${baseSlug}-${i}`
@@ -65,7 +77,7 @@ export async function listArticles(query: ArticleListQuery) {
   }
 
   const [articles, total] = await Promise.all([
-    prisma.article.findMany({
+    articleModel.findMany({
       where,
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
       skip: (page - 1) * pageSize,
@@ -75,6 +87,7 @@ export async function listArticles(query: ArticleListQuery) {
         title: true,
         slug: true,
         excerpt: true,
+        tags: true,
         coverImageUrl: true,
         status: true,
         publishedAt: true,
@@ -90,19 +103,26 @@ export async function listArticles(query: ArticleListQuery) {
         },
       },
     }),
-    prisma.article.count({ where }),
+    articleModel.count({ where }),
   ])
 
-  return { articles, total }
+  return {
+    articles: articles.map((article: any) => ({
+      ...article,
+      tags: parseTags(article.tags),
+    })),
+    total,
+  }
 }
 
 export async function listAllArticlesForManage() {
-  return prisma.article.findMany({
+  const articles = await articleModel.findMany({
     orderBy: [{ updatedAt: 'desc' }],
     select: {
       id: true,
       title: true,
       slug: true,
+      tags: true,
       status: true,
       updatedAt: true,
       publishedAt: true,
@@ -116,10 +136,15 @@ export async function listAllArticlesForManage() {
       },
     },
   })
+
+  return articles.map((article: any) => ({
+    ...article,
+    tags: parseTags(article.tags),
+  }))
 }
 
 export async function getArticleBySlug(slug: string) {
-  return prisma.article.findUnique({
+  const article = await articleModel.findUnique({
     where: { slug },
     include: {
       author: {
@@ -134,18 +159,26 @@ export async function getArticleBySlug(slug: string) {
       },
     },
   })
+
+  if (!article) return null
+
+  return {
+    ...article,
+    tags: parseTags(article.tags || '[]'),
+  }
 }
 
 export async function createArticle(input: CreateArticleInput, authorUserId?: string) {
   const baseSlug = slugify(input.title)
   const slug = await ensureUniqueSlug(baseSlug)
 
-  return prisma.article.create({
+  return articleModel.create({
     data: {
       title: input.title,
       slug,
       excerpt: input.excerpt,
       content: input.content,
+      tags: JSON.stringify(input.tags || []),
       coverImageUrl: input.coverImageUrl,
       status: input.status ?? ArticleStatus.draft,
       authorUserId,
@@ -163,7 +196,7 @@ export async function createArticle(input: CreateArticleInput, authorUserId?: st
 }
 
 export async function updateArticle(id: string, input: UpdateArticleInput) {
-  const existing = await prisma.article.findUnique({ where: { id } })
+  const existing = await articleModel.findUnique({ where: { id } })
   if (!existing) return null
 
   let slug: string | undefined
@@ -174,13 +207,14 @@ export async function updateArticle(id: string, input: UpdateArticleInput) {
   const nextStatus = input.status ?? existing.status
   const shouldSetPublishedAt = existing.status !== ArticleStatus.published && nextStatus === ArticleStatus.published
 
-  return prisma.article.update({
+  return articleModel.update({
     where: { id },
     data: {
       title: input.title,
       slug,
       excerpt: input.excerpt,
       content: input.content,
+      tags: input.tags ? JSON.stringify(input.tags) : undefined,
       coverImageUrl: input.coverImageUrl,
       status: input.status,
       publishedAt: shouldSetPublishedAt ? new Date() : existing.publishedAt,
@@ -197,10 +231,10 @@ export async function updateArticle(id: string, input: UpdateArticleInput) {
 }
 
 export async function archiveArticle(id: string) {
-  const existing = await prisma.article.findUnique({ where: { id } })
+  const existing = await articleModel.findUnique({ where: { id } })
   if (!existing) return null
 
-  return prisma.article.update({
+  return articleModel.update({
     where: { id },
     data: {
       status: ArticleStatus.archived,
@@ -214,7 +248,7 @@ export async function archiveArticle(id: string) {
 }
 
 export async function increaseArticleView(slug: string) {
-  await prisma.article.update({
+  await articleModel.update({
     where: { slug },
     data: {
       viewCount: {

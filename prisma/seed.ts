@@ -126,6 +126,7 @@ const articles = [
 先用 2 周试点，采集效率指标后再做组织级切换。`,
     status: 'published' as const,
     publishedAt: new Date(),
+    tags: JSON.stringify(['选型', '实践方法']),
   },
   {
     title: 'AI Coding 助手评测方法论：如何做可复现的基准测试',
@@ -150,8 +151,21 @@ const articles = [
 - 回归问题数量`,
     status: 'published' as const,
     publishedAt: new Date(),
+    tags: JSON.stringify(['评测体系', '工程化']),
   },
 ]
+
+const tags = [
+  { name: '高效', slug: 'efficient', sentiment: 'good' },
+  { name: '稳定', slug: 'stable', sentiment: 'good' },
+  { name: '不稳定', slug: 'unstable', sentiment: 'bad' },
+  { name: '工作流', slug: 'workflow', sentiment: 'good' },
+  { name: '团队协作', slug: 'team-collaboration', sentiment: 'good' },
+  { name: '体验一般', slug: 'so-so-experience', sentiment: 'bad' },
+  { name: '方法论', slug: 'methodology', sentiment: 'good' },
+  { name: '实战', slug: 'hands-on', sentiment: 'good' },
+  { name: '信息过时', slug: 'outdated', sentiment: 'bad' },
+] as const
 
 const apps = [
   {
@@ -200,6 +214,13 @@ async function main() {
     })
     console.log(`Created/Updated app: ${app.title}`)
   }
+
+  console.log('Seeding tag pool...')
+
+  await (prisma as any).tag.createMany({
+    data: tags,
+    skipDuplicates: true,
+  })
 
   console.log('Seeding completed!')
 }

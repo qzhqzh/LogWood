@@ -15,7 +15,7 @@ export function sanitizeCallbackUrl(raw: string | null | undefined, fallback: st
   try {
     const parsed = new URL(value)
     if (LOCAL_HOSTS.has(parsed.hostname)) {
-      return fallback
+      return `${parsed.pathname}${parsed.search}${parsed.hash}` || fallback
     }
 
     return `${parsed.pathname}${parsed.search}${parsed.hash}` || fallback

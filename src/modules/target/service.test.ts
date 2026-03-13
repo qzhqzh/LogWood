@@ -7,12 +7,13 @@ vi.mock('@/lib/prisma', () => ({
       findFirst: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
     },
   },
 }))
 
 import { prisma } from '@/lib/prisma'
-import { createTarget, getFeatures, getTargetBySlug, listTargets } from './service'
+import { createTarget, getFeatures, getTargetBySlug, listTargets, updateTarget } from './service'
 
 const prismaMock = prisma as unknown as {
   target: {
@@ -20,6 +21,7 @@ const prismaMock = prisma as unknown as {
     findFirst: ReturnType<typeof vi.fn>
     findUnique: ReturnType<typeof vi.fn>
     create: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
   }
 }
 
@@ -99,7 +101,7 @@ describe('target/service', () => {
 
     const result = await createTarget({
       name: 'Prompt Deck',
-      type: 'prompt',
+      type: 'prompt' as any,
       features: ['模板', '版本'],
     })
 
@@ -113,5 +115,33 @@ describe('target/service', () => {
       })
     )
     expect(result.slug).toBe('prompt-deck-2')
+  })
+
+  it('updates existing target features', async () => {
+    prismaMock.target.findUnique.mockResolvedValue({ id: 't1' })
+    prismaMock.target.update.mockResolvedValue({
+      id: 't1',
+      name: 'Cursor Pro',
+      slug: 'cursor',
+      type: 'editor',
+    })
+
+    const result = await updateTarget({
+      id: 't1',
+      name: 'Cursor Pro',
+      type: 'editor',
+      websiteUrl: 'https://cursor.sh',
+      features: ['高效', '稳定'],
+    })
+
+    expect(prismaMock.target.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 't1' },
+        data: expect.objectContaining({
+          features: '["高效","稳定"]',
+        }),
+      })
+    )
+    expect(result.slug).toBe('cursor')
   })
 })

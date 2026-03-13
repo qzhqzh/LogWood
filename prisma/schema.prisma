@@ -20,6 +20,11 @@ enum AppStatus {
   archived
 }
 
+enum TagSentiment {
+  good
+  bad
+}
+
 enum ReviewStatus {
   published
   pending
@@ -217,6 +222,7 @@ model Article {
   slug          String        @unique
   excerpt       String?
   content       String
+  tags          String        @default("[]")
   coverImageUrl String?
   status        ArticleStatus @default(draft)
   authorUserId  String?
@@ -231,6 +237,19 @@ model Article {
   @@index([status, publishedAt])
   @@index([createdAt])
   @@map("articles")
+}
+
+model Tag {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String
+  sentiment TagSentiment @default(good)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([slug])
+  @@index([sentiment])
+  @@map("tags")
 }
 
 model App {

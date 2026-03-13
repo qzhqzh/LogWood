@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
+import { TagPicker } from '@/components/tag-picker'
 
 type TargetType = 'editor' | 'coding' | 'model' | 'prompt'
 
@@ -11,22 +12,51 @@ interface TargetItem {
   name: string
   slug: string
   type: TargetType
+  logoUrl?: string | null
+  description?: string | null
+  websiteUrl?: string | null
+  developer?: string | null
+  features: string[]
 }
 
 export default function ManageTargetsPage() {
   const { status: sessionStatus } = useSession()
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [type, setType] = useState<TargetType>('coding')
   const [logoUrl, setLogoUrl] = useState('')
   const [description, setDescription] = useState('')
   const [websiteUrl, setWebsiteUrl] = useState('')
   const [developer, setDeveloper] = useState('')
-  const [features, setFeatures] = useState('')
+  const [features, setFeatures] = useState<string[]>([])
   const [targets, setTargets] = useState<TargetItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const canSubmit = useMemo(() => name.trim().length >= 2, [name])
+
+  function resetForm() {
+    setEditingId(null)
+    setName('')
+    setType('coding')
+    setLogoUrl('')
+    setDescription('')
+    setWebsiteUrl('')
+    setDeveloper('')
+    setFeatures([])
+  }
+
+  function startEditing(target: TargetItem) {
+    setEditingId(target.id)
+    setName(target.name)
+    setType(target.type)
+    setLogoUrl(target.logoUrl || '')
+    setDescription(target.description || '')
+    setWebsiteUrl(target.websiteUrl || '')
+    setDeveloper(target.developer || '')
+    setFeatures(target.features)
+    setError(null)
+  }
 
   async function loadTargets() {
     const res = await fetch('/api/targets', { cache: 'no-store' })
@@ -68,33 +98,28 @@ export default function ManageTargetsPage() {
       setLoading(true)
       setError(null)
       const res = await fetch('/api/targets', {
-        method: 'POST',
+        method: editingId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: editingId || undefined,
           name,
           type,
           logoUrl: logoUrl.trim() || undefined,
           description: description.trim() || undefined,
           websiteUrl: websiteUrl.trim() || undefined,
           developer: developer.trim() || undefined,
-          features: features.split(',').map((item) => item.trim()).filter(Boolean),
+          features,
         }),
       })
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || '创建失败')
+        throw new Error(data.error || (editingId ? '更新失败' : '创建失败'))
       }
 
-      setName('')
-      setType('coding')
-      setLogoUrl('')
-      setDescription('')
-      setWebsiteUrl('')
-      setDeveloper('')
-      setFeatures('')
+      resetForm()
       await loadTargets()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '创建失败')
+      setError(e instanceof Error ? e.message : (editingId ? '更新失败' : '创建失败'))
     } finally {
       setLoading(false)
     }
@@ -109,6 +134,17 @@ export default function ManageTargetsPage() {
         </div>
 
         <form onSubmit={submitTarget} className="cyber-card rounded-2xl p-6 mb-8 space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white">{editingId ? '编辑评测目标' : '新增评测目标'}</h2>
+              <p className="text-sm text-gray-400 mt-1">可编辑历史目标，并从统一标签池选择或快速创建标签。</p>
+            </div>
+            {editingId && (
+              <button type="button" onClick={resetForm} className="rounded-lg border border-cyan-500/30 px-4 py-2 text-sm text-cyan-300 hover:border-cyan-400/50 hover:text-cyan-200">
+                取消编辑
+              </button>
+            )}
+          </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm mb-2 text-gray-300">名称</label>
@@ -130,10 +166,14 @@ export default function ManageTargetsPage() {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <input value={developer} onChange={(e) => setDeveloper(e.target.value)} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="开发者 / 团队" />
-            <input value={features} onChange={(e) => setFeatures(e.target.value)} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="功能标签，逗号分隔" />
+            <div className="text-xs text-gray-500 flex items-center">标签已改为标签池维护，可在下方选择或快速创建。</div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2 text-gray-300">标签</label>
+            <TagPicker value={features} onChange={setFeatures} disabled={loading} />
           </div>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="简要描述目标定位和能力边界" />
-          <button type="submit" disabled={loading || !canSubmit} className="cyber-button px-5 py-2 rounded-lg disabled:opacity-60">{loading ? '提交中...' : '新增评测目标'}</button>
+          <button type="submit" disabled={loading || !canSubmit} className="cyber-button px-5 py-2 rounded-lg disabled:opacity-60">{loading ? (editingId ? '保存中...' : '提交中...') : (editingId ? '保存修改' : '新增评测目标')}</button>
           {error && <p className="text-red-400 text-sm">{error}</p>}
         </form>
 
@@ -142,8 +182,20 @@ export default function ManageTargetsPage() {
           <div className="grid md:grid-cols-2 gap-3">
             {targets.map((item) => (
               <div key={item.id} className="border border-cyan-500/15 rounded-lg p-3">
-                <p className="text-white">{item.name}</p>
-                <p className="text-xs text-gray-500">{item.type} / {item.slug}</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-white">{item.name}</p>
+                    <p className="text-xs text-gray-500">{item.type} / {item.slug}</p>
+                  </div>
+                  <button type="button" onClick={() => startEditing(item)} className="text-cyan-400 hover:text-cyan-300 text-sm">编辑</button>
+                </div>
+                {item.features.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {item.features.slice(0, 4).map((feature) => (
+                      <span key={feature} className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 text-xs">{feature}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
