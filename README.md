@@ -11,6 +11,12 @@ LogWood 的目标是构建一个高质量、可持续迭代的评测平台：
 
 当前规划基于 [SPEC.md](./SPEC.md)，并按 Phase 1 -> Phase 3 分阶段落地。
 
+## Project Plan (必读)
+
+- 项目计划书：[`docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md)
+- 该文件用于快速理解项目现状、边界、部署、风险与近期变更。
+- 凡是功能新增、功能修复、架构调整、部署策略变化，必须同步更新项目计划书。
+
 ## Core Features
 
 - 工具目录与详情：`/editor`、`/coding`、`/:type/[slug]`

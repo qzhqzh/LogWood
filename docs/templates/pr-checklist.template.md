@@ -3,6 +3,7 @@
 ## 1. Scope and Spec
 - [ ] 改动范围清晰，未混入无关变更
 - [ ] 对应 `SPEC.md` 或模块 `module-spec.md` 已更新/确认无需更新
+- [ ] `docs/PROJECT_PLAN.md` 已更新/确认无需更新
 - [ ] 若有架构级变更，已新增或更新 ADR
 
 ## 2. Module Boundaries

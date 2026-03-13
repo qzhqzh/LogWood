@@ -9,6 +9,17 @@ import { prisma } from '@/lib/prisma'
 const adminEmail = process.env.ADMIN_EMAIL
 const adminPassword = process.env.ADMIN_PASSWORD
 const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH
+const nextAuthUrl = process.env.NEXTAUTH_URL || ''
+
+if (process.env.NODE_ENV === 'production') {
+  if (!nextAuthUrl) {
+    throw new Error('NEXTAUTH_URL is required in production')
+  }
+
+  if (/localhost|127\.0\.0\.1/.test(nextAuthUrl)) {
+    throw new Error('NEXTAUTH_URL cannot point to localhost in production')
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),

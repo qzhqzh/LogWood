@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { signIn, useSession } from 'next-auth/react'
+import { sanitizeCallbackUrl } from '@/modules/identity/callback-url'
 
 export default function SignInPage() {
   const { data: session, status } = useSession()
@@ -15,7 +16,7 @@ export default function SignInPage() {
   const callbackUrl = useMemo(() => {
     if (typeof window === 'undefined') return '/articles/manage'
     const url = new URL(window.location.href)
-    return url.searchParams.get('callbackUrl') || '/articles/manage'
+    return sanitizeCallbackUrl(url.searchParams.get('callbackUrl'), '/articles/manage')
   }, [])
 
   useEffect(() => {
