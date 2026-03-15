@@ -44,7 +44,6 @@ describe('review/service createReview', () => {
       createReview(
         {
           targetId: 't1',
-          category: 'ux',
           rating: 6,
           content: 'a'.repeat(80),
         },
@@ -60,7 +59,6 @@ describe('review/service createReview', () => {
       createReview(
         {
           targetId: 'missing',
-          category: 'ux',
           rating: 4,
           content: 'a'.repeat(80),
         },
@@ -81,7 +79,6 @@ describe('review/service createReview', () => {
     const result = await createReview(
       {
         targetId: 't1',
-        category: 'ux',
         rating: 4,
         content: 'a'.repeat(80),
       },

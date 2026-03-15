@@ -1,8 +1,12 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { getServerSession } from 'next-auth'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { ReviewList } from '@/components/review-list'
+import { authOptions } from '@/lib/auth'
+import { isAdminSession } from '@/lib/authz'
+import { SiteFooter } from '@/components/site-footer'
+import { TargetReviewSection } from '@/components/target-review-section'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,13 +24,16 @@ interface TargetPageProps {
 
 export default async function EditorDetailPage({ params }: TargetPageProps) {
   const { slug } = await params
+  const session = await getServerSession(authOptions)
+  const isAdmin = isAdminSession(session)
+  const canPublishReview = Boolean(session?.user?.id)
   
   const target = await prisma.target.findFirst({
     where: { slug, type: 'editor' },
     include: {
       reviews: {
         where: { status: 'published' },
-        select: { rating: true, category: true },
+        select: { rating: true },
       },
     },
   })
@@ -42,11 +49,8 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
     : null
 
   const ratingDistribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-  const categoryStats: Record<string, number> = {}
-
   target.reviews.forEach((r) => {
     ratingDistribution[r.rating] = (ratingDistribution[r.rating] || 0) + 1
-    categoryStats[r.category] = (categoryStats[r.category] || 0) + 1
   })
 
   const totalReviews = target.reviews.length
@@ -74,9 +78,20 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
               <Link href="/coding" className="text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide">
                 AI Coding
               </Link>
-              <Link href="/submit" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">
-                发布评测
+              <Link href="/app" className="text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide">
+                应用工坊
               </Link>
+              <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide">
+                社区文章
+              </Link>
+              {isAdmin && (
+                <Link
+                  href="/targets/manage/editor"
+                  className="cyber-button w-[112px] text-center px-5 py-2 rounded-lg font-semibold tracking-wide"
+                >
+                  评测管理
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -148,14 +163,8 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
             <div className="cyber-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测列表</h2>
-                <Link
-                  href={`/submit?targetId=${target.id}`}
-                  className="cyber-button px-4 py-2 rounded-lg text-sm"
-                >
-                  发布评测
-                </Link>
               </div>
-              <ReviewList targetId={target.id} />
+              <TargetReviewSection targetId={target.id} canPublishReview={canPublishReview} />
             </div>
           </div>
 
@@ -187,25 +196,10 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
                 <p className="text-gray-500 text-sm">暂无评分数据</p>
               )}
             </div>
-
-            {Object.keys(categoryStats).length > 0 && (
-              <div className="cyber-card rounded-2xl p-6">
-                <h3 className="text-lg font-semibold font-['Orbitron'] text-white mb-4">功能分类</h3>
-                <div className="space-y-2">
-                  {Object.entries(categoryStats)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([category, count]) => (
-                      <div key={category} className="flex items-center justify-between">
-                        <span className="text-gray-400">{category}</span>
-                        <span className="text-cyan-400 text-sm">{count} 条</span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
+      <SiteFooter />
     </main>
   )
 }

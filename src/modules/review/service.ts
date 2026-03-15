@@ -7,7 +7,6 @@ import { assessContent } from '@/modules/like'
 
 export interface CreateReviewInput {
   targetId: string
-  category: string
   rating: number
   content: string
   language?: string
@@ -15,7 +14,6 @@ export interface CreateReviewInput {
 
 export interface ReviewQuery {
   sort?: 'latest' | 'hot'
-  category?: string
   targetId?: string
   language?: string
   page?: number
@@ -25,9 +23,9 @@ export interface ReviewQuery {
 export interface ReviewWithAuthor {
   id: string
   targetId: string
-  category: string
   content: string
   rating: number
+  commentCount: number
   language: string
   status: ReviewStatus
   likesCount: number
@@ -48,7 +46,7 @@ export interface ReviewWithAuthor {
   isLikedByMe?: boolean
 }
 
-const CONTENT_MIN_LENGTH = 50
+const CONTENT_MIN_LENGTH = 3
 const CONTENT_MAX_LENGTH = 2000
 const RATING_MIN = 1
 const RATING_MAX = 5
@@ -88,7 +86,6 @@ export async function createReview(
       userId: actor.userId,
       anonymousUserId: actor.anonymousUserId,
       targetId: input.targetId,
-      category: input.category,
       content: input.content,
       rating: input.rating,
       language: input.language || 'zh',
@@ -109,7 +106,6 @@ export async function getReviews(
 ): Promise<{ reviews: ReviewWithAuthor[]; total: number }> {
   const {
     sort = 'latest',
-    category,
     targetId,
     language,
     page = 1,
@@ -117,10 +113,6 @@ export async function getReviews(
   } = query
 
   const where: any = { status: ReviewStatus.published }
-
-  if (category) {
-    where.category = category
-  }
 
   if (targetId) {
     where.targetId = targetId
@@ -158,6 +150,21 @@ export async function getReviews(
   const reviewIds = reviews.map((r) => r.id)
   let likedReviewIds: string[] = []
 
+  const publishedCommentCounts = reviewIds.length > 0
+    ? await prisma.comment.groupBy({
+      by: ['reviewId'],
+      where: {
+        reviewId: { in: reviewIds },
+        status: 'published',
+      },
+      _count: { _all: true },
+    })
+    : []
+
+  const commentCountMap = new Map(
+    publishedCommentCounts.map((item) => [item.reviewId, item._count._all])
+  )
+
   if (actor && reviewIds.length > 0) {
     const likes = await prisma.reviewLike.findMany({
       where: {
@@ -176,9 +183,9 @@ export async function getReviews(
     reviews: reviews.map((review) => ({
       id: review.id,
       targetId: review.targetId,
-      category: review.category,
       content: review.content,
       rating: review.rating,
+      commentCount: commentCountMap.get(review.id) ?? 0,
       language: review.language,
       status: review.status,
       likesCount: review.likesCount,
@@ -233,9 +240,14 @@ export async function getReviewById(
   return {
     id: review.id,
     targetId: review.targetId,
-    category: review.category,
     content: review.content,
     rating: review.rating,
+    commentCount: await prisma.comment.count({
+      where: {
+        reviewId: review.id,
+        status: 'published',
+      },
+    }),
     language: review.language,
     status: review.status,
     likesCount: review.likesCount,
@@ -254,11 +266,10 @@ export async function getReviewStats(targetId: string): Promise<{
   total: number
   avgRating: number
   ratingDistribution: Record<number, number>
-  categoryStats: Record<string, number>
 }> {
   const reviews = await prisma.review.findMany({
     where: { targetId, status: ReviewStatus.published },
-    select: { rating: true, category: true },
+    select: { rating: true },
   })
 
   const total = reviews.length
@@ -267,17 +278,14 @@ export async function getReviewStats(targetId: string): Promise<{
     : 0
 
   const ratingDistribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-  const categoryStats: Record<string, number> = {}
 
   reviews.forEach((r) => {
     ratingDistribution[r.rating] = (ratingDistribution[r.rating] || 0) + 1
-    categoryStats[r.category] = (categoryStats[r.category] || 0) + 1
   })
 
   return {
     total,
     avgRating: Math.round(avgRating * 10) / 10,
     ratingDistribution,
-    categoryStats,
   }
 }

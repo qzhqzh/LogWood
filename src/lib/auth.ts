@@ -1,14 +1,17 @@
 import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
-import EmailProvider from 'next-auth/providers/email'
 import GitHubProvider from 'next-auth/providers/github'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { HttpsProxyAgent } from 'https-proxy-agent'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+
+export type UserRole = 'admin' | 'user'
 
 const adminEmail = process.env.ADMIN_EMAIL
 const adminPassword = process.env.ADMIN_PASSWORD
 const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH
+const githubOAuthProxy = process.env.GITHUB_OAUTH_PROXY?.trim()
 const nextAuthUrl = process.env.NEXTAUTH_URL || ''
 const globalForAuthWarning = globalThis as typeof globalThis & {
   __logwoodAuthEnvWarned?: boolean
@@ -27,22 +30,22 @@ if (process.env.NODE_ENV === 'production' && !globalForAuthWarning.__logwoodAuth
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    EmailProvider({
-      server: {
-        host: process.env.EMAIL_SERVER_HOST,
-        port: process.env.EMAIL_SERVER_PORT,
-        auth: {
-          user: process.env.EMAIL_SERVER_USER,
-          pass: process.env.EMAIL_SERVER_PASSWORD,
-        },
-      },
-      from: process.env.EMAIL_FROM,
-    }),
     ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
       ? [
           GitHubProvider({
             clientId: process.env.GITHUB_CLIENT_ID,
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
+            httpOptions: {
+              timeout: 60000,
+              retry: 2,
+              ...(githubOAuthProxy
+                ? {
+                    agent: {
+                      https: new HttpsProxyAgent(githubOAuthProxy),
+                    },
+                  }
+                : {}),
+            },
           }),
         ]
       : []),
@@ -103,15 +106,28 @@ export const authOptions: NextAuthOptions = {
     error: '/auth/error',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
       }
+
+      if (account?.provider === 'admin-credentials') {
+        token.role = 'admin'
+        token.authProvider = account.provider
+      } else if (account?.provider) {
+        token.role = 'user'
+        token.authProvider = account.provider
+      } else if (!token.role) {
+        token.role = 'user'
+      }
+
       return token
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string
+        session.user.role = (token.role as UserRole | undefined) || 'user'
+        session.user.authProvider = (token.authProvider as string | undefined) || 'unknown'
       }
       return session
     },
@@ -123,6 +139,8 @@ declare module 'next-auth' {
     user: {
       id: string
       email: string
+      role: UserRole
+      authProvider?: string
       name?: string | null
       image?: string | null
     }
@@ -132,5 +150,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id?: string
+    role?: UserRole
+    authProvider?: string
   }
 }

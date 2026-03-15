@@ -1,9 +1,12 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { TargetType } from '@prisma/client'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { authOptions } from '@/lib/auth'
+import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +35,8 @@ interface CodingPageProps {
 }
 
 export default async function CodingPage({ searchParams }: CodingPageProps) {
+  const session = await getServerSession(authOptions)
+  const isAdmin = isAdminSession(session)
   const { category } = await searchParams
   const targets = await prisma.target.findMany({
     where: {
@@ -81,7 +86,11 @@ export default async function CodingPage({ searchParams }: CodingPageProps) {
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
 
-      <SiteNav active="coding" actionLabel="发布评测" actionHref="/submit" />
+      <SiteNav
+        active="coding"
+        actionLabel={isAdmin ? '评测管理' : undefined}
+        actionHref={isAdmin ? `/targets/manage/${selectedCategory}` : undefined}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="mb-12">
@@ -185,7 +194,7 @@ export default async function CodingPage({ searchParams }: CodingPageProps) {
 
               {target.features.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {target.features.slice(0, 3).map((feature) => (
+                  {target.features.map((feature) => (
                     <span
                       key={feature}
                       className="px-2 py-1 bg-purple-500/10 text-purple-400 text-xs rounded"
@@ -193,11 +202,6 @@ export default async function CodingPage({ searchParams }: CodingPageProps) {
                       {feature}
                     </span>
                   ))}
-                  {target.features.length > 3 && (
-                    <span className="px-2 py-1 bg-gray-500/10 text-gray-400 text-xs rounded">
-                      +{target.features.length - 3}
-                    </span>
-                  )}
                 </div>
               )}
 

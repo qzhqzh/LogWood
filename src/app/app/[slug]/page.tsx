@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { getAppBySlug } from '@/modules/app'
+import { SiteFooter } from '@/components/site-footer'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +63,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
           </div>
         </div>
       </section>
+      <SiteFooter />
     </main>
   )
 }

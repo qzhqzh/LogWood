@@ -269,6 +269,18 @@ export async function archiveArticle(id: string) {
   })
 }
 
+export async function deleteArticle(id: string) {
+  const existing = await articleModel.findUnique({ where: { id } })
+  if (!existing) return null
+
+  return articleModel.delete({
+    where: { id },
+    select: {
+      id: true,
+    },
+  })
+}
+
 export async function increaseArticleView(slug: string) {
   await articleModel.update({
     where: { slug },

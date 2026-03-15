@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { createArticleColumn, listArticleColumns } from '@/modules/article-column'
+import { isAdminSession } from '@/lib/authz'
 
 const createSchema = z.object({
   name: z.string().min(1).max(40),
@@ -23,6 +24,9 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'ERR_UNAUTHORIZED' }, { status: 401 })
+    }
+    if (!isAdminSession(session)) {
+      return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
     }
 
     const body = await request.json()

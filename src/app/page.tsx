@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
-import { listArticles } from '@/modules/article'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { SiteFooter } from '@/components/site-footer'
 
 export const dynamic = 'force-dynamic'
+
+const AI_CODING_TARGET_TYPES = ['editor', 'coding', 'model', 'prompt'] as const
 
 function parseFeatures(features: string): string[] {
   try {
@@ -17,7 +18,7 @@ function parseFeatures(features: string): string[] {
 }
 
 export default async function HomePage() {
-  const [targets, reviews, totalReviews, totalTargets, articleListResult] = await Promise.all([
+  const [targets, reviews, featuredApps, featuredArticles, aiCodingTargetsCount, appTargetsCount, communityArticleCount] = await Promise.all([
     prisma.target.findMany({
       include: {
         _count: {
@@ -41,12 +42,36 @@ export default async function HomePage() {
         target: { select: { name: true, slug: true, type: true } },
       },
     }),
-    prisma.review.count({ where: { status: 'published' } }),
-    prisma.target.count(),
-    listArticles({ page: 1, pageSize: 1 }),
+    prisma.app.findMany({
+      where: { status: 'published' },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        summary: true,
+      },
+    }),
+    prisma.article.findMany({
+      where: { status: 'published' },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        excerpt: true,
+      },
+    }),
+    prisma.target.count({
+      where: {
+        type: { in: [...AI_CODING_TARGET_TYPES] },
+      },
+    }),
+    prisma.app.count({ where: { status: 'published' } }),
+    prisma.article.count({ where: { status: 'published' } }),
   ])
-
-  const totalArticles = articleListResult.total
 
   const targetsWithStats = targets.map((target) => {
     const ratings = target.reviews.map((r) => r.rating)
@@ -89,9 +114,6 @@ export default async function HomePage() {
               <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide">
                 社区文章
               </Link>
-              <Link href="/submit" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">
-                发布评测
-              </Link>
             </div>
           </div>
         </div>
@@ -130,16 +152,16 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
             <div className="cyber-card rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold font-['Orbitron'] text-cyan-400 mb-2">4</div>
-              <div className="text-gray-400 text-sm tracking-wide">AI Coding 分区</div>
+              <div className="text-4xl font-bold font-['Orbitron'] text-cyan-400 mb-2">{aiCodingTargetsCount}</div>
+              <div className="text-gray-400 text-sm tracking-wide">AI Coding</div>
             </div>
             <div className="cyber-card rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold font-['Orbitron'] text-purple-400 mb-2">{totalTargets}</div>
-              <div className="text-gray-400 text-sm tracking-wide">收录工具</div>
+              <div className="text-4xl font-bold font-['Orbitron'] text-purple-400 mb-2">{appTargetsCount}</div>
+              <div className="text-gray-400 text-sm tracking-wide">应用工坊</div>
             </div>
             <div className="cyber-card rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold font-['Orbitron'] text-pink-400 mb-2">{totalReviews + totalArticles}</div>
-              <div className="text-gray-400 text-sm tracking-wide">内容沉淀</div>
+              <div className="text-4xl font-bold font-['Orbitron'] text-pink-400 mb-2">{communityArticleCount}</div>
+              <div className="text-gray-400 text-sm tracking-wide">社区文章</div>
             </div>
           </div>
         </div>
@@ -231,6 +253,72 @@ export default async function HomePage() {
 
       <section className="py-20 px-4 border-t border-cyan-500/10">
         <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-10">
+            <div>
+              <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">应用工坊</h2>
+              <p className="text-gray-500">精选应用展示</p>
+            </div>
+            <Link href="/app" className="text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-2">
+              查看全部 <span>→</span>
+            </Link>
+          </div>
+
+          {featuredApps.length === 0 ? (
+            <div className="cyber-card rounded-2xl p-8 text-center text-gray-500">暂无应用工坊内容</div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-6">
+              {featuredApps.map((app) => (
+                <Link
+                  key={app.id}
+                  href={`/app/${app.slug}`}
+                  className="cyber-card rounded-2xl p-6 group transition-all duration-300 hover:scale-105"
+                >
+                  <h3 className="text-xl font-semibold text-white group-hover:text-purple-300 transition-colors mb-3 line-clamp-2">
+                    {app.title}
+                  </h3>
+                  <p className="text-gray-400 text-sm line-clamp-3">{app.summary}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="py-20 px-4 border-t border-cyan-500/10">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-10">
+            <div>
+              <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">社区文章</h2>
+              <p className="text-gray-500">最新文章</p>
+            </div>
+            <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors flex items-center gap-2">
+              查看全部 <span>→</span>
+            </Link>
+          </div>
+
+          {featuredArticles.length === 0 ? (
+            <div className="cyber-card rounded-2xl p-8 text-center text-gray-500">暂无社区文章</div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredArticles.map((article) => (
+                <Link
+                  key={article.id}
+                  href={`/articles/${article.slug}`}
+                  className="cyber-card rounded-2xl p-5 group transition-all duration-300 hover:scale-105"
+                >
+                  <h3 className="text-lg font-semibold text-white group-hover:text-pink-300 transition-colors mb-2 line-clamp-2">
+                    {article.title}
+                  </h3>
+                  <p className="text-gray-400 text-sm line-clamp-3">{article.excerpt || '暂无摘要'}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="py-20 px-4 border-t border-cyan-500/10">
+        <div className="max-w-7xl mx-auto">
           <div className="mb-10">
             <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">最新评测</h2>
             <p className="text-gray-500">来自社区的真实使用体验</p>
@@ -241,16 +329,21 @@ export default async function HomePage() {
               <div className="text-6xl mb-4">🤖</div>
               <h3 className="text-xl font-bold text-white mb-2">暂无评测数据</h3>
               <p className="text-gray-500 mb-6">成为第一个发布评测的人吧！</p>
-              <Link href="/submit" className="cyber-button px-6 py-2 rounded-lg inline-block">
-                发布评测
+              <Link href="/coding" className="cyber-button px-6 py-2 rounded-lg inline-block">
+                前往 AI Coding
               </Link>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {reviews.map((review) => (
+              {reviews.map((review) => {
+                const targetHref = review.target
+                  ? `/${review.target.type}/${review.target.slug}`
+                  : '/coding'
+
+                return (
                 <Link
                   key={review.id}
-                  href={`/review?id=${review.id}`}
+                  href={targetHref}
                   className="cyber-card rounded-2xl p-6 group transition-all duration-300 hover:scale-105"
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -282,23 +375,17 @@ export default async function HomePage() {
                       {review.target.name}
                     </div>
                   )}
-
-                  <div className="mb-3">
-                    <span className="px-2 py-1 bg-purple-500/10 text-purple-400 text-xs rounded">
-                      {review.category}
-                    </span>
-                  </div>
-
                   <p className="text-gray-400 line-clamp-3 mb-4">{review.content}</p>
 
                   <div className="flex items-center gap-4 text-sm text-gray-500">
                     <span className="flex items-center gap-1">
                       <span>👍</span> {review.likesCount}
                     </span>
-                    <span className="text-cyan-400 group-hover:text-cyan-300">查看详情 →</span>
+                    <span className="text-cyan-400 group-hover:text-cyan-300">查看工具页 →</span>
                   </div>
                 </Link>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

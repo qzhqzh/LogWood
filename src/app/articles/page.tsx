@@ -1,17 +1,29 @@
 import Link from 'next/link'
+import { getServerSession } from 'next-auth'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { encodeArticleSlug, listArticles } from '@/modules/article'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { authOptions } from '@/lib/auth'
+import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ArticlesPage() {
+interface ArticlesPageProps {
+  searchParams?: {
+    column?: string
+  }
+}
+
+export default async function ArticlesPage({ searchParams }: ArticlesPageProps) {
+  const session = await getServerSession(authOptions)
+  const isAdmin = isAdminSession(session)
   const { articles } = await listArticles({
     page: 1,
     pageSize: 24,
   })
+  const selectedColumn = searchParams?.column?.trim() || 'all'
 
   const groupedArticles = new Map<string, { label: string; items: (typeof articles) }>()
 
@@ -26,6 +38,19 @@ export default async function ArticlesPage() {
     }
   }
 
+  const groups = Array.from(groupedArticles.entries()).map(([key, group]) => ({
+    key,
+    label: group.label,
+    items: group.items,
+  }))
+
+  const totalCount = articles.length
+  const visibleGroups = selectedColumn === 'all'
+    ? groups
+    : groups.filter((group) => group.key === selectedColumn)
+
+  const visibleCount = visibleGroups.reduce((sum, group) => sum + group.items.length, 0)
+
   return (
     <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
@@ -33,7 +58,11 @@ export default async function ArticlesPage() {
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
 
-      <SiteNav active="articles" actionLabel="文章管理" actionHref="/articles/manage" />
+      <SiteNav
+        active="articles"
+        actionLabel={isAdmin ? '文章管理' : undefined}
+        actionHref={isAdmin ? '/articles/manage' : undefined}
+      />
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="mb-12">
@@ -44,12 +73,56 @@ export default async function ArticlesPage() {
           <p className="text-gray-400 text-lg max-w-2xl">沉淀方法论、使用经验与最佳实践。</p>
         </div>
 
+        {articles.length > 0 && (
+          <section className="mb-10 cyber-card rounded-2xl p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+              <div>
+                <p className="text-xs tracking-[0.28em] text-pink-300 uppercase mb-2">专栏统计</p>
+                <h2 className="text-xl font-semibold text-white">按专栏筛选文章</h2>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold font-['Orbitron'] text-pink-300">{visibleCount}</div>
+                <div className="text-xs text-gray-500">当前显示 / 总计 {totalCount}</div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/articles"
+                className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
+                  selectedColumn === 'all'
+                    ? 'border-pink-400 bg-pink-500/10 text-pink-300'
+                    : 'border-white/10 text-gray-400 hover:border-pink-500/40 hover:text-white'
+                }`}
+              >
+                全部 · {totalCount}
+              </Link>
+              {groups.map((group) => (
+                <Link
+                  key={group.key}
+                  href={`/articles?column=${encodeURIComponent(group.key)}`}
+                  className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
+                    selectedColumn === group.key
+                      ? 'border-pink-400 bg-pink-500/10 text-pink-300'
+                      : 'border-white/10 text-gray-400 hover:border-pink-500/40 hover:text-white'
+                  }`}
+                >
+                  {group.label} · {group.items.length}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {articles.length === 0 ? (
           <div className="cyber-card rounded-2xl p-10 text-center text-gray-400">暂无文章，先去创建第一篇吧。</div>
         ) : (
           <div className="space-y-10">
-            {Array.from(groupedArticles.entries()).map(([key, group]) => (
-              <section key={key}>
+            {visibleGroups.length === 0 && (
+              <div className="cyber-card rounded-2xl p-10 text-center text-gray-400">当前筛选专栏暂无文章。</div>
+            )}
+            {visibleGroups.map((group) => (
+              <section key={group.key}>
                 <h2 className="text-xl font-semibold text-cyan-200 mb-4">专栏：{group.label}</h2>
                 <div className="grid md:grid-cols-2 gap-6">
                   {group.items.map((article: (typeof articles)[number]) => (
@@ -59,7 +132,7 @@ export default async function ArticlesPage() {
                       className="cyber-card rounded-2xl p-6 hover:scale-[1.01] transition-transform"
                     >
                       <h3 className="text-2xl font-semibold text-white mb-3">{article.title}</h3>
-                      {article.excerpt && <p className="text-gray-300 mb-4 line-clamp-3">{article.excerpt}</p>}
+                      {article.excerpt && <p className="text-gray-300 mb-4 line-clamp-5">{article.excerpt}</p>}
                       <div className="flex items-center justify-between text-sm text-gray-500">
                         <span>
                           {formatDistanceToNow(new Date(article.publishedAt || article.createdAt), {

@@ -4,7 +4,8 @@ import { listTargets, getTargetBySlug, getFeatures } from '@/modules/target'
 import { TargetType } from '@prisma/client'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
-import { createTarget, updateTarget } from '@/modules/target'
+import { createTarget, updateTarget, deleteTarget } from '@/modules/target'
+import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +26,10 @@ const createTargetSchema = z.object({
 })
 
 const updateTargetSchema = createTargetSchema.extend({
+  id: z.string().min(1),
+})
+
+const deleteTargetSchema = z.object({
   id: z.string().min(1),
 })
 
@@ -78,6 +83,9 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'ERR_UNAUTHORIZED' }, { status: 401 })
     }
+    if (!isAdminSession(session)) {
+      return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
+    }
 
     const body = await request.json()
     const validated = createTargetSchema.parse(body)
@@ -106,6 +114,9 @@ export async function PATCH(request: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'ERR_UNAUTHORIZED' }, { status: 401 })
     }
+    if (!isAdminSession(session)) {
+      return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
+    }
 
     const body = await request.json()
     const validated = updateTargetSchema.parse(body)
@@ -125,6 +136,41 @@ export async function PATCH(request: NextRequest) {
     }
 
     console.error('PATCH /api/targets error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'ERR_UNAUTHORIZED' }, { status: 401 })
+    }
+    if (!isAdminSession(session)) {
+      return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const validated = deleteTargetSchema.parse(body)
+    const result = await deleteTarget(validated.id)
+
+    return NextResponse.json(result)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'ERR_TARGET_VALIDATION', details: error.errors },
+        { status: 400 }
+      )
+    }
+
+    if (error instanceof Error && error.message === 'ERR_TARGET_NOT_FOUND') {
+      return NextResponse.json({ error: error.message }, { status: 404 })
+    }
+
+    console.error('DELETE /api/targets error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

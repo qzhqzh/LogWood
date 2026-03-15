@@ -7,6 +7,7 @@ import { signIn, useSession } from 'next-auth/react'
 import type { ArticleStatus as PrismaArticleStatus } from '@prisma/client'
 import { encodeArticleSlug } from '@/modules/article/slug'
 import { TagPicker } from '@/components/tag-picker'
+import { SiteFooter } from '@/components/site-footer'
 
 const RichTextEditor = dynamic(() => import('@/components/rich-text-editor'), {
   ssr: false,
@@ -56,11 +57,13 @@ export default function ManageArticlesPage() {
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const canSubmit = useMemo(() => {
     return title.trim().length >= 3 && contentTextLength >= 20
   }, [title, contentTextLength])
+  const isAdmin = session?.user?.role === 'admin'
 
   const currentUserLabel = useMemo(() => {
     const name = session?.user?.name?.trim()
@@ -122,6 +125,24 @@ export default function ManageArticlesPage() {
             className="cyber-button px-5 py-2 rounded-lg"
           >
             前往登录
+          </button>
+        </div>
+      </main>
+    )
+  }
+
+  if (!isAdmin) {
+    return (
+      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+        <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">仅管理员可访问</h1>
+          <p className="text-gray-400 mb-6">文章管理仅对系统管理员开放。GitHub 普通用户可在文章详情中参与评论。</p>
+          <button
+            type="button"
+            onClick={() => signIn(undefined, { callbackUrl: '/articles/manage' })}
+            className="cyber-button px-5 py-2 rounded-lg"
+          >
+            切换账号
           </button>
         </div>
       </main>
@@ -239,15 +260,48 @@ export default function ManageArticlesPage() {
   }
 
   async function archive(id: string) {
+    const confirmed = window.confirm('确认将该文章归档吗？归档后将从公开列表隐藏，但仍可保留历史记录。')
+    if (!confirmed) return
+
     try {
+      setUpdatingId(id)
+      setError(null)
       const res = await fetch(`/api/articles/${id}`, {
-        method: 'DELETE',
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'archived' }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '归档失败')
       await loadArticles()
     } catch (e) {
       setError(e instanceof Error ? e.message : '归档失败')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  async function removeArticle(id: string) {
+    const confirmed = window.confirm('确认彻底删除该文章吗？此操作不可恢复。')
+    if (!confirmed) return
+
+    try {
+      setDeletingId(id)
+      setError(null)
+      const res = await fetch(`/api/articles/${id}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '删除失败')
+
+      if (editingArticleId === id) {
+        resetForm()
+      }
+      await loadArticles()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '删除失败')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -322,12 +376,15 @@ export default function ManageArticlesPage() {
 
           <div>
             <label className="block text-sm mb-2 text-gray-300">摘要</label>
-            <input
+            <textarea
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
-              className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+              rows={4}
+              maxLength={200}
+              className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white resize-y"
               placeholder="用于列表展示的简要摘要"
             />
+            <p className="text-xs text-gray-500 mt-2">摘要最多 200 字，当前 {excerpt.length} 字</p>
           </div>
 
           <div>
@@ -471,17 +528,27 @@ export default function ManageArticlesPage() {
                     <button
                       type="button"
                       onClick={() => archive(item.id)}
-                      className="text-orange-300 hover:text-orange-200"
+                      disabled={updatingId === item.id || deletingId === item.id}
+                      className="text-orange-300 hover:text-orange-200 disabled:opacity-60"
                     >
-                      归档
+                      {updatingId === item.id ? '归档中...' : '归档'}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => removeArticle(item.id)}
+                    disabled={deletingId === item.id || updatingId === item.id}
+                    className="text-red-300 hover:text-red-200 disabled:opacity-60"
+                  >
+                    {deletingId === item.id ? '删除中...' : '删除'}
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
       </div>
+      <SiteFooter />
     </main>
   )
 }

@@ -1,12 +1,17 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { getServerSession } from 'next-auth'
 import { listApps } from '@/modules/app'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { authOptions } from '@/lib/auth'
+import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AppWorkshopPage() {
+  const session = await getServerSession(authOptions)
+  const isAdmin = isAdminSession(session)
   const { apps } = await listApps({ page: 1, pageSize: 24 })
 
   return (
@@ -16,7 +21,11 @@ export default async function AppWorkshopPage() {
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
 
-      <SiteNav active="app" actionLabel="App管理" actionHref="/app/manage" />
+      <SiteNav
+        active="app"
+        actionLabel={isAdmin ? 'App管理' : undefined}
+        actionHref={isAdmin ? '/app/manage' : undefined}
+      />
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="mb-12">

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-type TagSentiment = 'good' | 'bad'
+type TagSentiment = 'good' | 'bad' | 'neutral'
 
 interface TagItem {
   id: string
@@ -17,10 +17,33 @@ interface TagPickerProps {
   allowCreate?: boolean
 }
 
+async function safeReadJson<T>(res: Response): Promise<T | null> {
+  const raw = await res.text()
+  if (!raw) return null
+
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+const SENTIMENT_META: Record<TagSentiment, { label: string; titleClass: string; emptyText: string }> = {
+  good: { label: '正向标签池', titleClass: 'text-emerald-300', emptyText: '暂无匹配的正向标签' },
+  bad: { label: '负向标签池', titleClass: 'text-rose-300', emptyText: '暂无匹配的负向标签' },
+  neutral: { label: '中性标签池', titleClass: 'text-violet-300', emptyText: '暂无匹配的中性标签' },
+}
+
 function sentimentClass(sentiment: TagSentiment): string {
-  return sentiment === 'good'
-    ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
-    : 'border-rose-400/30 bg-rose-500/10 text-rose-200'
+  if (sentiment === 'good') {
+    return 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
+  }
+
+  if (sentiment === 'bad') {
+    return 'border-rose-400/30 bg-rose-500/10 text-rose-200'
+  }
+
+  return 'border-violet-400/30 bg-violet-500/10 text-violet-200'
 }
 
 export function TagPicker({ value, onChange, disabled = false, allowCreate = true }: TagPickerProps) {
@@ -37,11 +60,11 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
       setLoading(true)
       setError(null)
       const res = await fetch('/api/tags', { cache: 'no-store' })
-      const data = await res.json()
+      const data = await safeReadJson<{ tags?: TagItem[]; error?: string }>(res)
       if (!res.ok) {
-        throw new Error(data.error || '标签加载失败')
+        throw new Error(data?.error || `标签加载失败（${res.status}）`)
       }
-      setTags(data.tags || [])
+      setTags(data?.tags || [])
     } catch (e) {
       setError(e instanceof Error ? e.message : '标签加载失败')
     } finally {
@@ -58,6 +81,15 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
     if (!normalized) return tags
     return tags.filter((tag) => tag.name.toLowerCase().includes(normalized))
   }, [tags, keyword])
+
+  const groupedTags = useMemo(
+    () => ({
+      good: filteredTags.filter((tag) => tag.sentiment === 'good'),
+      bad: filteredTags.filter((tag) => tag.sentiment === 'bad'),
+      neutral: filteredTags.filter((tag) => tag.sentiment === 'neutral'),
+    }),
+    [filteredTags]
+  )
 
   function toggleTag(tagName: string) {
     if (disabled) return
@@ -85,9 +117,9 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
           sentiment: newSentiment,
         }),
       })
-      const data = await res.json()
+      const data = await safeReadJson<TagItem & { error?: string }>(res)
       if (!res.ok) {
-        throw new Error(data.error || '标签创建失败')
+        throw new Error(data?.error || `标签创建失败（${res.status}）`)
       }
 
       const created = data as TagItem
@@ -126,8 +158,9 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
             disabled={disabled || creating}
             className="bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white disabled:opacity-60"
           >
-            <option value="good">好</option>
-            <option value="bad">不好</option>
+            <option value="good">正向</option>
+            <option value="bad">负向</option>
+            <option value="neutral">中性</option>
           </select>
           <button
             type="button"
@@ -179,22 +212,33 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
       {loading ? (
         <p className="text-xs text-gray-500">标签加载中...</p>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {filteredTags.map((tag) => {
-            const selected = value.includes(tag.name)
-            return (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => toggleTag(tag.name)}
-                disabled={disabled}
-                className={`px-3 py-1 rounded-full border text-xs transition-colors disabled:opacity-60 ${selected ? sentimentClass(tag.sentiment) : 'border-white/15 text-gray-300 hover:border-cyan-400/40 hover:text-cyan-200'}`}
-              >
-                {tag.name}
-              </button>
-            )
-          })}
-          {filteredTags.length === 0 && <span className="text-xs text-gray-500">没有匹配标签</span>}
+        <div className="grid md:grid-cols-3 gap-3">
+          {(Object.keys(groupedTags) as TagSentiment[]).map((sentiment) => (
+            <section key={sentiment} className="rounded-xl border border-cyan-500/15 bg-[#0f1018] p-3">
+              <h3 className={`text-xs tracking-[0.2em] uppercase mb-3 ${SENTIMENT_META[sentiment].titleClass}`}>
+                {SENTIMENT_META[sentiment].label}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {groupedTags[sentiment].map((tag) => {
+                  const selected = value.includes(tag.name)
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.name)}
+                      disabled={disabled}
+                      className={`px-3 py-1 rounded-full border text-xs transition-colors disabled:opacity-60 ${selected ? sentimentClass(tag.sentiment) : 'border-white/15 text-gray-300 hover:border-cyan-400/40 hover:text-cyan-200'}`}
+                    >
+                      {tag.name}
+                    </button>
+                  )
+                })}
+                {groupedTags[sentiment].length === 0 && (
+                  <span className="text-xs text-gray-500">{SENTIMENT_META[sentiment].emptyText}</span>
+                )}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 

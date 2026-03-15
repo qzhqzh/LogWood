@@ -5,9 +5,8 @@ import { z } from 'zod'
 
 const createReviewSchema = z.object({
   targetId: z.string(),
-  category: z.string().min(1),
   rating: z.number().int().min(1).max(5),
-  content: z.string().min(50).max(2000),
+  content: z.string().min(3).max(2000),
   language: z.string().optional(),
   deviceFingerprint: z.string().optional(),
 })
@@ -17,7 +16,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const query = {
       sort: searchParams.get('sort') as 'latest' | 'hot' | undefined,
-      category: searchParams.get('category') || undefined,
       targetId: searchParams.get('targetId') || undefined,
       language: searchParams.get('language') || undefined,
       page: parseInt(searchParams.get('page') || '1'),
@@ -50,7 +48,6 @@ export async function POST(request: NextRequest) {
     const result = await createReview(
       {
         targetId: validated.targetId,
-        category: validated.category,
         rating: validated.rating,
         content: validated.content,
         language: validated.language,

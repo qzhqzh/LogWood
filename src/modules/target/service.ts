@@ -169,6 +169,22 @@ export async function updateTarget(input: UpdateTargetInput) {
   })
 }
 
+export async function deleteTarget(id: string) {
+  const existing = await prisma.target.findUnique({
+    where: { id },
+    select: { id: true },
+  })
+
+  if (!existing) {
+    throw new Error('ERR_TARGET_NOT_FOUND')
+  }
+
+  return prisma.target.delete({
+    where: { id },
+    select: { id: true },
+  })
+}
+
 export async function getTargetBySlug(
   type: TargetType,
   slug: string

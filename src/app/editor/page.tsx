@@ -1,9 +1,45 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
-import { ReviewList } from '@/components/review-list'
+import { SiteNav } from '@/components/site-nav'
+import { SiteFooter } from '@/components/site-footer'
+import { authOptions } from '@/lib/auth'
+import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
+
+type TagSentiment = 'good' | 'neutral' | 'bad'
+
+const SENTIMENT_ORDER: Record<TagSentiment, number> = {
+  good: 0,
+  neutral: 1,
+  bad: 2,
+}
+
+function featureTagClass(sentiment?: TagSentiment): string {
+  if (sentiment === 'good') {
+    return 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20'
+  }
+  if (sentiment === 'neutral') {
+    return 'bg-violet-500/10 text-violet-300 border border-violet-500/20'
+  }
+  if (sentiment === 'bad') {
+    return 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
+  }
+  return 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+}
+
+function sortFeaturesBySentiment(features: string[], sentimentByTag: Map<string, TagSentiment>): string[] {
+  return [...features].sort((a, b) => {
+    const sentimentA = sentimentByTag.get(a)
+    const sentimentB = sentimentByTag.get(b)
+    const orderA = sentimentA ? SENTIMENT_ORDER[sentimentA] : 3
+    const orderB = sentimentB ? SENTIMENT_ORDER[sentimentB] : 3
+    if (orderA !== orderB) return orderA - orderB
+    return a.localeCompare(b, 'zh-CN')
+  })
+}
 
 function parseFeatures(features: string): string[] {
   try {
@@ -14,6 +50,8 @@ function parseFeatures(features: string): string[] {
 }
 
 export default async function EditorPage() {
+  const session = await getServerSession(authOptions)
+  const isAdmin = isAdminSession(session)
   const targets = await prisma.target.findMany({
     where: { type: 'editor' },
     include: {
@@ -28,6 +66,21 @@ export default async function EditorPage() {
     orderBy: { name: 'asc' },
   })
 
+  const allFeatureNames = Array.from(
+    new Set(targets.flatMap((target) => parseFeatures(target.features)))
+  )
+
+  const tags = allFeatureNames.length > 0
+    ? await prisma.tag.findMany({
+      where: { name: { in: allFeatureNames } },
+      select: { name: true, sentiment: true },
+    })
+    : []
+
+  const sentimentByTag = new Map<string, TagSentiment>(
+    tags.map((tag) => [tag.name, tag.sentiment as TagSentiment])
+  )
+
   const targetsWithStats = targets.map((target) => {
     const ratings = target.reviews.map((r) => r.rating)
     const avgRating = ratings.length > 0
@@ -36,7 +89,7 @@ export default async function EditorPage() {
 
     return {
       ...target,
-      features: parseFeatures(target.features),
+      features: sortFeaturesBySentiment(parseFeatures(target.features), sentimentByTag),
       avgRating: avgRating ? Math.round(avgRating * 10) / 10 : null,
       reviewCount: target._count.reviews,
     }
@@ -49,29 +102,11 @@ export default async function EditorPage() {
         <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
 
-      <nav className="border-b border-cyan-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">LW</span>
-              </div>
-              <span className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
-            </Link>
-            <div className="flex items-center gap-6">
-              <Link href="/editor" className="text-cyan-400 font-medium tracking-wide">
-                AI Editor
-              </Link>
-              <Link href="/coding" className="text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide">
-                AI Coding
-              </Link>
-              <Link href="/submit" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">
-                发布评测
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SiteNav
+        active="coding"
+        actionLabel={isAdmin ? '评测管理' : undefined}
+        actionHref={isAdmin ? '/targets/manage/editor' : undefined}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="mb-12">
@@ -137,19 +172,14 @@ export default async function EditorPage() {
 
               {target.features.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {target.features.slice(0, 3).map((feature) => (
+                  {target.features.map((feature) => (
                     <span
                       key={feature}
-                      className="px-2 py-1 bg-cyan-500/10 text-cyan-400 text-xs rounded"
+                      className={`px-2 py-1 text-xs rounded ${featureTagClass(sentimentByTag.get(feature))}`}
                     >
                       {feature}
                     </span>
                   ))}
-                  {target.features.length > 3 && (
-                    <span className="px-2 py-1 bg-gray-500/10 text-gray-400 text-xs rounded">
-                      +{target.features.length - 3}
-                    </span>
-                  )}
                 </div>
               )}
 
@@ -161,6 +191,7 @@ export default async function EditorPage() {
           ))}
         </div>
       </div>
+      <SiteFooter />
     </main>
   )
 }

@@ -63,9 +63,26 @@ export async function toggleReviewLike(
   })
 
   if (existingLike) {
+    const likesCount = await prisma.$transaction(async (tx) => {
+      await tx.reviewLike.deleteMany({
+        where: { id: existingLike.id },
+      })
+
+      const nextCount = await tx.reviewLike.count({
+        where: { reviewId },
+      })
+
+      await tx.review.update({
+        where: { id: reviewId },
+        data: { likesCount: nextCount },
+      })
+
+      return nextCount
+    })
+
     return {
-      liked: true,
-      likesCount: review.likesCount,
+      liked: false,
+      likesCount,
       isNew: false,
     }
   }
@@ -80,23 +97,30 @@ export async function toggleReviewLike(
     throw new Error('ERR_RATE_LIMIT_EXCEEDED')
   }
 
-  await prisma.reviewLike.create({
-    data: {
-      reviewId,
-      userId: actor.userId,
-      anonymousUserId: actor.anonymousUserId,
-    },
-  })
+  const likesCount = await prisma.$transaction(async (tx) => {
+    await tx.reviewLike.create({
+      data: {
+        reviewId,
+        userId: actor.userId,
+        anonymousUserId: actor.anonymousUserId,
+      },
+    })
 
-  const updatedReview = await prisma.review.update({
-    where: { id: reviewId },
-    data: { likesCount: { increment: 1 } },
-    select: { likesCount: true },
+    const nextCount = await tx.reviewLike.count({
+      where: { reviewId },
+    })
+
+    await tx.review.update({
+      where: { id: reviewId },
+      data: { likesCount: nextCount },
+    })
+
+    return nextCount
   })
 
   return {
     liked: true,
-    likesCount: updatedReview.likesCount,
+    likesCount,
     isNew: true,
   }
 }
@@ -129,9 +153,26 @@ export async function toggleCommentLike(
   })
 
   if (existingLike) {
+    const likesCount = await prisma.$transaction(async (tx) => {
+      await tx.commentLike.deleteMany({
+        where: { id: existingLike.id },
+      })
+
+      const nextCount = await tx.commentLike.count({
+        where: { commentId },
+      })
+
+      await tx.comment.update({
+        where: { id: commentId },
+        data: { likesCount: nextCount },
+      })
+
+      return nextCount
+    })
+
     return {
-      liked: true,
-      likesCount: comment.likesCount,
+      liked: false,
+      likesCount,
       isNew: false,
     }
   }
@@ -146,23 +187,30 @@ export async function toggleCommentLike(
     throw new Error('ERR_RATE_LIMIT_EXCEEDED')
   }
 
-  await prisma.commentLike.create({
-    data: {
-      commentId,
-      userId: actor.userId,
-      anonymousUserId: actor.anonymousUserId,
-    },
-  })
+  const likesCount = await prisma.$transaction(async (tx) => {
+    await tx.commentLike.create({
+      data: {
+        commentId,
+        userId: actor.userId,
+        anonymousUserId: actor.anonymousUserId,
+      },
+    })
 
-  const updatedComment = await prisma.comment.update({
-    where: { id: commentId },
-    data: { likesCount: { increment: 1 } },
-    select: { likesCount: true },
+    const nextCount = await tx.commentLike.count({
+      where: { commentId },
+    })
+
+    await tx.comment.update({
+      where: { id: commentId },
+      data: { likesCount: nextCount },
+    })
+
+    return nextCount
   })
 
   return {
     liked: true,
-    likesCount: updatedComment.likesCount,
+    likesCount,
     isNew: true,
   }
 }

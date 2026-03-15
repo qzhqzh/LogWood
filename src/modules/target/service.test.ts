@@ -8,12 +8,13 @@ vi.mock('@/lib/prisma', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     },
   },
 }))
 
 import { prisma } from '@/lib/prisma'
-import { createTarget, getFeatures, getTargetBySlug, listTargets, updateTarget } from './service'
+import { createTarget, deleteTarget, getFeatures, getTargetBySlug, listTargets, updateTarget } from './service'
 
 const prismaMock = prisma as unknown as {
   target: {
@@ -22,6 +23,7 @@ const prismaMock = prisma as unknown as {
     findUnique: ReturnType<typeof vi.fn>
     create: ReturnType<typeof vi.fn>
     update: ReturnType<typeof vi.fn>
+    delete: ReturnType<typeof vi.fn>
   }
 }
 
@@ -143,5 +145,18 @@ describe('target/service', () => {
       })
     )
     expect(result.slug).toBe('cursor')
+  })
+
+  it('deletes existing target by id', async () => {
+    prismaMock.target.findUnique.mockResolvedValue({ id: 't9' })
+    prismaMock.target.delete.mockResolvedValue({ id: 't9' })
+
+    const result = await deleteTarget('t9')
+
+    expect(prismaMock.target.delete).toHaveBeenCalledWith({
+      where: { id: 't9' },
+      select: { id: true },
+    })
+    expect(result.id).toBe('t9')
   })
 })

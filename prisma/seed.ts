@@ -166,6 +166,8 @@ const articleColumns = [
 const tags = [
   { name: '高效', slug: 'efficient', sentiment: 'good' },
   { name: '稳定', slug: 'stable', sentiment: 'good' },
+  { name: '通用', slug: 'general-purpose', sentiment: 'neutral' },
+  { name: '待观察', slug: 'to-be-observed', sentiment: 'neutral' },
   { name: '不稳定', slug: 'unstable', sentiment: 'bad' },
   { name: '工作流', slug: 'workflow', sentiment: 'good' },
   { name: '团队协作', slug: 'team-collaboration', sentiment: 'good' },

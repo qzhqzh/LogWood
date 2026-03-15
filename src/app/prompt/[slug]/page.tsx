@@ -1,8 +1,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { getServerSession } from 'next-auth'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { ReviewList } from '@/components/review-list'
+import { authOptions } from '@/lib/auth'
+import { SiteFooter } from '@/components/site-footer'
+import { TargetReviewSection } from '@/components/target-review-section'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,13 +23,15 @@ interface TargetPageProps {
 
 export default async function PromptDetailPage({ params }: TargetPageProps) {
   const { slug } = await params
+  const session = await getServerSession(authOptions)
+  const canPublishReview = Boolean(session?.user?.id)
 
   const target = await prisma.target.findFirst({
     where: { slug, type: 'prompt' as any },
     include: {
       reviews: {
         where: { status: 'published' },
-        select: { rating: true, category: true },
+        select: { rating: true },
       },
     },
   }) as any
@@ -39,11 +44,6 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
   const ratings = target.reviews.map((r: any) => r.rating)
   const avgRating = ratings.length > 0 ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length : null
   const totalReviews = target.reviews.length
-  const categoryStats: Record<string, number> = {}
-
-  target.reviews.forEach((r: any) => {
-    categoryStats[r.category] = (categoryStats[r.category] || 0) + 1
-  })
 
   return (
     <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
@@ -94,24 +94,16 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
           <div className="lg:col-span-2 cyber-card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测列表</h2>
-              <Link href={`/submit?targetId=${target.id}`} className="cyber-button px-4 py-2 rounded-lg text-sm">发布评测</Link>
             </div>
-            <ReviewList targetId={target.id} />
+            <TargetReviewSection targetId={target.id} canPublishReview={canPublishReview} />
           </div>
           <div className="cyber-card rounded-2xl p-6">
-            <h3 className="text-lg font-semibold font-['Orbitron'] text-white mb-4">功能分类</h3>
-            <div className="space-y-2">
-              {Object.entries(categoryStats).map(([category, count]) => (
-                <div key={category} className="flex items-center justify-between">
-                  <span className="text-gray-400">{category}</span>
-                  <span className="text-pink-300 text-sm">{count} 条</span>
-                </div>
-              ))}
-              {Object.keys(categoryStats).length === 0 && <p className="text-gray-500 text-sm">暂无分类数据</p>}
-            </div>
+            <h3 className="text-lg font-semibold font-['Orbitron'] text-white mb-4">说明</h3>
+            <p className="text-gray-500 text-sm">该目标的评测列表按时间和热度展示，不再使用分类标签。</p>
           </div>
         </div>
       </div>
+      <SiteFooter />
     </main>
   )
 }

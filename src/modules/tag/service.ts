@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 
-export const TAG_SENTIMENTS = ['good', 'bad'] as const
+export const TAG_SENTIMENTS = ['good', 'bad', 'neutral'] as const
 
 export type TagSentiment = (typeof TAG_SENTIMENTS)[number]
 

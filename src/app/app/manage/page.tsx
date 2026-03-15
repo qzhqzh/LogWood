@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
 import { TagPicker } from '@/components/tag-picker'
+import { SiteFooter } from '@/components/site-footer'
 
 type AppStatus = 'draft' | 'published' | 'archived'
 
@@ -43,6 +44,7 @@ export default function ManageAppsPage() {
       && description.trim().length >= 20
       && appUrl.trim().length > 0
   }, [name, title, summary, description, appUrl])
+  const isAdmin = session?.user?.role === 'admin'
 
   function resetForm() {
     setEditingId(null)
@@ -94,6 +96,18 @@ export default function ManageAppsPage() {
           <h1 className="text-2xl font-bold text-white mb-2">需要登录</h1>
           <p className="text-gray-400 mb-6">App 管理仅对登录用户开放。</p>
           <button type="button" onClick={() => signIn(undefined, { callbackUrl: '/app/manage' })} className="cyber-button px-5 py-2 rounded-lg">前往登录</button>
+        </div>
+      </main>
+    )
+  }
+
+  if (!isAdmin) {
+    return (
+      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+        <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">仅管理员可访问</h1>
+          <p className="text-gray-400 mb-6">App 管理仅对系统管理员开放。GitHub 普通用户可在应用详情中参与评论。</p>
+          <button type="button" onClick={() => signIn(undefined, { callbackUrl: '/app/manage' })} className="cyber-button px-5 py-2 rounded-lg">切换账号</button>
         </div>
       </main>
     )
@@ -221,6 +235,7 @@ export default function ManageAppsPage() {
           </div>
         </div>
       </div>
+      <SiteFooter />
     </main>
   )
 }

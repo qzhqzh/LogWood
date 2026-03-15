@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { APP_STATUSES, createApp, listAllAppsForManage, listApps, updateApp } from '@/modules/app'
+import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +39,9 @@ export async function GET(request: NextRequest) {
       if (!session?.user?.id) {
         return NextResponse.json({ error: 'ERR_UNAUTHORIZED' }, { status: 401 })
       }
+      if (!isAdminSession(session)) {
+        return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
+      }
 
       const apps = await listAllAppsForManage()
       return NextResponse.json({ apps })
@@ -59,6 +63,9 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'ERR_UNAUTHORIZED' }, { status: 401 })
+    }
+    if (!isAdminSession(session)) {
+      return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -84,6 +91,9 @@ export async function PATCH(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'ERR_UNAUTHORIZED' }, { status: 401 })
+    }
+    if (!isAdminSession(session)) {
+      return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
     }
 
     const body = await request.json()

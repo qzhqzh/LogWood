@@ -23,6 +23,7 @@ enum AppStatus {
 enum TagSentiment {
   good
   bad
+  neutral
 }
 
 enum ReviewStatus {
@@ -75,6 +76,7 @@ model User {
   id            String   @id @default(cuid())
   email         String   @unique
   name          String?
+  image         String?
   avatarUrl     String?
   emailVerified DateTime?
   createdAt     DateTime @default(now())
@@ -84,6 +86,7 @@ model User {
   comments      Comment[]
   reviewLikes   ReviewLike[]
   commentLikes  CommentLike[]
+  articleLikes  ArticleLike[]
   reports       Report[]
   articles      Article[]
   apps          App[]
@@ -107,6 +110,7 @@ model AnonymousUser {
   comments            Comment[]
   reviewLikes         ReviewLike[]
   commentLikes        CommentLike[]
+  articleLikes        ArticleLike[]
   reports             Report[]
   articleComments     ArticleComment[]
 
@@ -135,7 +139,6 @@ model Review {
   userId           String?
   anonymousUserId  String?
   targetId         String
-  category         String
   content          String
   rating           Int
   language         String        @default("zh")
@@ -235,6 +238,7 @@ model Article {
   author        User?         @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
   column        ArticleColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
   comments      ArticleComment[]
+  likes         ArticleLike[]
 
   @@index([columnId])
   @@index([status, publishedAt])
@@ -265,6 +269,17 @@ model Tag {
   @@unique([slug])
   @@index([sentiment])
   @@map("tags")
+}
+
+model Emoji {
+  id        String   @id @default(cuid())
+  name      String
+  symbol    String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("emojis")
 }
 
 model App {
@@ -307,6 +322,23 @@ model ArticleComment {
   @@index([articleId])
   @@index([status])
   @@map("article_comments")
+}
+
+model ArticleLike {
+  id               String          @id @default(cuid())
+  articleId        String
+  userId           String?
+  anonymousUserId  String?
+  createdAt        DateTime        @default(now())
+
+  article          Article         @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anonymousUser    AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, userId])
+  @@unique([articleId, anonymousUserId])
+  @@index([articleId])
+  @@map("article_likes")
 }
 
 model Report {

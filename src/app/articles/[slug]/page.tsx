@@ -1,11 +1,16 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { getServerSession } from 'next-auth'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { ArticleStatus } from '@prisma/client'
 import sanitizeHtml from 'sanitize-html'
 import { decodeArticleSlug, getArticleBySlug, increaseArticleView } from '@/modules/article'
+import { authOptions } from '@/lib/auth'
+import { isAdminSession } from '@/lib/authz'
+import { ArticleEngagement } from '@/components/article-engagement'
+import { SiteFooter } from '@/components/site-footer'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +19,8 @@ export default async function ArticleDetailPage({
 }: {
   params: { slug: string }
 }) {
+  const session = await getServerSession(authOptions)
+  const isAdmin = isAdminSession(session)
   const decodedSlug = decodeArticleSlug(params.slug)
   const article = await getArticleBySlug(decodedSlug)
 
@@ -29,11 +36,12 @@ export default async function ArticleDetailPage({
         allowedTags: [
           'p', 'br', 'strong', 'em', 'u', 's', 'blockquote',
           'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-          'pre', 'code', 'a', 'hr', 'img', 'figure', 'figcaption'
+          'pre', 'code', 'a', 'hr', 'img', 'figure', 'figcaption', 'video'
         ],
         allowedAttributes: {
           a: ['href', 'name', 'target', 'rel'],
           img: ['src', 'alt', 'title', 'width', 'height'],
+          video: ['src', 'controls', 'preload', 'class', 'width', 'height'],
           code: ['class'],
         },
         allowedSchemes: ['http', 'https', 'mailto'],
@@ -67,7 +75,9 @@ export default async function ArticleDetailPage({
               <Link href="/coding" className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide">AI Coding</Link>
               <Link href="/app" className="text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide">应用工坊</Link>
               <Link href="/articles" className="text-pink-400 font-medium tracking-wide">社区文章</Link>
-              <Link href="/articles/manage" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">文章管理</Link>
+              {isAdmin && (
+                <Link href="/articles/manage" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">文章管理</Link>
+              )}
             </div>
           </div>
         </div>
@@ -90,6 +100,19 @@ export default async function ArticleDetailPage({
           </div>
         </header>
 
+        {article.excerpt && article.excerpt.trim().length > 0 && (
+          <details className="mb-8 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-5 py-4 group">
+            <summary className="list-none cursor-pointer select-none flex items-center justify-between gap-3 text-cyan-200 hover:text-cyan-100">
+              <span className="text-sm sm:text-base tracking-wide">文章摘要</span>
+              <span className="text-xs text-cyan-300/80 group-open:hidden">展开</span>
+              <span className="text-xs text-cyan-300/80 hidden group-open:inline">收起</span>
+            </summary>
+            <p className="mt-3 text-sm sm:text-base leading-7 text-gray-200 whitespace-pre-wrap">
+              {article.excerpt}
+            </p>
+          </details>
+        )}
+
         {article.coverImageUrl && (
           <div className="mb-10">
             <Image
@@ -105,16 +128,19 @@ export default async function ArticleDetailPage({
         <article className="bg-white/[0.04] backdrop-blur-sm rounded-2xl p-6 sm:p-10 lg:p-12 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
           {looksLikeHtml ? (
             <div
-              className="prose prose-invert prose-lg max-w-none leading-8 text-gray-100 prose-headings:text-white prose-a:text-cyan-300 prose-strong:text-white"
+              className="article-content"
               dangerouslySetInnerHTML={{ __html: safeHtml }}
             />
           ) : (
-            <div className="prose prose-invert prose-lg max-w-none whitespace-pre-wrap leading-8 text-gray-100">
+            <div className="article-content whitespace-pre-wrap">
               {article.content}
             </div>
           )}
         </article>
+
+        <ArticleEngagement articleId={article.id} initialCommentCount={article._count.comments} />
       </div>
+      <SiteFooter />
     </main>
   )
 }

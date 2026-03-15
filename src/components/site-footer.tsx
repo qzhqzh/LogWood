@@ -1,23 +1,22 @@
 import Link from 'next/link'
+import { FooterAdminLinks } from '@/components/footer-admin-links'
+import { FooterAuthEntry } from '@/components/footer-auth-entry'
 
-const columns = [
+const sections = [
   {
     title: 'AI Coding',
     href: '/coding',
     colorClass: 'hover:text-cyan-400',
-    tagHref: '/tags',
   },
   {
     title: '应用工坊',
     href: '/app',
     colorClass: 'hover:text-purple-400',
-    tagHref: '/tags',
   },
   {
     title: '社区文章',
     href: '/articles',
     colorClass: 'hover:text-pink-400',
-    tagHref: '/tags',
   },
 ] as const
 
@@ -34,23 +33,35 @@ export function SiteFooter() {
           </div>
 
           <div className="text-center md:text-left">
-            <p className="text-gray-500 text-sm">© 2024 LogWood. AI 编码工具评测社区</p>
+            <p className="text-gray-500 text-sm">© 2026 LogWood. AI 编码工具评测社区</p>
             <p className="text-gray-500 text-xs mt-1">鄂ICP备2026011298号-1</p>
+            <a
+              href="https://github.com/qzhqzh/LogWood"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-cyan-300 transition-colors mt-2"
+              aria-label="查看 LogWood GitHub 仓库"
+            >
+              GitHub 仓库
+              <span aria-hidden="true">↗</span>
+            </a>
           </div>
 
           <div className="grid grid-cols-3 gap-8 text-sm min-w-[280px]">
-            {columns.map((item) => (
+            {sections.map((item) => (
               <div key={item.title} className="text-center md:text-left">
                 <Link href={item.href} className={`text-gray-400 transition-colors ${item.colorClass}`}>
                   {item.title}
                 </Link>
-                <div className="mt-2">
-                  <Link href={item.tagHref} className="text-xs text-gray-500 hover:text-cyan-300 transition-colors">
-                    标签
-                  </Link>
-                </div>
               </div>
             ))}
+          </div>
+
+          <div className="text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-4 text-sm whitespace-nowrap">
+              <FooterAdminLinks />
+              <FooterAuthEntry />
+            </div>
           </div>
         </div>
       </div>

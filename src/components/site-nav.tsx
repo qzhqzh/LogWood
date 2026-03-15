@@ -4,8 +4,8 @@ type NavSection = 'coding' | 'app' | 'articles'
 
 interface SiteNavProps {
   active: NavSection
-  actionLabel: string
-  actionHref: string
+  actionLabel?: string
+  actionHref?: string
 }
 
 function navBarTintClass(active: NavSection): string {
@@ -49,12 +49,14 @@ export function SiteNav({ active, actionLabel, actionHref }: SiteNavProps) {
             <Link href="/articles" className={navLinkClass('articles', active)}>
               社区文章
             </Link>
-            <Link
-              href={actionHref}
-              className="cyber-button w-[112px] text-center px-5 py-2 rounded-lg font-semibold tracking-wide"
-            >
-              {actionLabel}
-            </Link>
+            {actionLabel && actionHref && (
+              <Link
+                href={actionHref}
+                className="cyber-button w-[112px] text-center px-5 py-2 rounded-lg font-semibold tracking-wide"
+              >
+                {actionLabel}
+              </Link>
+            )}
           </div>
         </div>
       </div>

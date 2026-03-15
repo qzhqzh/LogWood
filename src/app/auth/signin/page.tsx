@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { signIn, useSession } from 'next-auth/react'
 import { sanitizeCallbackUrl } from '@/modules/identity/callback-url'
+import { SiteFooter } from '@/components/site-footer'
 
 export default function SignInPage() {
   const { data: session, status } = useSession()
@@ -14,9 +15,9 @@ export default function SignInPage() {
   const [adminSubmitting, setAdminSubmitting] = useState(false)
 
   const callbackUrl = useMemo(() => {
-    if (typeof window === 'undefined') return '/articles/manage'
+    if (typeof window === 'undefined') return '/'
     const url = new URL(window.location.href)
-    return sanitizeCallbackUrl(url.searchParams.get('callbackUrl'), '/articles/manage')
+    return sanitizeCallbackUrl(url.searchParams.get('callbackUrl'), '/')
   }, [])
 
   useEffect(() => {
@@ -30,7 +31,6 @@ export default function SignInPage() {
   }, [])
 
   const githubEnabled = Boolean(providers.github)
-  const emailEnabled = Boolean(providers.email)
   const adminEnabled = Boolean(providers['admin-credentials'])
 
   const currentUserLabel = useMemo(() => {
@@ -41,6 +41,8 @@ export default function SignInPage() {
     if (session?.user?.id) return `ID: ${session.user.id}`
     return '已认证用户'
   }, [session])
+
+  const currentRoleLabel = session?.user?.role === 'admin' ? '系统管理员' : '普通用户'
 
   async function submitAdminLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -57,24 +59,29 @@ export default function SignInPage() {
 
   if (status === 'authenticated') {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
-        <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">你已登录</h1>
-          <p className="text-gray-400 mb-2">可以继续访问管理功能。</p>
-          <p className="text-xs text-gray-500 mb-6">当前账号：{currentUserLabel}</p>
-          <Link href={callbackUrl} className="cyber-button px-5 py-2 rounded-lg inline-block">
-            继续前往
-          </Link>
+      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex flex-col">
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
+            <h1 className="text-2xl font-bold text-white mb-2">你已登录</h1>
+            <p className="text-gray-400 mb-2">可以继续访问管理功能。</p>
+            <p className="text-xs text-gray-500 mb-6">当前账号：{currentUserLabel}</p>
+            <p className="text-xs text-gray-500 mb-6">当前角色：{currentRoleLabel}</p>
+            <Link href={callbackUrl} className="cyber-button px-5 py-2 rounded-lg inline-block">
+              继续前往
+            </Link>
+          </div>
         </div>
+        <SiteFooter />
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
-      <div className="cyber-card rounded-2xl p-8 max-w-md w-full">
-        <h1 className="text-2xl font-bold text-white mb-2">登录 LogWood</h1>
-        <p className="text-gray-400 mb-6">登录后可进入文章管理、发布和归档。</p>
+    <main className="min-h-screen bg-[#0a0a0f] grid-bg flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="cyber-card rounded-2xl p-8 max-w-md w-full">
+          <h1 className="text-2xl font-bold text-white mb-2">登录 LogWood</h1>
+          <p className="text-gray-400 mb-6">支持两种登录：GitHub 普通用户（可评论）和系统管理员（可管理目标/App/文章）。</p>
 
         <div className="space-y-3">
           {githubEnabled && (
@@ -87,17 +94,7 @@ export default function SignInPage() {
             </button>
           )}
 
-          {emailEnabled && (
-            <button
-              type="button"
-              onClick={() => signIn('email', { callbackUrl })}
-              className="w-full border border-cyan-500/40 text-cyan-300 rounded-lg py-2 hover:bg-cyan-500/10 transition-colors"
-            >
-              使用邮箱魔法链接登录
-            </button>
-          )}
-
-          {!githubEnabled && !emailEnabled && (
+          {!githubEnabled && !adminEnabled && (
             <p className="text-sm text-yellow-300">当前未启用可用登录 provider，请先配置环境变量后重启服务。</p>
           )}
 
@@ -133,10 +130,12 @@ export default function SignInPage() {
           <p className="text-xs text-red-300 mt-4">登录错误：{authError}</p>
         )}
 
-        <p className="text-xs text-gray-500 mt-5">
-          如按钮点击后提示 provider 不可用，请先在 `.env` 配置对应的 provider 环境变量。
-        </p>
+          <p className="text-xs text-gray-500 mt-5">
+            如按钮点击后提示 provider 不可用，请先在 `.env` 配置对应的 provider 环境变量。
+          </p>
+        </div>
       </div>
+      <SiteFooter />
     </main>
   )
 }

@@ -4,17 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CustomSelect } from '@/components/custom-select'
-
-const CATEGORIES = [
-  '代码补全',
-  '代码解释',
-  '调试辅助',
-  '重构建议',
-  '单元测试',
-  '文档生成',
-  '多语言支持',
-  '上下文理解',
-]
+import { SiteFooter } from '@/components/site-footer'
 
 interface Target {
   id: string
@@ -35,7 +25,6 @@ function SubmitForm() {
 
   const [formData, setFormData] = useState({
     targetId: preselectedTargetId || '',
-    category: '',
     rating: 5,
     content: '',
   })
@@ -66,7 +55,11 @@ function SubmitForm() {
       const res = await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          targetId: formData.targetId,
+          rating: formData.rating,
+          content: formData.content,
+        }),
       })
 
       const data = await res.json()
@@ -142,28 +135,6 @@ function SubmitForm() {
 
       <div>
         <label className="block text-sm font-medium text-cyan-400 mb-3 tracking-wide">
-          功能分类 <span className="text-pink-500">*</span>
-        </label>
-        <div className="flex flex-wrap gap-3">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setFormData({ ...formData, category: cat })}
-              className={`px-4 py-2 rounded-xl text-sm transition-all duration-300 ${
-                formData.category === cat
-                  ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white shadow-lg shadow-cyan-500/25'
-                  : 'cyber-card text-gray-400 hover:text-white'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-cyan-400 mb-3 tracking-wide">
           评分 <span className="text-pink-500">*</span>
         </label>
         <div className="flex gap-3">
@@ -194,19 +165,19 @@ function SubmitForm() {
         <textarea
           value={formData.content}
           onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-          placeholder="请分享你的使用体验（50-2000字）..."
+          placeholder="请分享你的使用体验（3-2000字）..."
           className="w-full px-4 py-4 cyber-input rounded-xl min-h-[200px]"
-          minLength={50}
+          minLength={3}
           maxLength={2000}
           required
         />
         <p className="text-sm text-gray-500 mt-3">
-          <span className={formData.content.length < 50 ? 'text-pink-400' : 'text-cyan-400'}>
+          <span className={formData.content.length < 3 ? 'text-pink-400' : 'text-cyan-400'}>
             {formData.content.length}
           </span>
           {' '}/ 2000 字
-          {formData.content.length > 0 && formData.content.length < 50 && (
-            <span className="text-pink-400 ml-2">（至少需要 50 字）</span>
+          {formData.content.length > 0 && formData.content.length < 3 && (
+            <span className="text-pink-400 ml-2">（至少需要 3 字）</span>
           )}
         </p>
       </div>
@@ -214,7 +185,7 @@ function SubmitForm() {
       <div className="flex gap-4 pt-4">
         <button
           type="submit"
-          disabled={submitting || !formData.targetId || !formData.category || formData.content.length < 50}
+          disabled={submitting || !formData.targetId || formData.content.length < 3}
           className="flex-1 cyber-button py-4 rounded-xl font-bold text-lg tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
@@ -260,9 +231,6 @@ export default function SubmitPage() {
               <Link href="/coding" className="text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide">
                 AI Coding
               </Link>
-              <Link href="/submit" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">
-                发布评测
-              </Link>
             </div>
           </div>
         </div>
@@ -281,6 +249,7 @@ export default function SubmitPage() {
           </Suspense>
         </div>
       </div>
+      <SiteFooter />
     </main>
   )
 }
