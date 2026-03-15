@@ -38,6 +38,10 @@ next-env.d.ts
 prisma/*.db
 prisma/*.db-journal
 
+# runtime uploads (article screenshots/media)
+public/uploads/articles/*
+!public/uploads/articles/.gitkeep
+
 # IDE
 .idea
 .vscode
