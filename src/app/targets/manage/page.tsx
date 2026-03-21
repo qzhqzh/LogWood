@@ -28,6 +28,33 @@ interface TargetItem {
   features: string[]
 }
 
+interface ValidationIssue {
+  path?: Array<string | number>
+  message?: string
+}
+
+function formatTargetApiError(data: unknown, fallback: string): string {
+  if (!data || typeof data !== 'object') {
+    return fallback
+  }
+
+  const payload = data as { error?: string; details?: ValidationIssue[] }
+  if (payload.error === 'ERR_TARGET_VALIDATION' && Array.isArray(payload.details)) {
+    const first = payload.details[0]
+    if (!first) {
+      return '提交数据校验失败，请检查输入'
+    }
+
+    const firstPath = Array.isArray(first.path) && first.path.length > 0 ? String(first.path[0]) : '字段'
+    const firstMessage = typeof first.message === 'string' && first.message.trim().length > 0
+      ? first.message
+      : '格式不正确'
+    return `字段「${firstPath}」校验失败：${firstMessage}`
+  }
+
+  return payload.error || fallback
+}
+
 function parseScopedType(value: string | null): TargetType | null {
   if (value === 'editor' || value === 'coding' || value === 'model' || value === 'prompt') {
     return value
@@ -153,7 +180,7 @@ export default function ManageTargetsPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || (editingId ? '更新失败' : '创建失败'))
+        throw new Error(formatTargetApiError(data, editingId ? '更新失败' : '创建失败'))
       }
 
       resetForm()
@@ -261,7 +288,14 @@ export default function ManageTargetsPage() {
             <label className="block text-sm mb-2 text-gray-300">标签</label>
             <TagPicker value={features} onChange={setFeatures} disabled={loading} />
           </div>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="简要描述目标定位和能力边界" />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            maxLength={2000}
+            className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+            placeholder="简要描述目标定位和能力边界（可留空）"
+          />
           <button type="submit" disabled={loading || !canSubmit} className="cyber-button px-5 py-2 rounded-lg disabled:opacity-60">{loading ? (editingId ? '保存中...' : '提交中...') : (editingId ? '保存修改' : '新增评测目标')}</button>
           {error && <p className="text-red-400 text-sm">{error}</p>}
         </form>

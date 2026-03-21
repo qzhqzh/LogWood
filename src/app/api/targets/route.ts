@@ -9,18 +9,35 @@ import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
 
+const optionalHttpUrl = z.preprocess((value) => {
+  if (typeof value !== 'string') return value
+
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+
+  // 管理端常见输入是 "example.com"，这里自动补全协议。
+  return `https://${trimmed}`
+}, z.string().url().optional())
+
+const optionalDescription = z.preprocess((value) => {
+  if (value === null || value === undefined) return undefined
+  if (typeof value !== 'string') return value
+
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  return trimmed
+}, z.string().max(2000).optional())
+
 const createTargetSchema = z.object({
   name: z.string().min(2).max(80),
   type: z.nativeEnum(TargetType),
-  logoUrl: z.preprocess(
-    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
-    z.string().url().optional()
-  ),
-  description: z.string().max(240).optional(),
-  websiteUrl: z.preprocess(
-    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
-    z.string().url().optional()
-  ),
+  logoUrl: optionalHttpUrl,
+  description: optionalDescription,
+  websiteUrl: optionalHttpUrl,
   developer: z.string().max(80).optional(),
   features: z.array(z.string().min(1).max(30)).optional(),
 })
