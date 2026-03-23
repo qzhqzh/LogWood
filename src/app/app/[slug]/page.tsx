@@ -1,7 +1,7 @@
-import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { getAppBySlug } from '@/modules/app'
+import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 
 export const dynamic = 'force-dynamic'
@@ -20,18 +20,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
 
   return (
     <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
-      <nav className="border-b border-cyan-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</Link>
-            <div className="flex items-center gap-6">
-              <Link href="/coding" className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide">AI Coding</Link>
-              <Link href="/app" className="text-purple-400 font-medium tracking-wide">应用工坊</Link>
-              <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide">社区文章</Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SiteNav active="app" borderClassName="border-cyan-500/20" />
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8 items-start">

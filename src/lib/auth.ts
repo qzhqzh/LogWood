@@ -37,12 +37,9 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
             httpOptions: {
               timeout: 60000,
-              retry: 2,
               ...(githubOAuthProxy
                 ? {
-                    agent: {
-                      https: new HttpsProxyAgent(githubOAuthProxy),
-                    },
+                    agent: new HttpsProxyAgent(githubOAuthProxy),
                   }
                 : {}),
             },

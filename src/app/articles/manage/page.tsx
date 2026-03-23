@@ -7,6 +7,7 @@ import { signIn, useSession } from 'next-auth/react'
 import type { ArticleStatus as PrismaArticleStatus } from '@prisma/client'
 import { encodeArticleSlug } from '@/modules/article/slug'
 import { TagPicker } from '@/components/tag-picker'
+import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 
 const RichTextEditor = dynamic(() => import('@/components/rich-text-editor'), {
@@ -326,24 +327,12 @@ export default function ManageArticlesPage() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
-      <nav className="border-b border-cyan-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">LW</span>
-              </div>
-              <span className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
-            </Link>
-            <div className="flex items-center gap-6">
-              <Link href="/coding" className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide">AI Coding</Link>
-              <Link href="/app" className="text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide">应用工坊</Link>
-              <Link href="/articles" className="text-pink-400 font-medium tracking-wide">社区文章</Link>
-              <Link href="/articles/manage" className="cyber-button px-5 py-2 rounded-lg font-semibold tracking-wide">文章管理</Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SiteNav
+        active="articles"
+        actionLabel="文章管理"
+        actionHref="/articles/manage"
+        borderClassName="border-cyan-500/20"
+      />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-center justify-between mb-8">

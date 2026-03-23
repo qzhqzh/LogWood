@@ -1,10 +1,10 @@
-import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { TargetReviewSection } from '@/components/target-review-section'
 
@@ -62,40 +62,33 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
         <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
 
-      <nav className="border-b border-purple-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">LW</span>
-              </div>
-              <span className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
-            </Link>
-            <div className="flex items-center gap-6">
-              <Link href="/editor" className="text-gray-400 hover:text-cyan-400 transition-colors font-medium tracking-wide">
-                AI Editor
-              </Link>
-              <Link href="/coding" className="text-purple-400 font-medium tracking-wide">
-                AI Coding
-              </Link>
-              <Link href="/app" className="text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide">
-                应用工坊
-              </Link>
-              <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide">
-                社区文章
-              </Link>
-              {isAdmin && (
-                <Link
-                  href="/targets/manage/coding"
-                  className="cyber-button w-[112px] text-center px-5 py-2 rounded-lg font-semibold tracking-wide"
-                >
-                  评测管理
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SiteNav
+        navItems={[
+          {
+            href: '/editor',
+            label: 'AI Editor',
+            className: 'text-gray-400 hover:text-cyan-400 transition-colors font-medium tracking-wide',
+          },
+          {
+            href: '/coding',
+            label: 'AI Coding',
+            className: 'text-purple-400 font-medium tracking-wide',
+          },
+          {
+            href: '/app',
+            label: '应用工坊',
+            className: 'text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide',
+          },
+          {
+            href: '/articles',
+            label: '社区文章',
+            className: 'text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide',
+          },
+        ]}
+        actionLabel={isAdmin ? '评测管理' : undefined}
+        actionHref={isAdmin ? '/targets/manage/coding' : undefined}
+        borderClassName="border-purple-500/20"
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="cyber-card rounded-3xl p-8 mb-8" style={{ borderColor: 'rgba(191, 0, 255, 0.2)' }}>

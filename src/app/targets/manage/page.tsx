@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { signIn, useSession } from 'next-auth/react'
@@ -62,7 +62,7 @@ function parseScopedType(value: string | null): TargetType | null {
   return null
 }
 
-export default function ManageTargetsPage() {
+function ManageTargetsPageContent() {
   const searchParams = useSearchParams()
   const scopedType = parseScopedType(searchParams.get('type'))
   const managePath = scopedType ? `/targets/manage?type=${scopedType}` : '/targets/manage'
@@ -339,5 +339,19 @@ export default function ManageTargetsPage() {
       </div>
       <SiteFooter />
     </main>
+  )
+}
+
+export default function ManageTargetsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+          <div className="cyber-card rounded-2xl p-8 text-gray-300">页面加载中...</div>
+        </main>
+      }
+    >
+      <ManageTargetsPageContent />
+    </Suspense>
   )
 }

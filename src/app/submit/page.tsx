@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CustomSelect } from '@/components/custom-select'
+import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 
 interface Target {
@@ -215,26 +216,21 @@ export default function SubmitPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
       </div>
 
-      <nav className="border-b border-cyan-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">LW</span>
-              </div>
-              <span className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
-            </Link>
-            <div className="flex items-center gap-6">
-              <Link href="/editor" className="text-gray-400 hover:text-cyan-400 transition-colors font-medium tracking-wide">
-                AI Editor
-              </Link>
-              <Link href="/coding" className="text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide">
-                AI Coding
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SiteNav
+        navItems={[
+          {
+            href: '/editor',
+            label: 'AI Editor',
+            className: 'text-gray-400 hover:text-cyan-400 transition-colors font-medium tracking-wide',
+          },
+          {
+            href: '/coding',
+            label: 'AI Coding',
+            className: 'text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide',
+          },
+        ]}
+        borderClassName="border-cyan-500/20"
+      />
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="cyber-card rounded-3xl p-8">

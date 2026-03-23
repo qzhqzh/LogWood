@@ -1,9 +1,9 @@
-import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
+import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { TargetReviewSection } from '@/components/target-review-section'
 
@@ -47,18 +47,26 @@ export default async function ModelDetailPage({ params }: TargetPageProps) {
 
   return (
     <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
-      <nav className="border-b border-purple-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</Link>
-            <div className="flex items-center gap-6">
-              <Link href="/coding?category=model" className="text-purple-300 font-medium tracking-wide">AI Model</Link>
-              <Link href="/app" className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide">应用工坊</Link>
-              <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide">社区文章</Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SiteNav
+        navItems={[
+          {
+            href: '/coding?category=model',
+            label: 'AI Model',
+            className: 'text-purple-300 font-medium tracking-wide',
+          },
+          {
+            href: '/app',
+            label: '应用工坊',
+            className: 'text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide',
+          },
+          {
+            href: '/articles',
+            label: '社区文章',
+            className: 'text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide',
+          },
+        ]}
+        borderClassName="border-purple-500/20"
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="cyber-card rounded-3xl p-8 mb-8" style={{ borderColor: 'rgba(191, 0, 255, 0.2)' }}>
