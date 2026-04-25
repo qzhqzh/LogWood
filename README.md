@@ -35,6 +35,26 @@ LogWood 的目标是构建一个高质量、可持续迭代的评测平台：
 - Auth: NextAuth.js
 - Deploy: Vercel
 
+## Theme System (Light/Dark)
+
+项目已支持全局主题切换（白天/黑夜），并采用“token + 语义类”组织方式：
+
+- 主题 token 文件：`src/app/theme.css`
+  - 统一维护 `html[data-theme='dark']` 与 `html[data-theme='light']` 的颜色变量。
+  - 业务组件应优先使用这些变量，不直接写具体色值。
+
+- 全局语义类入口：`src/app/globals.css`
+  - 维护跨页面可复用语义类（如 `text-muted`、`text-coding`、`status-info`、`border-divider`、`surface-panel`）。
+  - 这些类是普通 CSS 工具类，不是 Tailwind 内置色板；伪类请使用已定义辅助类（如 `hover-text-coding`、`group-hover-text-coding`）。
+
+- 主题初始化与切换：
+  - `src/app/layout.tsx`：首屏脚本初始化 `data-theme`，避免闪烁。
+  - `src/components/theme-toggle.tsx`：全局切换按钮，状态持久化到 `localStorage` 的 `logwood-theme`。
+
+维护约定：
+- 新增组件时优先复用语义类，避免新增 `text-gray-*`、`bg-[#xxxxxx]` 这类硬编码。
+- 如确实需要新颜色语义，先在 `theme.css` 增加 token，再在 `globals.css` 增加语义类映射。
+
 ## Run With Docker Compose
 
 项目已支持通过 Docker Compose 同时启动前端（Next.js）和数据库（PostgreSQL）。
@@ -49,6 +69,19 @@ cp .env.example .env
 
 ```bash
 docker compose up --build
+```
+
+默认已为 Docker 安装链路切到国内源：
+- Debian apt：清华镜像
+- npm registry：npmmirror
+- Prisma engines：npmmirror Prisma 二进制镜像
+
+如需切换为其他镜像，可在 `.env` 中覆盖：
+
+```bash
+DEBIAN_MIRROR=http://mirrors.ustc.edu.cn
+NPM_REGISTRY=https://registry.npmmirror.com
+PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
 ```
 
 首次部署会自动完成：

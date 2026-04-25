@@ -76,7 +76,7 @@ export function InlineReviewComposer({ targetId, onSubmitted }: InlineReviewComp
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="写下你的评测（至少 3 字）"
-        className="w-full min-h-[120px] rounded-lg border border-cyan-500/30 bg-[#12121a] px-3 py-2 text-white"
+        className="w-full min-h-[120px] rounded-lg border border-cyan-500/30 bg-[var(--color-surface-1)] px-3 py-2 text-[var(--color-text-strong)]"
       />
 
       <div className="mt-3 flex items-center justify-between gap-3">

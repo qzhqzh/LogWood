@@ -9,7 +9,7 @@ export function FooterAuthEntry() {
 
   if (status !== 'authenticated' || !session?.user?.id) {
     return (
-      <Link href="/auth/signin" className="text-gray-500 hover:text-cyan-300 transition-colors">
+      <Link href="/auth/signin" className="text-muted hover-text-coding transition-colors">
         登录入口
       </Link>
     )
@@ -22,8 +22,8 @@ export function FooterAuthEntry() {
   const userLabel = isAdmin ? '管理员' : githubName
 
   return (
-    <div className="inline-flex items-center gap-2 text-gray-500">
-      <Link href="/auth/signin" className="hover:text-cyan-300 transition-colors">
+    <div className="inline-flex items-center gap-2 text-muted">
+      <Link href="/auth/signin" className="hover-text-coding transition-colors">
         {userLabel}
       </Link>
       <button
@@ -31,7 +31,7 @@ export function FooterAuthEntry() {
         onClick={() => signOut({ callbackUrl: '/' })}
         aria-label="退出登录"
         title="退出登录"
-        className="text-gray-500 hover:text-red-300 transition-colors"
+        className="text-muted hover:text-[var(--color-danger-text)] transition-colors"
       >
         <LogOut size={14} />
       </button>

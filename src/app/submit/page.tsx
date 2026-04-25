@@ -146,7 +146,7 @@ function SubmitForm() {
               onClick={() => setFormData({ ...formData, rating })}
               className={`w-14 h-14 rounded-xl text-2xl transition-all duration-300 ${
                 rating <= formData.rating
-                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-lg shadow-yellow-500/25'
+                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-[var(--color-text-strong)] shadow-lg shadow-yellow-500/25'
                   : 'cyber-card text-gray-500 hover:text-yellow-400'
               }`}
             >
@@ -199,7 +199,7 @@ function SubmitForm() {
         </button>
         <Link
           href="/"
-          className="px-8 py-4 cyber-card rounded-xl text-gray-400 hover:text-white transition-colors"
+          className="px-8 py-4 cyber-card rounded-xl text-gray-400 hover:text-[var(--color-text-strong)] transition-colors"
         >
           取消
         </Link>
@@ -210,7 +210,7 @@ function SubmitForm() {
 
 export default function SubmitPage() {
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />

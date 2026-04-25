@@ -59,8 +59,8 @@ const Video = Node.create({
 
 function toolbarButtonClass(active = false): string {
   return active
-    ? 'px-2 py-1 rounded text-xs border border-cyan-300/70 bg-cyan-500/20 text-cyan-100'
-    : 'px-2 py-1 rounded text-xs border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10'
+    ? 'px-2 py-1 rounded text-xs border border-[var(--color-border-strong)] status-info'
+    : 'px-2 py-1 rounded text-xs border border-[var(--color-border)] text-coding hover:bg-cyan-500/10'
 }
 
 async function safeReadJson<T>(res: Response): Promise<T | null> {
@@ -212,7 +212,7 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          'min-h-[280px] rounded-b-lg bg-[#12121a] px-3 py-3 text-gray-100 focus:outline-none tiptap-editor-content',
+          'min-h-[280px] rounded-b-lg bg-[var(--color-surface-1)] px-3 py-3 text-[var(--color-fg)] focus:outline-none tiptap-editor-content',
       },
       handleDrop: (_view, event) => {
         const dragEvent = event as DragEvent
@@ -236,7 +236,7 @@ export default function RichTextEditor({
   }, [editor, value])
 
   if (!editor) {
-    return <div className="w-full min-h-[280px] rounded-lg border border-cyan-500/30 bg-[#12121a]" />
+    return <div className="w-full min-h-[280px] rounded-lg border border-cyan-500/30 bg-[var(--color-surface-1)]" />
   }
 
   return (
@@ -261,9 +261,9 @@ export default function RichTextEditor({
           e.currentTarget.value = ''
         }}
       />
-      <div className="flex flex-wrap gap-2 border-b border-cyan-500/20 bg-[#0f0f16] p-2">
+      <div className="flex flex-wrap gap-2 border-b border-[var(--color-divider)] bg-[var(--color-surface-2)] p-2">
         <select
-          className="px-2 py-1 rounded text-xs border border-cyan-500/40 bg-[#111623] text-cyan-200"
+          className="px-2 py-1 rounded text-xs border border-[var(--color-border)] bg-[var(--color-surface-3)] text-coding"
           value={editor.getAttributes('textStyle').fontFamily || ''}
           onChange={(e) => {
             const next = e.target.value
@@ -300,11 +300,11 @@ export default function RichTextEditor({
         </button>
         <button type="button" onClick={handleChooseImage} disabled={uploadingImage} className="cyber-button px-2 py-1 rounded text-xs disabled:opacity-60">{uploadingImage ? '上传中...' : '上传图片'}</button>
         <button type="button" onClick={handleChooseVideo} disabled={uploadingVideo} className="cyber-button px-2 py-1 rounded text-xs disabled:opacity-60">{uploadingVideo ? '上传中...' : '上传视频'}</button>
-        <button type="button" onClick={() => editor.chain().focus().undo().run()} className="border border-cyan-500/40 text-cyan-300 px-2 py-1 rounded text-xs hover:bg-cyan-500/10">撤销</button>
-        <button type="button" onClick={() => editor.chain().focus().redo().run()} className="border border-cyan-500/40 text-cyan-300 px-2 py-1 rounded text-xs hover:bg-cyan-500/10">重做</button>
+        <button type="button" onClick={() => editor.chain().focus().undo().run()} className="border border-[var(--color-border)] text-coding px-2 py-1 rounded text-xs hover:bg-cyan-500/10">撤销</button>
+        <button type="button" onClick={() => editor.chain().focus().redo().run()} className="border border-[var(--color-border)] text-coding px-2 py-1 rounded text-xs hover:bg-cyan-500/10">重做</button>
       </div>
       <EditorContent editor={editor} />
-      <div className="px-3 py-2 text-xs text-gray-500 border-t border-cyan-500/15 bg-[#0f0f16]">
+      <div className="px-3 py-2 text-xs text-muted border-t border-[var(--color-divider)] bg-[var(--color-surface-2)]">
         支持 H1/H2/H3、字体选择、列表、引用、代码块、分割线、上传图片/视频、Ctrl/Cmd+V 粘贴媒体、拖拽媒体到编辑区。
       </div>
     </div>

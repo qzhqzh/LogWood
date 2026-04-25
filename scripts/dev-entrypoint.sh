@@ -3,11 +3,20 @@ set -e
 
 echo "[dev-entrypoint] Starting web container..."
 
+LOCKFILE_HASH="$(sha256sum package-lock.json | awk '{print $1}')"
+LOCKFILE_HASH_FILE="node_modules/.package-lock.hash"
+
 if [ ! -d node_modules ] || [ -z "$(ls -A node_modules 2>/dev/null)" ]; then
   echo "[dev-entrypoint] node_modules missing, running npm ci..."
   npm ci
+  mkdir -p node_modules
+  printf '%s\n' "$LOCKFILE_HASH" > "$LOCKFILE_HASH_FILE"
+elif [ ! -f "$LOCKFILE_HASH_FILE" ] || [ "$(cat "$LOCKFILE_HASH_FILE" 2>/dev/null)" != "$LOCKFILE_HASH" ]; then
+  echo "[dev-entrypoint] package-lock changed, running npm ci..."
+  npm ci
+  printf '%s\n' "$LOCKFILE_HASH" > "$LOCKFILE_HASH_FILE"
 else
-  echo "[dev-entrypoint] node_modules exists, skip npm ci"
+  echo "[dev-entrypoint] node_modules is up to date, skip npm ci"
 fi
 
 echo "[dev-entrypoint] Generating Prisma client..."

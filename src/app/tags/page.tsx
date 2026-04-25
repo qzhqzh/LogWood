@@ -159,7 +159,7 @@ export default function TagsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -175,7 +175,7 @@ export default function TagsPage() {
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="w-full md:w-[420px] bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+            className="w-full md:w-[420px] bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
             placeholder="搜索标签"
           />
         </div>

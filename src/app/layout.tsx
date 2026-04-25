@@ -13,8 +13,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN">
-      <body className="bg-[#0a0a0f] text-[#e0e0ff] font-sans">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var stored=localStorage.getItem('logwood-theme');var systemDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var theme=stored||(systemDark?'dark':'light');document.documentElement.dataset.theme=theme;}catch(e){document.documentElement.dataset.theme='dark';}})();`,
+          }}
+        />
+      </head>
+      <body className="bg-[var(--color-bg)] text-[var(--color-fg)] font-sans transition-colors duration-300">
         <Providers>{children}</Providers>
       </body>
     </html>

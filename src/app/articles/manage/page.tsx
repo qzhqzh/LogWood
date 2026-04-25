@@ -13,7 +13,7 @@ import { SiteFooter } from '@/components/site-footer'
 const RichTextEditor = dynamic(() => import('@/components/rich-text-editor'), {
   ssr: false,
   loading: () => (
-    <div className="w-full min-h-[280px] rounded-lg border border-cyan-500/30 bg-[#12121a]" />
+    <div className="w-full min-h-[280px] rounded-lg border border-cyan-500/30 bg-[var(--color-surface-1)]" />
   ),
 })
 
@@ -32,13 +32,16 @@ interface ArticleItem {
   columnId: string | null
   column: ArticleColumnItem | null
   excerpt: string | null
-  content: string
   tags: string[]
   coverImageUrl: string | null
   status: ArticleStatus
   updatedAt: string
   publishedAt: string | null
   viewCount: number
+}
+
+interface ArticleDetail extends ArticleItem {
+  content: string
 }
 
 export default function ManageArticlesPage() {
@@ -59,6 +62,7 @@ export default function ManageArticlesPage() {
   const [loading, setLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const canSubmit = useMemo(() => {
@@ -108,7 +112,7 @@ export default function ManageArticlesPage() {
 
   if (sessionStatus === 'loading') {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+      <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 text-gray-300">登录状态检查中...</div>
       </main>
     )
@@ -116,9 +120,9 @@ export default function ManageArticlesPage() {
 
   if (sessionStatus !== 'authenticated') {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+      <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">需要登录</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">需要登录</h1>
           <p className="text-gray-400 mb-6">文章管理仅对登录用户开放。</p>
           <button
             type="button"
@@ -134,9 +138,9 @@ export default function ManageArticlesPage() {
 
   if (!isAdmin) {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+      <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">仅管理员可访问</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">仅管理员可访问</h1>
           <p className="text-gray-400 mb-6">文章管理仅对系统管理员开放。GitHub 普通用户可在文章详情中参与评论。</p>
           <button
             type="button"
@@ -211,20 +215,36 @@ export default function ManageArticlesPage() {
     setError(null)
   }
 
-  function editArticle(item: ArticleItem) {
+  async function editArticle(item: ArticleItem) {
     if (item.status === 'archived') return
 
-    setTitle(item.title)
-    setExcerpt(item.excerpt || '')
-    const nextContent = item.content || '<p></p>'
-    setContent(nextContent)
-    setContentTextLength(getTextLengthFromHtml(nextContent))
-    setCoverImageUrl(item.coverImageUrl || '')
-    setColumnId(item.columnId || '')
-    setTags(item.tags)
-    setStatus(item.status)
-    setEditingArticleId(item.id)
+    setEditingId(item.id)
     setError(null)
+
+    try {
+      const res = await fetch(`/api/articles/${item.id}`, { cache: 'no-store' })
+      const data = (await res.json()) as ArticleDetail | { error?: string }
+      if (!res.ok) {
+        throw new Error((data as { error?: string }).error || '加载文章详情失败')
+      }
+
+      const detail = data as ArticleDetail
+      const nextContent = detail.content || '<p></p>'
+
+      setTitle(detail.title)
+      setExcerpt(detail.excerpt || '')
+      setContent(nextContent)
+      setContentTextLength(getTextLengthFromHtml(nextContent))
+      setCoverImageUrl(detail.coverImageUrl || '')
+      setColumnId(detail.columnId || '')
+      setTags(detail.tags)
+      setStatus(detail.status)
+      setEditingArticleId(detail.id)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '加载文章详情失败')
+    } finally {
+      setEditingId(null)
+    }
   }
 
   async function createColumn() {
@@ -326,7 +346,7 @@ export default function ManageArticlesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <SiteNav
         active="articles"
         actionLabel="文章管理"
@@ -342,12 +362,12 @@ export default function ManageArticlesPage() {
 
         <form onSubmit={submitArticle} className="cyber-card rounded-2xl p-6 mb-8 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">{editingArticleId ? '编辑文章' : '新建文章'}</h2>
+            <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">{editingArticleId ? '编辑文章' : '新建文章'}</h2>
             {editingArticleId && (
               <button
                 type="button"
                 onClick={resetForm}
-                className="text-sm text-gray-300 hover:text-white"
+                className="text-sm text-gray-300 hover:text-[var(--color-text-strong)]"
               >
                 取消编辑
               </button>
@@ -358,7 +378,7 @@ export default function ManageArticlesPage() {
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+              className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
               placeholder="输入文章标题"
             />
           </div>
@@ -370,7 +390,7 @@ export default function ManageArticlesPage() {
               onChange={(e) => setExcerpt(e.target.value)}
               rows={4}
               maxLength={200}
-              className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white resize-y"
+              className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)] resize-y"
               placeholder="用于列表展示的简要摘要"
             />
             <p className="text-xs text-gray-500 mt-2">摘要最多 200 字，当前 {excerpt.length} 字</p>
@@ -381,7 +401,7 @@ export default function ManageArticlesPage() {
             <input
               value={coverImageUrl}
               onChange={(e) => setCoverImageUrl(e.target.value)}
-              className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+              className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
               placeholder="https://..."
             />
           </div>
@@ -392,7 +412,7 @@ export default function ManageArticlesPage() {
               <select
                 value={columnId}
                 onChange={(e) => setColumnId(e.target.value)}
-                className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+                className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
               >
                 <option value="">未归入专栏</option>
                 {columns.map((column) => (
@@ -404,7 +424,7 @@ export default function ManageArticlesPage() {
               <input
                 value={newColumnName}
                 onChange={(e) => setNewColumnName(e.target.value)}
-                className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+                className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
                 placeholder="新建专栏（例如 vibe coding / Vision / Robot）"
               />
               <button
@@ -433,7 +453,7 @@ export default function ManageArticlesPage() {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as ArticleStatus)}
-              className="bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+              className="bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
             >
               <option value="draft">草稿</option>
               <option value="published">发布</option>
@@ -462,12 +482,12 @@ export default function ManageArticlesPage() {
         </form>
 
         <div className="cyber-card rounded-2xl p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">文章列表</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-text-strong)] mb-4">文章列表</h2>
           <div className="space-y-3">
             {articles.map((item) => (
               <div key={item.id} className="flex items-center justify-between border border-cyan-500/15 rounded-lg p-3">
                 <div>
-                  <p className="text-white">{item.title}</p>
+                  <p className="text-[var(--color-text-strong)]">{item.title}</p>
                   <p className="text-xs text-gray-500">
                     /articles/{item.slug} · {item.status} · {item.viewCount} 阅读
                   </p>
@@ -488,9 +508,10 @@ export default function ManageArticlesPage() {
                     <button
                       type="button"
                       onClick={() => editArticle(item)}
+                      disabled={editingId === item.id}
                       className="text-indigo-300 hover:text-indigo-200"
                     >
-                      编辑
+                      {editingId === item.id ? '加载中...' : '编辑'}
                     </button>
                   )}
                   {item.status === 'draft' && (

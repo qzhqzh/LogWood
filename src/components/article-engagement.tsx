@@ -161,7 +161,7 @@ export function ArticleEngagement({ articleId, initialCommentCount = 0 }: Articl
     <section className="mt-8 cyber-card rounded-2xl p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div>
-          <h3 className="text-xl font-semibold text-white">点赞与评论</h3>
+          <h3 className="text-xl font-semibold text-[var(--color-text-strong)]">点赞与评论</h3>
         </div>
         <div className="flex items-center gap-3 text-sm">
           <button
@@ -185,7 +185,7 @@ export function ArticleEngagement({ articleId, initialCommentCount = 0 }: Articl
           value={commentContent}
           onChange={(e) => setCommentContent(e.target.value)}
           placeholder="写下你的评论"
-          className="w-full min-h-[96px] rounded-lg border border-cyan-500/30 bg-[#12121a] px-3 py-2 text-white"
+          className="w-full min-h-[96px] rounded-lg border border-cyan-500/30 bg-[var(--color-surface-1)] px-3 py-2 text-[var(--color-text-strong)]"
         />
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="text-xs text-gray-500">{commentContent.length} / 500</span>

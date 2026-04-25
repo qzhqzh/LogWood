@@ -96,7 +96,7 @@ export default async function EditorPage() {
   })
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -143,7 +143,7 @@ export default async function EditorPage() {
                   </div>
                 )}
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold text-white group-hover:text-cyan-400 transition-colors">
+                  <h2 className="text-xl font-bold text-[var(--color-text-strong)] group-hover:text-cyan-400 transition-colors">
                     {target.name}
                   </h2>
                   {target.developer && (

@@ -43,11 +43,11 @@ export function CustomSelect({ options = [], groups, value, onChange, placeholde
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-4 py-3 cyber-input rounded-xl text-left flex items-center justify-between"
       >
-        <span className={selectedOption ? 'text-white' : 'text-gray-500'}>
+        <span className={selectedOption ? 'text-[var(--color-text-strong)]' : 'text-muted'}>
           {selectedOption?.label || placeholder}
         </span>
         <svg
-          className={`w-5 h-5 text-cyan-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 text-coding transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -57,7 +57,7 @@ export function CustomSelect({ options = [], groups, value, onChange, placeholde
       </button>
 
       {isOpen && (
-        <div className="absolute z-[100] w-full mt-2 bg-[#12121a] border border-cyan-500/30 rounded-xl overflow-hidden shadow-2xl shadow-cyan-500/20">
+        <div className="absolute z-[100] w-full mt-2 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl overflow-hidden shadow-2xl shadow-cyan-500/20">
           <div className="max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-transparent">
             {!groups && options.map((option) => (
               <button
@@ -69,8 +69,8 @@ export function CustomSelect({ options = [], groups, value, onChange, placeholde
                 }}
                 className={`w-full px-4 py-3 text-left transition-all duration-200 ${
                   option.value === value
-                    ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-400'
-                    : 'text-gray-300 hover:bg-cyan-500/10 hover:text-white'
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-coding'
+                    : 'text-muted hover:bg-cyan-500/10 hover:text-[var(--color-text-strong)]'
                 }`}
               >
                 {option.label}
@@ -79,11 +79,11 @@ export function CustomSelect({ options = [], groups, value, onChange, placeholde
 
             {groups?.map((group, groupIndex) => (
               <div key={groupIndex}>
-                <div className="px-4 py-2 text-xs font-semibold text-cyan-400 uppercase tracking-wider bg-cyan-500/10 border-b border-cyan-500/20 sticky top-0">
+                <div className="px-4 py-2 text-xs font-semibold text-coding uppercase tracking-wider bg-cyan-500/10 border-b border-[var(--color-divider)] sticky top-0">
                   {group.label}
                 </div>
                 {group.options.length === 0 ? (
-                  <div className="px-4 py-3 text-gray-500 text-sm">暂无工具</div>
+                  <div className="px-4 py-3 text-muted text-sm">暂无工具</div>
                 ) : (
                   group.options.map((option) => (
                     <button
@@ -95,13 +95,13 @@ export function CustomSelect({ options = [], groups, value, onChange, placeholde
                       }}
                       className={`w-full px-4 py-3 text-left transition-all duration-200 ${
                         option.value === value
-                          ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-400'
-                          : 'text-gray-300 hover:bg-cyan-500/10 hover:text-white'
+                          ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-coding'
+                          : 'text-muted hover:bg-cyan-500/10 hover:text-[var(--color-text-strong)]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         {option.value === value && (
-                          <span className="text-cyan-400">✓</span>
+                          <span className="text-coding">✓</span>
                         )}
                         <span className={option.value === value ? 'pl-0' : 'pl-5'}>
                           {option.label}

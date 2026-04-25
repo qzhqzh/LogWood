@@ -56,7 +56,7 @@ export default async function ArticleDetailPage({
     : ''
 
   return (
-    <main className="min-h-screen bg-[#08090f] relative overflow-hidden">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-220px] left-[-180px] w-[520px] h-[520px] rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="absolute top-[140px] right-[-220px] w-[560px] h-[560px] rounded-full bg-fuchsia-500/10 blur-3xl" />
@@ -68,35 +68,35 @@ export default async function ArticleDetailPage({
           active="articles"
           actionLabel={isAdmin ? '文章管理' : undefined}
           actionHref={isAdmin ? '/articles/manage' : undefined}
-          borderClassName="border-cyan-500/20"
+          borderClassName="border-divider"
         />
       </div>
 
       <div className="relative max-w-5xl mx-auto px-5 sm:px-8 lg:px-10 pt-10 pb-16">
-        <Link href="/articles" className="inline-flex items-center text-cyan-300 hover:text-cyan-200 text-sm tracking-wide mb-8">
+        <Link href="/articles" className="inline-flex items-center text-coding hover-text-coding text-sm tracking-wide mb-8">
           ← 返回文章列表
         </Link>
 
         <header className="mb-10">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 text-balance">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[var(--color-text-strong)] leading-tight mb-6 text-balance">
             {article.title}
           </h1>
-          <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-300">
-            {article.column && <span className="px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-200">专栏：{article.column.name}</span>}
-            <span className="px-3 py-1 rounded-full bg-white/10">发布于 {format(new Date(article.publishedAt || article.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}</span>
-            <span className="px-3 py-1 rounded-full bg-white/10">{article.viewCount + 1} 次阅读</span>
-            <span className="px-3 py-1 rounded-full bg-white/10">{article._count.comments} 条评论</span>
+          <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-muted">
+            {article.column && <span className="px-3 py-1 rounded-full border border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-[var(--color-info-text)]">专栏：{article.column.name}</span>}
+            <span className="px-3 py-1 rounded-full border border-divider surface-panel">发布于 {format(new Date(article.publishedAt || article.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}</span>
+            <span className="px-3 py-1 rounded-full border border-divider surface-panel">{article.viewCount + 1} 次阅读</span>
+            <span className="px-3 py-1 rounded-full border border-divider surface-panel">{article._count.comments} 条评论</span>
           </div>
         </header>
 
         {article.excerpt && article.excerpt.trim().length > 0 && (
-          <details className="mb-8 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-5 py-4 group">
-            <summary className="list-none cursor-pointer select-none flex items-center justify-between gap-3 text-cyan-200 hover:text-cyan-100">
+          <details className="mb-8 rounded-2xl border border-divider bg-[var(--color-info-bg)] px-5 py-4 group">
+            <summary className="list-none cursor-pointer select-none flex items-center justify-between gap-3 text-coding hover-text-coding">
               <span className="text-sm sm:text-base tracking-wide">文章摘要</span>
-              <span className="text-xs text-cyan-300/80 group-open:hidden">展开</span>
-              <span className="text-xs text-cyan-300/80 hidden group-open:inline">收起</span>
+              <span className="text-xs text-soft group-open:hidden">展开</span>
+              <span className="text-xs text-soft hidden group-open:inline">收起</span>
             </summary>
-            <p className="mt-3 text-sm sm:text-base leading-7 text-gray-200 whitespace-pre-wrap">
+            <p className="mt-3 text-sm sm:text-base leading-7 text-muted whitespace-pre-wrap">
               {article.excerpt}
             </p>
           </details>
@@ -114,7 +114,7 @@ export default async function ArticleDetailPage({
           </div>
         )}
 
-        <article className="bg-white/[0.04] backdrop-blur-sm rounded-2xl p-6 sm:p-10 lg:p-12 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+        <article className="bg-[var(--color-surface-1)] border border-divider backdrop-blur-sm rounded-2xl p-6 sm:p-10 lg:p-12 shadow-[var(--color-card-shadow)]">
           {looksLikeHtml ? (
             <div
               className="article-content"

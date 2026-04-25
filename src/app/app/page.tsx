@@ -15,7 +15,7 @@ export default async function AppWorkshopPage() {
   const { apps } = await listApps({ page: 1, pageSize: 24 })
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
@@ -58,7 +58,7 @@ export default async function AppWorkshopPage() {
                 </div>
                 <div className="p-6">
                   <p className="text-xs uppercase tracking-[0.3em] text-cyan-400 mb-2">{app.name}</p>
-                  <h2 className="text-2xl font-semibold text-white mb-3">{app.title}</h2>
+                  <h2 className="text-2xl font-semibold text-[var(--color-text-strong)] mb-3">{app.title}</h2>
                   <p className="text-gray-300 mb-4 line-clamp-2">{app.summary}</p>
                   <p className="text-gray-500 text-sm line-clamp-3">{app.description}</p>
                 </div>

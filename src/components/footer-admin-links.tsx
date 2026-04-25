@@ -12,10 +12,10 @@ export function FooterAdminLinks() {
 
   return (
     <>
-      <Link href="/tags" className="text-gray-400 hover:text-cyan-300 transition-colors">
+      <Link href="/tags" className="text-muted hover-text-coding transition-colors">
         标签管理
       </Link>
-      <Link href="/comments/manage" className="text-gray-400 hover:text-cyan-300 transition-colors">
+      <Link href="/comments/manage" className="text-muted hover-text-coding transition-colors">
         评论管理
       </Link>
     </>

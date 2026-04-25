@@ -59,10 +59,10 @@ export default function SignInPage() {
 
   if (status === 'authenticated') {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex flex-col">
+      <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex flex-col">
         <div className="flex-1 flex items-center justify-center px-4">
           <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
-            <h1 className="text-2xl font-bold text-white mb-2">你已登录</h1>
+            <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">你已登录</h1>
             <p className="text-gray-400 mb-2">可以继续访问管理功能。</p>
             <p className="text-xs text-gray-500 mb-6">当前账号：{currentUserLabel}</p>
             <p className="text-xs text-gray-500 mb-6">当前角色：{currentRoleLabel}</p>
@@ -77,10 +77,10 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg flex flex-col">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 max-w-md w-full">
-          <h1 className="text-2xl font-bold text-white mb-2">登录 LogWood</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">登录 LogWood</h1>
           <p className="text-gray-400 mb-6">支持两种登录：GitHub 普通用户（可评论）和系统管理员（可管理目标/App/文章）。</p>
 
         <div className="space-y-3">
@@ -106,14 +106,14 @@ export default function SignInPage() {
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
                 placeholder="管理员邮箱"
-                className="w-full bg-[#12121a] border border-cyan-500/30 rounded px-3 py-2 text-white"
+                className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded px-3 py-2 text-[var(--color-text-strong)]"
               />
               <input
                 type="password"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
                 placeholder="管理员密码"
-                className="w-full bg-[#12121a] border border-cyan-500/30 rounded px-3 py-2 text-white"
+                className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded px-3 py-2 text-[var(--color-text-strong)]"
               />
               <button
                 type="submit"

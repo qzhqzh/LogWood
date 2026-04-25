@@ -19,14 +19,14 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <SiteNav active="app" borderClassName="border-cyan-500/20" />
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8 items-start">
           <div className="cyber-card rounded-3xl p-8">
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-400 mb-3">{app.name}</p>
-            <h1 className="text-4xl font-bold font-['Orbitron'] text-white mb-4">{app.title}</h1>
+            <h1 className="text-4xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] mb-4">{app.title}</h1>
             <p className="text-xl text-gray-300 mb-6">{app.summary}</p>
             <div className="prose prose-invert max-w-none text-gray-300 whitespace-pre-line">{app.description}</div>
             {app.tags.length > 0 && (

@@ -140,7 +140,6 @@ export async function listAllArticlesForManage() {
         },
       },
       excerpt: true,
-      content: true,
       tags: true,
       coverImageUrl: true,
       status: true,
@@ -161,6 +160,40 @@ export async function listAllArticlesForManage() {
     ...article,
     tags: parseTags(article.tags),
   }))
+}
+
+export async function getArticleByIdForManage(id: string) {
+  const article = await articleModel.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      columnId: true,
+      column: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+      excerpt: true,
+      content: true,
+      tags: true,
+      coverImageUrl: true,
+      status: true,
+      updatedAt: true,
+      publishedAt: true,
+      viewCount: true,
+    },
+  })
+
+  if (!article) return null
+
+  return {
+    ...article,
+    tags: parseTags(article.tags),
+  }
 }
 
 export async function getArticleBySlug(slug: string) {

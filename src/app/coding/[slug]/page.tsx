@@ -56,7 +56,7 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
   const totalReviews = target.reviews.length
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
@@ -106,7 +106,7 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
               </div>
             )}
             <div className="flex-1">
-              <h1 className="text-3xl font-bold font-['Orbitron'] text-white mb-2">{target.name}</h1>
+              <h1 className="text-3xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] mb-2">{target.name}</h1>
               {target.developer && (
                 <p className="text-gray-500">开发者: {target.developer}</p>
               )}
@@ -127,7 +127,7 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
             <div className="text-right">
               {avgRating && (
                 <div className="text-4xl font-bold font-['Orbitron']">
-                  <span className="text-yellow-400">★</span> <span className="text-white">{avgRating.toFixed(1)}</span>
+                  <span className="text-yellow-400">★</span> <span className="text-[var(--color-text-strong)]">{avgRating.toFixed(1)}</span>
                 </div>
               )}
               <div className="text-gray-500 mt-1">{totalReviews} 条评测</div>
@@ -163,7 +163,7 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
 
           <div className="space-y-6">
             <div className="cyber-card rounded-2xl p-6" style={{ borderColor: 'rgba(191, 0, 255, 0.2)' }}>
-              <h3 className="text-lg font-semibold font-['Orbitron'] text-white mb-4">评分分布</h3>
+              <h3 className="text-lg font-semibold font-['Orbitron'] text-[var(--color-text-strong)] mb-4">评分分布</h3>
               {totalReviews > 0 ? (
                 <div className="space-y-3">
                   {[5, 4, 3, 2, 1].map((rating) => {

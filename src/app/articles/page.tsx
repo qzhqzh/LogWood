@@ -52,7 +52,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const visibleCount = visibleGroups.reduce((sum, group) => sum + group.items.length, 0)
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
@@ -66,23 +66,23 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="mb-12">
-          <div className="inline-block mb-4 px-4 py-1 border border-pink-500/30 rounded-full bg-pink-500/5">
-            <span className="text-pink-400 text-sm tracking-widest uppercase">COMMUNITY ARTICLES</span>
+          <div className="inline-block mb-4 px-4 py-1 border border-[var(--color-danger-border)] rounded-full bg-[var(--color-danger-bg)]">
+            <span className="text-[var(--color-danger-text)] text-sm tracking-widest uppercase">COMMUNITY ARTICLES</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">社区文章</h1>
-          <p className="text-gray-400 text-lg max-w-2xl">沉淀方法论、使用经验与最佳实践。</p>
+          <p className="text-muted text-lg max-w-2xl">沉淀方法论、使用经验与最佳实践。</p>
         </div>
 
         {articles.length > 0 && (
           <section className="mb-10 cyber-card rounded-2xl p-5 sm:p-6">
             <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
               <div>
-                <p className="text-xs tracking-[0.28em] text-pink-300 uppercase mb-2">专栏统计</p>
-                <h2 className="text-xl font-semibold text-white">按专栏筛选文章</h2>
+                <p className="text-xs tracking-[0.28em] text-article uppercase mb-2">专栏统计</p>
+                <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">按专栏筛选文章</h2>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold font-['Orbitron'] text-pink-300">{visibleCount}</div>
-                <div className="text-xs text-gray-500">当前显示 / 总计 {totalCount}</div>
+                <div className="text-2xl font-bold font-['Orbitron'] text-article">{visibleCount}</div>
+                <div className="text-xs text-soft">当前显示 / 总计 {totalCount}</div>
               </div>
             </div>
 
@@ -91,8 +91,8 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
                 href="/articles"
                 className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
                   selectedColumn === 'all'
-                    ? 'border-pink-400 bg-pink-500/10 text-pink-300'
-                    : 'border-white/10 text-gray-400 hover:border-pink-500/40 hover:text-white'
+                    ? 'status-danger'
+                    : 'border-divider text-muted hover:border-[var(--color-danger-border)] hover:text-[var(--color-danger-text)]'
                 }`}
               >
                 全部 · {totalCount}
@@ -103,8 +103,8 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
                   href={`/articles?column=${encodeURIComponent(group.key)}`}
                   className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
                     selectedColumn === group.key
-                      ? 'border-pink-400 bg-pink-500/10 text-pink-300'
-                      : 'border-white/10 text-gray-400 hover:border-pink-500/40 hover:text-white'
+                      ? 'status-danger'
+                      : 'border-divider text-muted hover:border-[var(--color-danger-border)] hover:text-[var(--color-danger-text)]'
                   }`}
                 >
                   {group.label} · {group.items.length}
@@ -115,15 +115,15 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
         )}
 
         {articles.length === 0 ? (
-          <div className="cyber-card rounded-2xl p-10 text-center text-gray-400">暂无文章，先去创建第一篇吧。</div>
+          <div className="cyber-card rounded-2xl p-10 text-center text-muted">暂无文章，先去创建第一篇吧。</div>
         ) : (
           <div className="space-y-10">
             {visibleGroups.length === 0 && (
-              <div className="cyber-card rounded-2xl p-10 text-center text-gray-400">当前筛选专栏暂无文章。</div>
+              <div className="cyber-card rounded-2xl p-10 text-center text-muted">当前筛选专栏暂无文章。</div>
             )}
             {visibleGroups.map((group) => (
               <section key={group.key}>
-                <h2 className="text-xl font-semibold text-cyan-200 mb-4">专栏：{group.label}</h2>
+                <h2 className="text-xl font-semibold text-article mb-4">专栏：{group.label}</h2>
                 <div className="grid md:grid-cols-2 gap-6">
                   {group.items.map((article: (typeof articles)[number]) => (
                     <Link
@@ -131,9 +131,9 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
                       href={`/articles/${encodeArticleSlug(article.slug)}`}
                       className="cyber-card rounded-2xl p-6 hover:scale-[1.01] transition-transform"
                     >
-                      <h3 className="text-2xl font-semibold text-white mb-3">{article.title}</h3>
-                      {article.excerpt && <p className="text-gray-300 mb-4 line-clamp-5">{article.excerpt}</p>}
-                      <div className="flex items-center justify-between text-sm text-gray-500">
+                      <h3 className="text-2xl font-semibold text-[var(--color-text-strong)] mb-3">{article.title}</h3>
+                      {article.excerpt && <p className="text-muted mb-4 line-clamp-5">{article.excerpt}</p>}
+                      <div className="flex items-center justify-between text-sm text-soft">
                         <span>
                           {formatDistanceToNow(new Date(article.publishedAt || article.createdAt), {
                             addSuffix: true,
