@@ -1,10 +1,10 @@
-import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { TargetReviewSection } from '@/components/target-review-section'
 
@@ -56,46 +56,39 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
   const totalReviews = target.reviews.length
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
 
-      <nav className="border-b border-cyan-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">LW</span>
-              </div>
-              <span className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
-            </Link>
-            <div className="flex items-center gap-6">
-              <Link href="/editor" className="text-cyan-400 font-medium tracking-wide">
-                AI Editor
-              </Link>
-              <Link href="/coding" className="text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide">
-                AI Coding
-              </Link>
-              <Link href="/app" className="text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide">
-                应用工坊
-              </Link>
-              <Link href="/articles" className="text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide">
-                社区文章
-              </Link>
-              {isAdmin && (
-                <Link
-                  href="/targets/manage/editor"
-                  className="cyber-button w-[112px] text-center px-5 py-2 rounded-lg font-semibold tracking-wide"
-                >
-                  评测管理
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SiteNav
+        navItems={[
+          {
+            href: '/editor',
+            label: 'AI Editor',
+            className: 'text-cyan-400 font-medium tracking-wide',
+          },
+          {
+            href: '/coding',
+            label: 'AI Coding',
+            className: 'text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide',
+          },
+          {
+            href: '/app',
+            label: '应用工坊',
+            className: 'text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide',
+          },
+          {
+            href: '/articles',
+            label: '社区文章',
+            className: 'text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide',
+          },
+        ]}
+        actionLabel={isAdmin ? '评测管理' : undefined}
+        actionHref={isAdmin ? '/targets/manage/editor' : undefined}
+        borderClassName="border-cyan-500/20"
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="cyber-card rounded-3xl p-8 mb-8">
@@ -113,7 +106,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
               </div>
             )}
             <div className="flex-1">
-              <h1 className="text-3xl font-bold font-['Orbitron'] text-white mb-2">{target.name}</h1>
+              <h1 className="text-3xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] mb-2">{target.name}</h1>
               {target.developer && (
                 <p className="text-gray-500">开发者: {target.developer}</p>
               )}
@@ -134,7 +127,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
             <div className="text-right">
               {avgRating && (
                 <div className="text-4xl font-bold font-['Orbitron']">
-                  <span className="text-yellow-400">★</span> <span className="text-white">{avgRating.toFixed(1)}</span>
+                  <span className="text-yellow-400">★</span> <span className="text-[var(--color-text-strong)]">{avgRating.toFixed(1)}</span>
                 </div>
               )}
               <div className="text-gray-500 mt-1">{totalReviews} 条评测</div>
@@ -170,7 +163,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
 
           <div className="space-y-6">
             <div className="cyber-card rounded-2xl p-6">
-              <h3 className="text-lg font-semibold font-['Orbitron'] text-white mb-4">评分分布</h3>
+              <h3 className="text-lg font-semibold font-['Orbitron'] text-[var(--color-text-strong)] mb-4">评分分布</h3>
               {totalReviews > 0 ? (
                 <div className="space-y-3">
                   {[5, 4, 3, 2, 1].map((rating) => {

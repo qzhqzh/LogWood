@@ -90,7 +90,7 @@ export default function EmojisPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-10">
           <div className="inline-block mb-4 px-4 py-1 border border-cyan-500/30 rounded-full bg-cyan-500/5">
@@ -106,13 +106,13 @@ export default function EmojisPage() {
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+                className="bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
                 placeholder="表情名称，如 加油"
               />
               <input
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value)}
-                className="bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+                className="bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
                 placeholder="表情字符，如 🚀"
               />
               <button

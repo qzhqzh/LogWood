@@ -121,7 +121,7 @@ export default function ManageCommentsPage() {
 
   if (sessionStatus === 'loading') {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+      <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 text-gray-300">登录状态检查中...</div>
       </main>
     )
@@ -129,9 +129,9 @@ export default function ManageCommentsPage() {
 
   if (sessionStatus !== 'authenticated') {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+      <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">需要登录</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">需要登录</h1>
           <p className="text-gray-400 mb-6">评论管理仅对登录用户开放。</p>
           <button type="button" onClick={() => signIn(undefined, { callbackUrl: '/comments/manage' })} className="cyber-button px-5 py-2 rounded-lg">前往登录</button>
         </div>
@@ -141,9 +141,9 @@ export default function ManageCommentsPage() {
 
   if (!isAdmin) {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+      <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">仅管理员可访问</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">仅管理员可访问</h1>
           <p className="text-gray-400 mb-6">评论管理仅对系统管理员开放。</p>
           <button type="button" onClick={() => signIn(undefined, { callbackUrl: '/comments/manage' })} className="cyber-button px-5 py-2 rounded-lg">切换账号</button>
         </div>
@@ -152,7 +152,7 @@ export default function ManageCommentsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">评论管理</h1>
@@ -164,7 +164,7 @@ export default function ManageCommentsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'hidden')}
-            className="bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white"
+            className="bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
           >
             <option value="all">全部</option>
             <option value="active">有效</option>
@@ -173,7 +173,7 @@ export default function ManageCommentsPage() {
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white min-w-[220px]"
+            className="bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)] min-w-[220px]"
             placeholder="搜索评论内容 / 作者 / 目标"
           />
           <button
@@ -195,7 +195,7 @@ export default function ManageCommentsPage() {
                 <div key={comment.id} className="cyber-card rounded-2xl p-4">
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div>
-                      <p className="text-white text-sm">{comment.authorName}</p>
+                      <p className="text-[var(--color-text-strong)] text-sm">{comment.authorName}</p>
                       <p className="text-xs text-gray-500">
                         状态: {comment.status === 'hidden' ? '隐藏' : '有效'} · 赞: {comment.likesCount} · {new Date(comment.createdAt).toLocaleString('zh-CN')}
                       </p>

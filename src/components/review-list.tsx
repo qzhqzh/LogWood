@@ -138,12 +138,12 @@ export function ReviewList({ targetId }: ReviewListProps) {
   }
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-500">加载中...</div>
+    return <div className="text-center py-8 text-muted">加载中...</div>
   }
 
   if (reviews.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-muted">
         暂无评测，成为第一个发布评测的人吧！
       </div>
     )
@@ -156,8 +156,8 @@ export function ReviewList({ targetId }: ReviewListProps) {
           onClick={() => setSort('latest')}
           className={`px-3 py-1 rounded-lg text-sm ${
             sort === 'latest'
-              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-              : 'bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-transparent'
+              ? 'status-info border'
+              : 'bg-[var(--color-surface-2)] text-muted hover-text-coding border border-transparent'
           }`}
         >
           最新
@@ -166,8 +166,8 @@ export function ReviewList({ targetId }: ReviewListProps) {
           onClick={() => setSort('hot')}
           className={`px-3 py-1 rounded-lg text-sm ${
             sort === 'hot'
-              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-              : 'bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-transparent'
+              ? 'status-info border'
+              : 'bg-[var(--color-surface-2)] text-muted hover-text-coding border border-transparent'
           }`}
         >
           最热
@@ -179,15 +179,15 @@ export function ReviewList({ targetId }: ReviewListProps) {
           const canToggleContent = review.content.trim().length > 120
 
           return (
-            <div key={review.id} className="rounded-xl border border-cyan-500/15 p-4 bg-[#0f1018]">
+            <div key={review.id} className="rounded-xl border border-divider p-4 surface-panel">
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 border border-cyan-500/30 flex items-center justify-center text-sm">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 border border-divider flex items-center justify-center text-sm">
                   {review.author.type === 'anonymous' ? '🎭' : '👤'}
                 </div>
                 <div>
-                  <div className="font-medium text-cyan-200">{review.author.name}</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="font-medium text-coding">{review.author.name}</div>
+                  <div className="text-xs text-soft">
                     {formatDistanceToNow(new Date(review.createdAt), {
                       addSuffix: true,
                       locale: zhCN,
@@ -201,7 +201,7 @@ export function ReviewList({ targetId }: ReviewListProps) {
               </div>
             </div>
             <p
-              className={`text-gray-300 whitespace-pre-wrap break-all ${
+              className={`text-muted whitespace-pre-wrap break-all ${
                 expandedReviews[review.id] || !canToggleContent ? '' : 'line-clamp-3'
               }`}
             >
@@ -212,20 +212,20 @@ export function ReviewList({ targetId }: ReviewListProps) {
               <div className="mt-2">
                 <button
                   onClick={() => toggleReviewExpanded(review.id)}
-                  className="text-sm text-gray-500 hover:text-cyan-400"
+                  className="text-sm text-soft hover-text-coding"
                 >
                   {expandedReviews[review.id] ? '收起' : '展开全文'}
                 </button>
               </div>
             )}
 
-            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-cyan-500/10">
+            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-divider">
               <button
                 onClick={() => handleLike(review.id)}
                 className={`flex items-center gap-1 text-sm ${
                   review.isLikedByMe
-                    ? 'text-cyan-400'
-                    : 'text-gray-500 hover:text-cyan-400'
+                    ? 'text-coding'
+                    : 'text-soft hover-text-coding'
                 }`}
               >
                 👍 {review.likesCount}
@@ -233,40 +233,40 @@ export function ReviewList({ targetId }: ReviewListProps) {
 
               <button
                 onClick={() => toggleReplies(review.id)}
-                className="text-sm text-gray-500 hover:text-cyan-400"
+                className="text-sm text-soft hover-text-coding"
               >
                 {expandedReplies[review.id] ? '收起回复' : `回复(${review.commentCount})`}
               </button>
             </div>
 
             {expandedReplies[review.id] && (
-              <div className="mt-4 rounded-xl border border-cyan-500/20 bg-[#0f1018] p-3 space-y-3">
+              <div className="mt-4 rounded-xl border border-divider surface-panel p-3 space-y-3">
                 {loadingCommentsByReviewId[review.id] ? (
-                  <p className="text-sm text-gray-500">回复加载中...</p>
+                  <p className="text-sm text-soft">回复加载中...</p>
                 ) : (commentsByReviewId[review.id] || []).length === 0 ? (
-                  <p className="text-sm text-gray-500">暂无回复</p>
+                  <p className="text-sm text-soft">暂无回复</p>
                 ) : (
                   (commentsByReviewId[review.id] || []).map((comment) => (
-                    <div key={comment.id} className="rounded-lg border border-cyan-500/15 bg-[#12121a] p-3">
+                    <div key={comment.id} className="rounded-lg border border-divider bg-[var(--color-surface-1)] p-3">
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 border border-cyan-500/30 flex items-center justify-center text-xs">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 border border-divider flex items-center justify-center text-xs">
                           {comment.author.type === 'anonymous' ? '🎭' : '👤'}
                         </div>
-                        <div className="text-sm font-semibold text-cyan-200">{comment.author.name}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-sm font-semibold text-coding">{comment.author.name}</div>
+                        <div className="text-xs text-soft">
                           {formatDistanceToNow(new Date(comment.createdAt), {
                             addSuffix: true,
                             locale: zhCN,
                           })}
                         </div>
                       </div>
-                      <p className="text-sm text-gray-300 whitespace-pre-wrap break-all">{comment.content}</p>
+                      <p className="text-sm text-muted whitespace-pre-wrap break-all">{comment.content}</p>
                       <button
                         onClick={() => handleCommentLike(review.id, comment.id)}
                         className={`mt-2 text-xs ${
                           comment.isLikedByMe
-                            ? 'text-cyan-400'
-                            : 'text-gray-500 hover:text-cyan-400'
+                            ? 'text-coding'
+                            : 'text-soft hover-text-coding'
                         }`}
                       >
                         👍 {comment.likesCount}

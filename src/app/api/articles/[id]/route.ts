@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { ArticleStatus } from '@prisma/client'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
-import { deleteArticle, updateArticle } from '@/modules/article'
+import { deleteArticle, getArticleByIdForManage, updateArticle } from '@/modules/article'
 import { isAdminSession } from '@/lib/authz'
 
 const updateSchema = z.object({
@@ -22,6 +22,31 @@ const updateSchema = z.object({
   ),
   status: z.nativeEnum(ArticleStatus).optional(),
 })
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'ERR_UNAUTHORIZED' }, { status: 401 })
+    }
+    if (!isAdminSession(session)) {
+      return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
+    }
+
+    const article = await getArticleByIdForManage(params.id)
+    if (!article) {
+      return NextResponse.json({ error: 'ERR_ARTICLE_NOT_FOUND' }, { status: 404 })
+    }
+
+    return NextResponse.json(article)
+  } catch (error) {
+    console.error('GET /api/articles/:id error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
 
 export async function PATCH(
   request: NextRequest,

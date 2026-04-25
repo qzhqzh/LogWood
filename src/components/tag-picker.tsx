@@ -29,21 +29,21 @@ async function safeReadJson<T>(res: Response): Promise<T | null> {
 }
 
 const SENTIMENT_META: Record<TagSentiment, { label: string; titleClass: string; emptyText: string }> = {
-  good: { label: '正向标签池', titleClass: 'text-emerald-300', emptyText: '暂无匹配的正向标签' },
-  bad: { label: '负向标签池', titleClass: 'text-rose-300', emptyText: '暂无匹配的负向标签' },
-  neutral: { label: '中性标签池', titleClass: 'text-violet-300', emptyText: '暂无匹配的中性标签' },
+  good: { label: '正向标签池', titleClass: 'text-[var(--color-success-text)]', emptyText: '暂无匹配的正向标签' },
+  bad: { label: '负向标签池', titleClass: 'text-[var(--color-danger-text)]', emptyText: '暂无匹配的负向标签' },
+  neutral: { label: '中性标签池', titleClass: 'text-[var(--color-info-text)]', emptyText: '暂无匹配的中性标签' },
 }
 
 function sentimentClass(sentiment: TagSentiment): string {
   if (sentiment === 'good') {
-    return 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
+    return 'status-success border'
   }
 
   if (sentiment === 'bad') {
-    return 'border-rose-400/30 bg-rose-500/10 text-rose-200'
+    return 'status-danger border'
   }
 
-  return 'border-violet-400/30 bg-violet-500/10 text-violet-200'
+  return 'status-info border'
 }
 
 export function TagPicker({ value, onChange, disabled = false, allowCreate = true }: TagPickerProps) {
@@ -149,14 +149,14 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             disabled={disabled || creating}
-            className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white disabled:opacity-60"
+            className="w-full bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-strong)] disabled:opacity-60"
             placeholder="快速新建标签"
           />
           <select
             value={newSentiment}
             onChange={(e) => setNewSentiment(e.target.value as TagSentiment)}
             disabled={disabled || creating}
-            className="bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white disabled:opacity-60"
+            className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-strong)] disabled:opacity-60"
           >
             <option value="good">正向</option>
             <option value="bad">负向</option>
@@ -177,13 +177,13 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}
         disabled={disabled}
-        className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white disabled:opacity-60"
+        className="w-full bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-strong)] disabled:opacity-60"
         placeholder="搜索标签"
       />
 
       <div className="flex flex-wrap gap-2 min-h-8">
         {value.length === 0 ? (
-          <span className="text-xs text-gray-500">尚未选择标签</span>
+          <span className="text-xs text-soft">尚未选择标签</span>
         ) : (
           value.map((tagName) => {
             const matched = tags.find((tag) => tag.name === tagName)
@@ -193,7 +193,7 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
                 type="button"
                 onClick={() => toggleTag(tagName)}
                 disabled={disabled}
-                className={`px-3 py-1 rounded-full border text-xs ${matched ? sentimentClass(matched.sentiment) : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-200'} disabled:opacity-60`}
+                className={`px-3 py-1 rounded-full border text-xs ${matched ? sentimentClass(matched.sentiment) : 'status-info'} disabled:opacity-60`}
               >
                 {tagName} ×
               </button>
@@ -203,18 +203,18 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
       </div>
 
       <div className="relative py-2">
-        <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[var(--color-accent-coding)]/60 to-transparent" />
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-center">
-          <span className="px-3 text-[10px] tracking-[0.2em] uppercase text-cyan-300 bg-[#0a0a0f]">标签池</span>
+          <span className="px-3 text-[10px] tracking-[0.2em] uppercase text-coding bg-[var(--color-bg)]">标签池</span>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-xs text-gray-500">标签加载中...</p>
+        <p className="text-xs text-soft">标签加载中...</p>
       ) : (
         <div className="grid md:grid-cols-3 gap-3">
           {(Object.keys(groupedTags) as TagSentiment[]).map((sentiment) => (
-            <section key={sentiment} className="rounded-xl border border-cyan-500/15 bg-[#0f1018] p-3">
+            <section key={sentiment} className="rounded-xl border border-divider surface-panel p-3">
               <h3 className={`text-xs tracking-[0.2em] uppercase mb-3 ${SENTIMENT_META[sentiment].titleClass}`}>
                 {SENTIMENT_META[sentiment].label}
               </h3>
@@ -227,14 +227,14 @@ export function TagPicker({ value, onChange, disabled = false, allowCreate = tru
                       type="button"
                       onClick={() => toggleTag(tag.name)}
                       disabled={disabled}
-                      className={`px-3 py-1 rounded-full border text-xs transition-colors disabled:opacity-60 ${selected ? sentimentClass(tag.sentiment) : 'border-white/15 text-gray-300 hover:border-cyan-400/40 hover:text-cyan-200'}`}
+                      className={`px-3 py-1 rounded-full border text-xs transition-colors disabled:opacity-60 ${selected ? sentimentClass(tag.sentiment) : 'border-divider text-muted hover:border-[var(--color-border-strong)] hover-text-coding'}`}
                     >
                       {tag.name}
                     </button>
                   )
                 })}
                 {groupedTags[sentiment].length === 0 && (
-                  <span className="text-xs text-gray-500">{SENTIMENT_META[sentiment].emptyText}</span>
+                  <span className="text-xs text-soft">{SENTIMENT_META[sentiment].emptyText}</span>
                 )}
               </div>
             </section>

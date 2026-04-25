@@ -80,7 +80,7 @@ export default async function CodingPage({ searchParams }: CodingPageProps) {
   const activeGroup = groupedTargets.find((item) => item.key === selectedCategory) || groupedTargets[1]
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
@@ -113,7 +113,7 @@ export default async function CodingPage({ searchParams }: CodingPageProps) {
               className={`px-4 py-2 rounded-full border text-sm tracking-wide transition-colors ${
                 selectedCategory === group.key
                   ? 'border-purple-400 bg-purple-500/10 text-purple-300'
-                  : 'border-white/10 text-gray-400 hover:border-purple-500/40 hover:text-white'
+                  : 'border-white/10 text-gray-400 hover:border-purple-500/40 hover:text-[var(--color-text-strong)]'
               }`}
             >
               {group.label} · {group.targets.length}
@@ -125,7 +125,7 @@ export default async function CodingPage({ searchParams }: CodingPageProps) {
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <p className="text-xs tracking-[0.3em] text-purple-300 uppercase mb-2">当前分类</p>
-              <h2 className="text-2xl font-bold text-white">{activeGroup.label}</h2>
+              <h2 className="text-2xl font-bold text-[var(--color-text-strong)]">{activeGroup.label}</h2>
               <p className="text-gray-500 mt-2">不同分类下展示不同的评测目标，你也可以从管理入口继续补充目标池。</p>
             </div>
             <div className="text-right">
@@ -162,7 +162,7 @@ export default async function CodingPage({ searchParams }: CodingPageProps) {
                   </div>
                 )}
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">
+                  <h2 className="text-xl font-bold text-[var(--color-text-strong)] group-hover:text-purple-400 transition-colors">
                     {target.name}
                   </h2>
                   <span className="inline-flex mt-2 px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 text-xs tracking-wide">

@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CustomSelect } from '@/components/custom-select'
+import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 
 interface Target {
@@ -145,7 +146,7 @@ function SubmitForm() {
               onClick={() => setFormData({ ...formData, rating })}
               className={`w-14 h-14 rounded-xl text-2xl transition-all duration-300 ${
                 rating <= formData.rating
-                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-lg shadow-yellow-500/25'
+                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-[var(--color-text-strong)] shadow-lg shadow-yellow-500/25'
                   : 'cyber-card text-gray-500 hover:text-yellow-400'
               }`}
             >
@@ -198,7 +199,7 @@ function SubmitForm() {
         </button>
         <Link
           href="/"
-          className="px-8 py-4 cyber-card rounded-xl text-gray-400 hover:text-white transition-colors"
+          className="px-8 py-4 cyber-card rounded-xl text-gray-400 hover:text-[var(--color-text-strong)] transition-colors"
         >
           取消
         </Link>
@@ -209,32 +210,27 @@ function SubmitForm() {
 
 export default function SubmitPage() {
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
       </div>
 
-      <nav className="border-b border-cyan-500/20 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">LW</span>
-              </div>
-              <span className="text-2xl font-bold font-['Orbitron'] gradient-text">LogWood</span>
-            </Link>
-            <div className="flex items-center gap-6">
-              <Link href="/editor" className="text-gray-400 hover:text-cyan-400 transition-colors font-medium tracking-wide">
-                AI Editor
-              </Link>
-              <Link href="/coding" className="text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide">
-                AI Coding
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SiteNav
+        navItems={[
+          {
+            href: '/editor',
+            label: 'AI Editor',
+            className: 'text-gray-400 hover:text-cyan-400 transition-colors font-medium tracking-wide',
+          },
+          {
+            href: '/coding',
+            label: 'AI Coding',
+            className: 'text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide',
+          },
+        ]}
+        borderClassName="border-cyan-500/20"
+      />
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="cyber-card rounded-3xl p-8">

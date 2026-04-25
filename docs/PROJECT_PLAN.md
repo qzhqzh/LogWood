@@ -51,6 +51,13 @@
 
 ## 8. 变更记录
 
+### 2026-04-02
+- Docker 构建链路切换为可配置国内源：
+  - Debian apt 默认使用清华 HTTP 镜像，避免基础镜像首次构建时因缺少 CA 证书导致握手失败。
+  - npm 默认使用 npmmirror。
+  - Prisma engines 默认使用 npmmirror 二进制镜像。
+- docker-compose 为 web 服务补充镜像源相关 build args / runtime env，确保镜像构建和容器内 `npm ci` 均走国内源。
+
 ### 2026-03-13
 - 修复登录可能跳转 localhost 的问题：
   - 增加回调地址清洗逻辑，阻断 localhost 绝对地址。

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { signIn, useSession } from 'next-auth/react'
@@ -28,6 +28,33 @@ interface TargetItem {
   features: string[]
 }
 
+interface ValidationIssue {
+  path?: Array<string | number>
+  message?: string
+}
+
+function formatTargetApiError(data: unknown, fallback: string): string {
+  if (!data || typeof data !== 'object') {
+    return fallback
+  }
+
+  const payload = data as { error?: string; details?: ValidationIssue[] }
+  if (payload.error === 'ERR_TARGET_VALIDATION' && Array.isArray(payload.details)) {
+    const first = payload.details[0]
+    if (!first) {
+      return '提交数据校验失败，请检查输入'
+    }
+
+    const firstPath = Array.isArray(first.path) && first.path.length > 0 ? String(first.path[0]) : '字段'
+    const firstMessage = typeof first.message === 'string' && first.message.trim().length > 0
+      ? first.message
+      : '格式不正确'
+    return `字段「${firstPath}」校验失败：${firstMessage}`
+  }
+
+  return payload.error || fallback
+}
+
 function parseScopedType(value: string | null): TargetType | null {
   if (value === 'editor' || value === 'coding' || value === 'model' || value === 'prompt') {
     return value
@@ -35,7 +62,7 @@ function parseScopedType(value: string | null): TargetType | null {
   return null
 }
 
-export default function ManageTargetsPage() {
+function ManageTargetsPageContent() {
   const searchParams = useSearchParams()
   const scopedType = parseScopedType(searchParams.get('type'))
   const managePath = scopedType ? `/targets/manage?type=${scopedType}` : '/targets/manage'
@@ -100,14 +127,14 @@ export default function ManageTargetsPage() {
   }, [])
 
   if (sessionStatus === 'loading') {
-    return <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4"><div className="cyber-card rounded-2xl p-8 text-gray-300">登录状态检查中...</div></main>
+    return <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4"><div className="cyber-card rounded-2xl p-8 text-gray-300">登录状态检查中...</div></main>
   }
 
   if (sessionStatus !== 'authenticated') {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+      <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">需要登录</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">需要登录</h1>
           <p className="text-gray-400 mb-6">评测目标管理仅对登录用户开放。</p>
           <button type="button" onClick={() => signIn(undefined, { callbackUrl: managePath })} className="cyber-button px-5 py-2 rounded-lg">前往登录</button>
         </div>
@@ -117,9 +144,9 @@ export default function ManageTargetsPage() {
 
   if (!isAdmin) {
     return (
-      <main className="min-h-screen bg-[#0a0a0f] grid-bg flex items-center justify-center px-4">
+      <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">仅管理员可访问</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">仅管理员可访问</h1>
           <p className="text-gray-400 mb-6">评测目标管理仅对系统管理员开放。GitHub 普通用户可在目标详情中参与评论。</p>
           <button type="button" onClick={() => signIn(undefined, { callbackUrl: managePath })} className="cyber-button px-5 py-2 rounded-lg">切换账号</button>
         </div>
@@ -153,7 +180,7 @@ export default function ManageTargetsPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || (editingId ? '更新失败' : '创建失败'))
+        throw new Error(formatTargetApiError(data, editingId ? '更新失败' : '创建失败'))
       }
 
       resetForm()
@@ -194,7 +221,7 @@ export default function ManageTargetsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] grid-bg relative">
+    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">{titleText}</h1>
@@ -220,7 +247,7 @@ export default function ManageTargetsPage() {
         <form onSubmit={submitTarget} className="cyber-card rounded-2xl p-6 mb-8 space-y-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-white">{editingId ? '编辑评测目标' : '新增评测目标'}</h2>
+              <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">{editingId ? '编辑评测目标' : '新增评测目标'}</h2>
               <p className="text-sm text-gray-400 mt-1">可编辑历史目标，并从统一标签池选择或快速创建标签。</p>
             </div>
             {editingId && (
@@ -232,7 +259,7 @@ export default function ManageTargetsPage() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm mb-2 text-gray-300">名称</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="例如 Cursor / Claude 3.7 / Prompt Deck" />
+              <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]" placeholder="例如 Cursor / Claude 3.7 / Prompt Deck" />
             </div>
             <div>
               <label className="block text-sm mb-2 text-gray-300">分类</label>
@@ -240,7 +267,7 @@ export default function ManageTargetsPage() {
                 value={scopedType || type}
                 onChange={(e) => setType(e.target.value as TargetType)}
                 disabled={Boolean(scopedType)}
-                className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)] disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <option value="editor">AI Editor</option>
                 <option value="coding">AI Coding</option>
@@ -250,30 +277,37 @@ export default function ManageTargetsPage() {
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="官网 URL" />
-            <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="Logo URL（可选）" />
+            <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]" placeholder="官网 URL" />
+            <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]" placeholder="Logo URL（可选）" />
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            <input value={developer} onChange={(e) => setDeveloper(e.target.value)} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="开发者 / 团队" />
+            <input value={developer} onChange={(e) => setDeveloper(e.target.value)} className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]" placeholder="开发者 / 团队" />
             <div className="text-xs text-gray-500 flex items-center">标签已改为标签池维护，可在下方选择或快速创建。</div>
           </div>
           <div>
             <label className="block text-sm mb-2 text-gray-300">标签</label>
             <TagPicker value={features} onChange={setFeatures} disabled={loading} />
           </div>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full bg-[#12121a] border border-cyan-500/30 rounded-lg px-3 py-2 text-white" placeholder="简要描述目标定位和能力边界" />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            maxLength={2000}
+            className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
+            placeholder="简要描述目标定位和能力边界（可留空）"
+          />
           <button type="submit" disabled={loading || !canSubmit} className="cyber-button px-5 py-2 rounded-lg disabled:opacity-60">{loading ? (editingId ? '保存中...' : '提交中...') : (editingId ? '保存修改' : '新增评测目标')}</button>
           {error && <p className="text-red-400 text-sm">{error}</p>}
         </form>
 
         <div className="cyber-card rounded-2xl p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">当前评测目标</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-text-strong)] mb-4">当前评测目标</h2>
           <div className="grid md:grid-cols-2 gap-3">
             {visibleTargets.map((item) => (
               <div key={item.id} className="border border-cyan-500/15 rounded-lg p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-white">{item.name}</p>
+                    <p className="text-[var(--color-text-strong)]">{item.name}</p>
                     <p className="text-xs text-gray-500">{item.type} / {item.slug}</p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -305,5 +339,19 @@ export default function ManageTargetsPage() {
       </div>
       <SiteFooter />
     </main>
+  )
+}
+
+export default function ManageTargetsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex items-center justify-center px-4">
+          <div className="cyber-card rounded-2xl p-8 text-gray-300">页面加载中...</div>
+        </main>
+      }
+    >
+      <ManageTargetsPageContent />
+    </Suspense>
   )
 }
