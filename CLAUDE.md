@@ -12,45 +12,62 @@ LogWood is an AI coding tools review community (AI Editor / AI Coding). Users ca
 - **Backend**: Next.js Route Handlers + Service Layer
 - **Database**: PostgreSQL + Prisma ORM
 - **Auth**: NextAuth.js (GitHub OAuth + Admin Credentials)
-- **Deploy**: Docker Compose (dev), Vercel (prod)
+- **Deploy**: Docker Compose (Bun + Nginx), Vercel (prod)
 
 ## Essential Commands
 
 ### Development (Docker Compose)
 ```bash
-# Start everything (web + postgres)
+# Start everything (web + postgres + nginx) — production build by default
 docker compose up --build
 
+# Local dev mode (hot reload)
+NODE_ENV=development docker compose up --build
+
 # Access services
-docker compose exec web npx prisma db push       # Sync schema to DB
-docker compose exec web npx prisma generate       # Regenerate Prisma Client
-docker compose exec web npm run db:seed           # Seed test data
-docker compose exec web npm run test              # Run tests
-docker compose exec web npm run lint              # Run ESLint
-docker compose down                               # Stop and cleanup
+docker compose exec web bunx prisma db push       # Sync schema to DB
+docker compose exec web bunx prisma generate       # Regenerate Prisma Client
+docker compose exec web bun run db:seed            # Seed test data
+docker compose exec web bun run test               # Run tests
+docker compose exec web bun run lint               # Run ESLint
+docker compose down                                # Stop and cleanup
 ```
 
 ### Prisma Commands
 ```bash
-npm run db:generate   # prisma generate
-npm run db:push       # prisma db push (dev iteration)
-npm run db:migrate    # prisma migrate dev (versioned migrations)
-npm run db:studio     # prisma studio (visual DB browser)
-npm run db:seed       # Seed test data
+bun run db:generate   # prisma generate
+bun run db:push       # prisma db push (dev iteration)
+bun run db:migrate    # prisma migrate dev (versioned migrations)
+bun run db:studio     # prisma studio (visual DB browser)
+bun run db:seed       # Seed test data
 ```
 
 ### Next.js
 ```bash
-npm run dev           # Next.js dev (0.0.0.0:3000)
-npm run build         # Next.js build
-npm run start         # Next.js start (0.0.0.0:3000)
-npm run lint          # ESLint
-npm run test          # Vitest run
-npm run test:watch    # Vitest watch mode
+bun run dev           # Next.js dev (0.0.0.0:3000)
+bun run build         # Next.js build
+bun run start         # Next.js start (0.0.0.0:3000)
+bun run lint          # ESLint
+bun run test          # Vitest run
+bun run test:watch    # Vitest watch mode
 ```
 
 ### Force Re-seed Database
 Set `FORCE_DB_SEED=1` in `.env` and restart `docker compose up --build`.
+
+### Deployment Architecture
+
+```
+[Client] → [Upstream Nginx (SSL termination)] → [Nginx (:10000, gzip/cache/rate-limit)] → [Next.js (:3000)]
+```
+
+- **Production mode** (default): `NODE_ENV=production` → `bun run build` + `bun run start`
+- **Dev mode**: `NODE_ENV=development` → `bun run dev` (hot reload)
+- Switch via `.env.local`: `NODE_ENV=development`
+
+### Nginx Config
+
+`nginx/nginx.conf` handles: reverse proxy to web:3000, gzip compression, `/_next/static` long cache, API rate limiting, security headers. No SSL — handled by upstream Nginx.
 
 ## Architecture
 
@@ -121,8 +138,8 @@ The project supports light/dark theme with a token + semantic class system:
 Uses Vitest. Test files co-locate with source or live alongside modules.
 
 ```bash
-npm run test          # Run all tests
-npm run test:watch    # Watch mode
+bun run test          # Run all tests
+bun run test:watch    # Watch mode
 ```
 
 Priority: service layer business rules (validation, rate limiting, state machines, moderation) > API integration > E2E.
