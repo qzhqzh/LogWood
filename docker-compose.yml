@@ -29,6 +29,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/logwood?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-nextauth-secret-change-in-production}
@@ -42,11 +43,22 @@ services:
       NPM_CONFIG_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
       PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://registry.npmmirror.com/-/binary/prisma}
     ports:
-      - "10000:3000"
+      - "10001:3000"
     volumes:
       - .:/app
       - /app/node_modules
-    command: sh /app/scripts/dev-entrypoint.sh
+    command: sh /app/scripts/entrypoint.sh
+
+  nginx:
+    image: nginx:alpine
+    container_name: logwood-nginx
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "10000:10000"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
 volumes:
   postgres_data:

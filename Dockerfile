@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim
+FROM oven/bun:1-slim
 
 ARG DEBIAN_MIRROR=http://mirrors.tuna.tsinghua.edu.cn
 ARG NPM_REGISTRY=https://registry.npmmirror.com
@@ -20,11 +20,14 @@ RUN set -eux; \
 # Install dependencies first to maximize layer cache reuse.
 COPY package*.json ./
 COPY .npmrc ./.npmrc
-RUN npm ci
+RUN bun install
+
+# Copy source code (needed for production builds).
+# In dev mode, bind mount overrides this COPY.
+COPY . .
 
 # Prisma client generation requires schema files in the image.
 COPY prisma ./prisma
-RUN npx prisma generate
+RUN bunx prisma generate
 
-# Source is bind-mounted in docker-compose for local development.
 EXPOSE 3000
