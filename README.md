@@ -55,6 +55,46 @@ LogWood 的目标是构建一个高质量、可持续迭代的评测平台：
 - 新增组件时优先复用语义类，避免新增 `text-gray-*`、`bg-[#xxxxxx]` 这类硬编码。
 - 如确实需要新颜色语义，先在 `theme.css` 增加 token，再在 `globals.css` 增加语义类映射。
 
+## SEO
+
+LogWood 已落地全站 SEO 基础设施。所有页面共用同一套工具集与一致的 metadata / JSON-LD 输出。
+
+设计与策略文档（变更前必读）：
+- 综合方案：[`docs/SEO_STRATEGY.md`](./docs/SEO_STRATEGY.md)（单一权威指导，包含历史决策、采纳/不采纳裁决、未来工作）
+- 执行清单：[`docs/SEO_IMPLEMENTATION_PLAN.md`](./docs/SEO_IMPLEMENTATION_PLAN.md)
+
+工具集（`src/shared/seo/`）：
+- `site-config.ts`：`SITE_NAME` / `SITE_DESCRIPTION` / `SITE_KEYWORDS` 与 `getSiteUrl()`
+- `url.ts`：`toAbsoluteUrl()` / `canonicalFor()` / `joinPath()`
+- `metadata.ts`：`buildMetadata()` 一次性生成 Next.js `Metadata`（canonical、OG、Twitter、robots、article 字段）
+- `json-ld.ts`：`buildOrganization` / `buildWebSite` / `buildBreadcrumbList` / `buildArticleJsonLd` / `buildSoftwareApplicationJsonLd`
+
+注入点：
+- 站点级：`src/app/layout.tsx`（metadataBase + 默认 OG 图 + Organization JSON-LD），`src/app/opengraph-image.tsx`（默认 1200x630 动态图，edge runtime）
+- 首页：`src/app/page.tsx`（WebSite JSON-LD，已移除失效的 SearchAction）
+- 站点地图与抓取：`src/app/sitemap.ts`（target lastmod 用最近 published review.updatedAt 兜底）+ `src/app/robots.ts`
+- 详情/列表页：`src/app/{articles,app,editor,coding,model,prompt}/...`（统一通过 builders + `<JsonLd>` + `<Breadcrumbs>`）
+- 低价值/管理/认证页：8 个路由级 `layout.tsx` 注入 `noindex`
+- 未找到页面：`src/app/not-found.tsx`
+
+关键环境变量：
+- `NEXTAUTH_URL`：登录回调与回退站点 URL
+- `SITE_URL`（可选，推荐生产配置）：用于 metadataBase / canonical / sitemap / og:url
+- `GOOGLE_SITE_VERIFICATION`（可选）：Google Search Console 验证 token
+
+验证速查（生产环境）：
+- `curl -s https://<host>/robots.txt`
+- `curl -s https://<host>/sitemap.xml | head -40`
+- 浏览器 view-source 文章详情页应能看到 `BlogPosting` + `BreadcrumbList` 两块 JSON-LD
+- `https://<host>/opengraph-image` 应返回 1200x630 PNG
+
+详细的运行时验证步骤见 [`docs/SEO_STRATEGY.md`](./docs/SEO_STRATEGY.md) 的「当前实现速览」章节。
+
+维护约束：
+- 任何 SEO 相关改动必须先阅读 `docs/SEO_STRATEGY.md` 并在其末尾追加变更记录
+- 不引入新依赖时优先复用 `src/shared/seo` 工具，禁止在页面里手写 canonical / og 字段
+- 新增依赖前需评估对 SEO 输出（metadata / JSON-LD / sitemap）的影响
+
 ## Run With Docker Compose
 
 项目已支持通过 Docker Compose 同时启动前端（Next.js）和数据库（PostgreSQL）。

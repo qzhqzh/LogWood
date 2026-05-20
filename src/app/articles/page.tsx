@@ -6,20 +6,18 @@ import { zhCN } from 'date-fns/locale'
 import { encodeArticleSlug, listArticles } from '@/modules/article'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { JsonLd } from '@/components/json-ld'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: 'AI 编码实践文章',
   description: '阅读开发者分享的 AI Coding 实践经验、工具对比与使用技巧，与社区一起探索 AI 编程的边界',
-  alternates: { canonical: `${process.env.NEXTAUTH_URL || 'https://logwood.app'}/articles` },
-  openGraph: {
-    title: 'AI 编码实践文章 | LogWood',
-    description: '阅读开发者分享的 AI Coding 实践经验与工具对比',
-  },
-}
+  path: '/articles',
+})
 
 interface ArticlesPageProps {
   searchParams?: {
@@ -64,6 +62,12 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
+      <JsonLd
+        value={buildBreadcrumbList([
+          { name: '首页', path: '/' },
+          { name: '社区文章', path: '/articles' },
+        ])}
+      />
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />

@@ -864,3 +864,113 @@ twitter: {
 - 文档与代码不一致时**先改文档**（与 `docs/STYLE_GUIDE.md` 第 6 节同源）。
 
 > 本文档不出现 em-dash 字符。所有跨语言术语保留英文原文（如 SEO、JSON-LD、canonical、sitemap），中文文案使用全角标点。
+
+
+
+---
+
+## 13. 当前实现速览（2026-05-20 落地后）
+
+本节按文件维度记录 FEAT-002 / FEAT-003 实际合入仓库的能力，作为新加入的工程师的"我能立刻看到什么"清单。
+
+### 13.1 工具集（`src/shared/seo/`）
+
+| 文件 | 提供能力 |
+| --- | --- |
+| `site-config.ts` | 常量 `SITE_NAME` / `SITE_DESCRIPTION` / `SITE_KEYWORDS` / `SITE_LOCALE` / `TWITTER_CARD`；`getSiteUrl()` 按 `SITE_URL → NEXTAUTH_URL → 'https://logwood.app'` 顺序解析 |
+| `url.ts` | `toAbsoluteUrl(pathOrUrl)` / `canonicalFor(path)` / `joinPath(...segments)` |
+| `metadata.ts` | `buildMetadata(input)` 一次性生成 Next.js 14 `Metadata`：canonical、OG（含 article 字段）、Twitter Card、robots（noindex 时 `follow: true`）、images 默认 `/opengraph-image` |
+| `json-ld.ts` | `buildOrganization` / `buildWebSite` / `buildBreadcrumbList` / `buildArticleJsonLd` / `buildSoftwareApplicationJsonLd`，`aggregateRating` 仅在 `reviewCount > 0` 输出 |
+| `index.ts` | barrel 导出 |
+
+### 13.2 全局注入
+
+| 文件 | 职责 |
+| --- | --- |
+| `src/app/layout.tsx` | `metadataBase` / 站点级 OG / Twitter / Organization JSON-LD / 可选 Google 验证 |
+| `src/app/opengraph-image.tsx` | 默认 1200x630 PNG（edge runtime，不依赖外部字体） |
+| `src/components/json-ld.tsx` | 服务端组件，唯一允许写 `<script type="application/ld+json">` 的位置 |
+| `src/components/breadcrumbs.tsx` | 仅渲染可见面包屑，JSON-LD 由调用方单独输出 |
+| `src/app/not-found.tsx` | 404 页，`robots: { index: false, follow: true }` |
+
+### 13.3 列表 / 详情页接入
+
+| 路由 | metadata | JSON-LD | 可见 Breadcrumbs |
+| --- | --- | --- | --- |
+| `/` | `buildMetadata` + 动态 review/target count | `WebSite`（无 SearchAction） | 否 |
+| `/articles` | `buildMetadata` | `BreadcrumbList` | 否（聚合入口） |
+| `/articles/[slug]` | `buildMetadata` (article + cover) | `BlogPosting` + `BreadcrumbList` | 是 |
+| `/app` | `buildMetadata` | `BreadcrumbList` | 否 |
+| `/app/[slug]` | `buildMetadata` (preview image) | `SoftwareApplication` (`WebApplication`) + `BreadcrumbList` | 是 |
+| `/editor` | `buildMetadata` | `BreadcrumbList` | 否 |
+| `/editor/[slug]` | `buildMetadata` | `SoftwareApplication` (`DeveloperApplication` + 条件 aggregateRating) + `BreadcrumbList` | 是 |
+| `/coding` | `buildMetadata` | `BreadcrumbList` | 否 |
+| `/coding/[slug]` | `buildMetadata` | `SoftwareApplication` + `BreadcrumbList` | 是 |
+| `/model/[slug]` | `buildMetadata` | `SoftwareApplication` + `BreadcrumbList`（含 AI Model 中间项） | 是 |
+| `/prompt/[slug]` | `buildMetadata` | `SoftwareApplication` + `BreadcrumbList`（含 AI Prompt 中间项） | 是 |
+
+### 13.4 抓取 / 索引控制
+
+`src/app/sitemap.ts`：
+
+- 静态路由：`/`、`/editor`、`/coding`、`/articles`、`/app`（**不再包含** `/submit`、`/emojis`、`/tags`）
+- target 行 `lastModified = target.reviews[0]?.updatedAt ?? target.createdAt`，`reviews` 为 `where: { status: 'published' }, orderBy: { updatedAt: 'desc' }, take: 1`
+- 所有 url 通过 `canonicalFor(path)` 输出绝对地址
+
+`src/app/robots.ts` disallow：`/api/`、`/app/manage/`、`/articles/manage/`、`/comments/manage/`、`/targets/manage/`、`/auth/`、`/submit`、`/emojis`、`/tags`；`sitemap` 字段输出绝对 URL。
+
+### 13.5 noindex 路由（路由级 `layout.tsx`，统一注入 `index: false, follow: false`）
+
+`/submit`、`/emojis`、`/tags`、`/auth`（覆盖 `/auth/signin` 与 `/auth/error`）、`/articles/manage`、`/app/manage`、`/comments/manage`、`/targets/manage`（含 4 个子路由 `coding/editor/model/prompt`）。
+
+### 13.6 内容安全 / 头部层级
+
+`src/modules/article/sanitize.ts`：
+
+- 白名单不含 `h1`，`transformTags.h1: 'h2'` 让作者输入的 H1 内容降级为 H2，保持页面唯一 `<h1>` 是文章标题
+- 所有 `<a>` 强制 `target="_blank"` + `rel="noopener noreferrer nofollow"`
+- 拦截 `<script>`、`<iframe>`、`onerror=` 等危险标签 / 属性
+- 仅允许 `http`、`https`、`mailto` 协议，过滤 `javascript:`
+
+### 13.7 单元测试覆盖
+
+| 文件 | 关键断言 |
+| --- | --- |
+| `src/shared/seo/url.test.ts` | absolute / canonical / joinPath 边界，env fallback |
+| `src/shared/seo/metadata.test.ts` | 默认 OG 图绝对地址、description 截断 160、noindex 输出、article 字段 |
+| `src/shared/seo/json-ld.test.ts` | zod schema 校验 BlogPosting / BreadcrumbList / SoftwareApplication；WebSite 不含 SearchAction；aggregateRating 仅在 reviewCount > 0 输出 |
+| `src/app/sitemap.test.ts` | 不含 /submit /emojis /tags；target lastmod 优先 review.updatedAt；prisma 调用形状 |
+| `src/app/robots.test.ts` | disallow 完整、sitemap 绝对 URL、allow=/ |
+| `src/modules/article/sanitize.test.ts` | h1→h2、外链 rel、script/iframe 剥离、javascript: 过滤 |
+
+### 13.8 验证速查（生产环境）
+
+```bash
+# 抓取规则
+curl -s https://<host>/robots.txt
+
+# 站点地图
+curl -s https://<host>/sitemap.xml | head -40
+
+# 主页 JSON-LD（应有 Organization + WebSite，无 SearchAction）
+curl -s https://<host>/ | grep -A2 'application/ld+json'
+
+# 文章详情 JSON-LD（应有 BlogPosting + BreadcrumbList）
+curl -s 'https://<host>/articles/<slug>' | grep -A2 'application/ld+json'
+
+# 动态 OG 图
+curl -sI 'https://<host>/opengraph-image'   # Content-Type: image/png, 1200x630
+```
+
+Lighthouse / Search Console 验证清单：
+
+- 移动端 / 桌面端 Lighthouse SEO 评分 ≥ 95
+- Search Console > Coverage：管理 / 提交 / 标签 页应为 "Excluded by 'noindex' tag"
+- Search Console > Enhancements > Sitelinks SearchBox：不会再因失效 SearchAction 报错
+- Rich Results Test：`/articles/[slug]` 通过 Article rich result 校验；`/editor/[slug]` 等通过 SoftwareApplication 校验
+
+### 13.9 推迟项（与本节同步追踪）
+
+- 文章详情与工具详情的动态 OG 图：保留站点级 `/opengraph-image` 即可；下次评估 Prisma + ImageResponse 在 nodejs runtime 下的稳定性后补。
+- `/search` 实现后补回 `WebSite.SearchAction`。
+- `Target.updatedAt` 字段补齐后，`sitemap.ts` 简化为直接使用该字段即可。
