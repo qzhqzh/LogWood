@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { notFound } from 'next/navigation'
@@ -8,6 +9,29 @@ import { SiteFooter } from '@/components/site-footer'
 import { TargetReviewSection } from '@/components/target-review-section'
 
 export const dynamic = 'force-dynamic'
+
+const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const target = await prisma.target.findFirst({
+    where: { slug: params.slug, type: 'model' },
+    include: { _count: { select: { reviews: { where: { status: 'published' } } } } },
+  })
+  if (!target) return { title: 'Not Found' }
+  const description = target.description
+    ? target.description.slice(0, 160)
+    : `${target.name} AI Model 评测 — 查看真实用户评分与使用体验`
+  return {
+    title: `${target.name} - AI Model 评测`,
+    description,
+    alternates: { canonical: `${BASE_URL}/model/${target.slug}` },
+    openGraph: {
+      title: `${target.name} - AI Model 评测 | LogWood`,
+      description,
+      url: `${BASE_URL}/model/${target.slug}`,
+    },
+  }
+}
 
 function parseFeatures(features: string): string[] {
   try {
@@ -45,8 +69,31 @@ export default async function ModelDetailPage({ params }: TargetPageProps) {
   const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null
   const totalReviews = target.reviews.length
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: target.name,
+    description: target.description || `${target.name} AI Model 评测`,
+    applicationCategory: 'DeveloperApplication',
+    url: `${BASE_URL}/model/${target.slug}`,
+    ...(target.websiteUrl ? { sameAs: target.websiteUrl } : {}),
+    ...(totalReviews > 0 && avgRating !== null ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: Math.round(avgRating * 10) / 10,
+        bestRating: 5,
+        worstRating: 1,
+        reviewCount: totalReviews,
+      },
+    } : {}),
+  }
+
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <SiteNav
         navItems={[
           {

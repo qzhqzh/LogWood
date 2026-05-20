@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
@@ -8,6 +9,16 @@ import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'AI Editor 工具评测',
+  description: '浏览 Cursor、Windsurf、VS Code 等主流 AI Editor 工具的真实用户评测与评分，助你选择最适合的 AI 编辑器',
+  alternates: { canonical: `${process.env.NEXTAUTH_URL || 'https://logwood.app'}/editor` },
+  openGraph: {
+    title: 'AI Editor 工具评测 | LogWood',
+    description: '浏览主流 AI Editor 工具的真实用户评测与评分',
+  },
+}
 
 type TagSentiment = 'good' | 'neutral' | 'bad'
 

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { notFound } from 'next/navigation'
@@ -9,6 +10,29 @@ import { SiteFooter } from '@/components/site-footer'
 import { TargetReviewSection } from '@/components/target-review-section'
 
 export const dynamic = 'force-dynamic'
+
+const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const target = await prisma.target.findFirst({
+    where: { slug: params.slug, type: 'editor' },
+    include: { _count: { select: { reviews: { where: { status: 'published' } } } } },
+  })
+  if (!target) return { title: 'Not Found' }
+  const description = target.description
+    ? target.description.slice(0, 160)
+    : `${target.name} AI Editor 工具评测 — 查看真实用户评分与使用体验`
+  return {
+    title: `${target.name} - AI Editor 评测`,
+    description,
+    alternates: { canonical: `${BASE_URL}/editor/${target.slug}` },
+    openGraph: {
+      title: `${target.name} - AI Editor 评测 | LogWood`,
+      description,
+      url: `${BASE_URL}/editor/${target.slug}`,
+    },
+  }
+}
 
 function parseFeatures(features: string): string[] {
   try {
@@ -55,8 +79,31 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
 
   const totalReviews = target.reviews.length
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: target.name,
+    description: target.description || `${target.name} AI Editor 工具评测`,
+    applicationCategory: 'DeveloperApplication',
+    url: `${BASE_URL}/editor/${target.slug}`,
+    ...(target.websiteUrl ? { sameAs: target.websiteUrl } : {}),
+    ...(totalReviews > 0 && avgRating !== null ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: Math.round(avgRating * 10) / 10,
+        bestRating: 5,
+        worstRating: 1,
+        reviewCount: totalReviews,
+      },
+    } : {}),
+  }
+
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />

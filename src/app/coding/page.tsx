@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
@@ -9,6 +10,16 @@ import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'AI Coding 工具评测',
+  description: '浏览 GitHub Copilot、Codeium 等 AI Coding 工具的真实用户评测，同时收录 AI Model 与 AI Prompt 工具评测',
+  alternates: { canonical: `${process.env.NEXTAUTH_URL || 'https://logwood.app'}/coding` },
+  openGraph: {
+    title: 'AI Coding 工具评测 | LogWood',
+    description: '浏览 AI Coding、AI Model、AI Prompt 工具的真实用户评测',
+  },
+}
 
 const CATEGORY_CONFIG: Array<{
   key: TargetType
