@@ -51,6 +51,12 @@
 
 ## 8. 变更记录
 
+### 2026-05-20
+- 新增 `docs/SEO_STRATEGY.md`：综合 `docs/seo-claude.md` 与 `docs/seo-codex.md` 的 SEO 建议，结合本仓库实际代码（layout/sitemap/robots/各业务页 generateMetadata/JSON-LD、Prisma schema、反向代理与网络约束），输出 866 行的本期 SEO 单一权威指导文档。所有未来 SEO 改动以此为准。
+- 新增 `docs/SEO_IMPLEMENTATION_PLAN.md`：FEAT-002（基础设施）/ FEAT-003（详情页升级）/ FEAT-004（文档同步）的可执行任务清单，包含 steps、acceptance criteria、verification 命令。
+- 本期 SEO 实施约束：严格不引入新 npm 依赖（仅使用 Next.js 14 内置 + 已有依赖）；不修改 Prisma schema（`Target.updatedAt` 通过最近 published review.updatedAt 兜底）；不假设不存在的路由（`/search`、`/compare`、专栏/标签 landing 等列入未来工作）。
+- 实施时机：本次 commit 仅包含策略与计划文档，代码改动（FEAT-002/003）由后续会话按 `docs/SEO_IMPLEMENTATION_PLAN.md` 执行。
+
 ### 2026-04-02
 - Docker 构建链路切换为可配置国内源：
   - Debian apt 默认使用清华 HTTP 镜像，避免基础镜像首次构建时因缺少 CA 证书导致握手失败。
