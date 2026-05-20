@@ -64,6 +64,9 @@ enum RateLimitAction {
   comment_create
   like_create
   report_create
+  // Phase-2 additions for admin login brute-force defence and upload abuse.
+  admin_login_attempt
+  article_upload
 }
 
 enum ActorType {
@@ -93,6 +96,7 @@ model User {
   articleComments ArticleComment[]
   accounts      Account[]
   sessions      Session[]
+  adminAuditLogs AdminAuditLog[]
 
   @@map("users")
 }
@@ -128,6 +132,9 @@ model Target {
   developer   String?
   features    String
   createdAt   DateTime     @default(now())
+  // Default to now() so existing rows get a non-null value during the
+  // additive `prisma db push`. Auto-updates on every write thereafter.
+  updatedAt   DateTime     @default(now()) @updatedAt
 
   reviews     Review[]
 
@@ -372,6 +379,26 @@ model RateLimit {
   @@unique([action, actorType, actorKey, windowDate])
   @@index([action, actorType, actorKey])
   @@map("rate_limits")
+}
+
+/// Records destructive admin actions (delete, hide, status flips) for
+/// post-incident forensics. Append-only from the application's perspective:
+/// rows are never updated and only ever deleted by retention jobs.
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  action      String   // e.g. 'article.delete', 'comment.hide', 'target.delete'
+  targetType  String   // 'article' | 'comment' | 'review' | 'target' | 'app' | 'tag' | 'emoji'
+  targetId    String
+  metadata    String?  // JSON-encoded extra context
+  createdAt   DateTime @default(now())
+
+  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@index([actorUserId, createdAt])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
 }
 
 model VerificationToken {

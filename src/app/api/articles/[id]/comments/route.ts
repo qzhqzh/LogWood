@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { resolveActorWithFingerprint } from '@/modules/identity'
 import { createArticleComment, getArticleComments } from '@/modules/article'
+import { parsePage, parsePageSize } from '@/lib/safe-parse'
 
 const createArticleCommentSchema = z.object({
   content: z.string().min(1).max(500),
@@ -19,8 +20,8 @@ export async function GET(
 
     const result = await getArticleComments({
       articleId: id,
-      page: parseInt(searchParams.get('page') || '1'),
-      pageSize: parseInt(searchParams.get('pageSize') || '20'),
+      page: parsePage(searchParams.get('page')),
+      pageSize: parsePageSize(searchParams.get('pageSize')),
     })
 
     return NextResponse.json(result)
@@ -39,7 +40,7 @@ export async function POST(
     const body = await request.json()
     const validated = createArticleCommentSchema.parse(body)
 
-    const actor = await resolveActorWithFingerprint(validated.deviceFingerprint)
+    const actor = await resolveActorWithFingerprint(validated.deviceFingerprint, { createIfMissing: true })
 
     const result = await createArticleComment(
       {

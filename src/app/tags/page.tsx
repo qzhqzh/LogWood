@@ -37,7 +37,12 @@ function sentimentClass(sentiment: TagSentiment): string {
 }
 
 export default function TagsPage() {
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  // Tag/Emoji write operations are admin-only (server enforces via /api/tags
+  // POST/DELETE). Gate the UI accordingly so non-admins don't see write
+  // affordances they can't use.
+  const isAdmin = status === 'authenticated' && session?.user?.role === 'admin'
+  const isAuthed = isAdmin
   const [tags, setTags] = useState<TagItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

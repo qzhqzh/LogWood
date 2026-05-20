@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { prisma } from '@/lib/prisma'
+import { recordAdminAction } from '@/modules/audit'
 
 const updateCommentSchema = z.object({
   action: z.enum(['hide', 'publish']),
@@ -42,6 +43,14 @@ export async function PATCH(
       select: { id: true, status: true },
     })
 
+    await recordAdminAction({
+      actorUserId: session.user.id,
+      action: `comment.${action}`,
+      targetType: 'comment',
+      targetId: id,
+      metadata: { newStatus: nextStatus },
+    })
+
     return NextResponse.json(updated)
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -77,6 +86,13 @@ export async function DELETE(
     }
 
     await prisma.comment.delete({ where: { id } })
+
+    await recordAdminAction({
+      actorUserId: session.user.id,
+      action: 'comment.delete',
+      targetType: 'comment',
+      targetId: id,
+    })
 
     return NextResponse.json({ id })
   } catch (error) {

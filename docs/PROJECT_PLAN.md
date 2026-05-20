@@ -51,6 +51,44 @@
 
 ## 8. 变更记录
 
+### 2026-05-20 (evening) 安全与架构加固落地（FEAT-005）
+
+实施 `docs/SECURITY_HARDENING_PLAN.md` Phase 1 + Phase 2，把 `docs/SECURITY_REVIEW_2026-04-01.md` 列出的 R-01 ~ R-08 中的 7 项关闭、1 项部分关闭，并补足配套的可观测/可维护性短板。
+
+Phase 1（无 DB 改动）：
+
+- 鉴权密钥：`src/lib/auth.ts` 在生产模式下对 `NEXTAUTH_SECRET` 做强校验（缺失 / 命中已知弱值 / 长度 < 32 直接 throw）；`docker-compose.yml` 用 `:?` 必填语法；`.env.example` 移除占位字符串。
+- 鉴权权限：`/api/tags`、`/api/emojis` 的 POST/DELETE 补 `isAdminSession`，前端 `/tags` 和 `/emojis` 页面把"已登录"语义改为"管理员"。
+- 匿名身份：`resolveActorWithFingerprint` 默认 `createIfMissing=false`，GET 路径不再批量制造 `anonymous_users` 行；7 个写入端点显式 opt-in；fingerprint 必须匹配 `[A-Za-z0-9_-]{16,128}`。
+- IP 处理：新增 `src/lib/ip.ts`，HMAC-SHA-256 + `LOGWOOD_IP_HASH_SECRET`，`x-forwarded-for` / `x-real-ip` 仅在 `LOGWOOD_TRUST_PROXY=true` 时被信任。
+- 安全响应头：`next.config.js` `headers()` 全站下发 HSTS、X-Frame-Options、X-Content-Type-Options、Referrer-Policy、Permissions-Policy、CSP（report-only）；nginx 移除已弃用的 X-XSS-Protection。
+- 文件上传：`src/lib/file-signature.ts` 实现 magic-byte 校验，两个上传路由读首 32 字节比对，HTML 伪装为 PNG 之类的请求被 400 拒绝；图片扩展名走白名单。
+- 输入校验：`src/lib/safe-parse.ts` 提供 `parsePage` / `parsePageSize` / `parseSearchKeyword`；`/api/articles`、`/api/comments/manage` 等 6 处迁移到安全解析；`listTargets` / `getTargetBySlug` 改用 Prisma `_avg` 聚合，避免单 target 上万条评测时全量加载。
+- 可观测：新增 `src/lib/logger.ts`（JSON-line 结构化日志 + child binding）与 `src/lib/api-handlers.ts`（`withApiError(tag, handler)` 装饰器，统一 ZodError → 400、ERR_* → 状态码推断、未知错误 → 500 不泄露）。新增 `/api/health` liveness 探针。
+- 容器：Dockerfile 装 wget 并加 `HEALTHCHECK` 探活 `/api/health`，`USER bun` 非 root 运行。
+
+Phase 2（DB migration，已使用 `prisma db push` 兼容现有数据）：
+
+- `Target` 增加 `updatedAt @default(now()) @updatedAt`；`sitemap.ts` 简化为直接读取该字段，去掉之前用 review 兜底的逻辑。
+- 新增 `AdminAuditLog` 模型与 `User.adminAuditLogs` 反向关系；新增 `src/modules/audit` 模块，写日志失败不抛错、不影响主流程。
+- 8 处管理员破坏性接口接入审计：`articles/[id]` PATCH（仅状态变化）+ DELETE、`comments/manage/[id]` PATCH + DELETE、`/api/targets` PATCH + DELETE、`/api/tags/[id]` DELETE、`/api/emojis/[id]` DELETE。
+- `RateLimitAction` 增加 `admin_login_attempt` 与 `article_upload`；admin 登录在 `authorize()` 之前先消耗 `admin_login_attempt:ip_segment` 配额（10/IP/UTC+8 day），失败 / 限流均通过 `logger` 记录。
+
+测试：
+
+- 新增 6 个单元测试文件覆盖 ip / file-signature / safe-parse / api-handlers / logger / identity service 中的 createIfMissing 行为。
+- 更新 `target/service.test.ts` 与 `sitemap.test.ts` 适配新的 Prisma 调用形状（`_avg` 聚合 / `Target.updatedAt`）。
+
+被推迟的工作（详见 `docs/SECURITY_HARDENING_PLAN.md` §4）：
+
+- CSRF token 替代 `sameSite=lax`。
+- `force-dynamic` → ISR / `revalidatePath`。
+- Sentry / APM。
+- `images.remotePatterns` 从 `**` 收紧到具体域名 allowlist。
+- ClamAV 病毒扫描 + 上传迁移到对象存储。
+- `Article.tags` / `App.tags` / `Target.features` 从 JSON 字符串迁移为 join 表。
+- CSP 从 report-only 切到 enforce（待生产观察 1-2 周）。
+
 ### 2026-05-20
 - 新增 `docs/SEO_STRATEGY.md`：综合 `docs/seo-claude.md` 与 `docs/seo-codex.md` 的 SEO 建议，结合本仓库实际代码（layout/sitemap/robots/各业务页 generateMetadata/JSON-LD、Prisma schema、反向代理与网络约束），输出 866 行的本期 SEO 单一权威指导文档。所有未来 SEO 改动以此为准。
 - 新增 `docs/SEO_IMPLEMENTATION_PLAN.md`：FEAT-002（基础设施）/ FEAT-003（详情页升级）/ FEAT-004（文档同步）的可执行任务清单，包含 steps、acceptance criteria、verification 命令。

@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { createTarget, updateTarget, deleteTarget } from '@/modules/target'
 import { isAdminSession } from '@/lib/authz'
+import { recordAdminAction } from '@/modules/audit'
 
 export const dynamic = 'force-dynamic'
 
@@ -139,6 +140,14 @@ export async function PATCH(request: NextRequest) {
     const validated = updateTargetSchema.parse(body)
     const result = await updateTarget(validated)
 
+    await recordAdminAction({
+      actorUserId: session.user.id,
+      action: 'target.update',
+      targetType: 'target',
+      targetId: validated.id,
+      metadata: { name: validated.name, type: validated.type },
+    })
+
     return NextResponse.json(result)
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -173,6 +182,13 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json()
     const validated = deleteTargetSchema.parse(body)
     const result = await deleteTarget(validated.id)
+
+    await recordAdminAction({
+      actorUserId: session.user.id,
+      action: 'target.delete',
+      targetType: 'target',
+      targetId: validated.id,
+    })
 
     return NextResponse.json(result)
   } catch (error) {

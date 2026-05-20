@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveActorWithFingerprint } from '@/modules/identity'
 import { createReview, getReviews } from '@/modules/review'
+import { parsePage, parsePageSize } from '@/lib/safe-parse'
 import { z } from 'zod'
 
 const createReviewSchema = z.object({
@@ -18,8 +19,8 @@ export async function GET(request: NextRequest) {
       sort: searchParams.get('sort') as 'latest' | 'hot' | undefined,
       targetId: searchParams.get('targetId') || undefined,
       language: searchParams.get('language') || undefined,
-      page: parseInt(searchParams.get('page') || '1'),
-      pageSize: parseInt(searchParams.get('pageSize') || '20'),
+      page: parsePage(searchParams.get('page')),
+      pageSize: parsePageSize(searchParams.get('pageSize')),
     }
 
     const actor = await resolveActorWithFingerprint(
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validated = createReviewSchema.parse(body)
 
-    const actor = await resolveActorWithFingerprint(validated.deviceFingerprint)
+    const actor = await resolveActorWithFingerprint(validated.deviceFingerprint, { createIfMissing: true })
 
     const result = await createReview(
       {

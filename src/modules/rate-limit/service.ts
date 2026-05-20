@@ -16,6 +16,11 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
   'report_create:user': { maxCount: 20 },
   'report_create:anonymous': { maxCount: 10 },
   'like_create:ip_segment': { maxCount: 200 },
+  // Brute-force defence: 10 admin login attempts per IP per UTC+8 day.
+  'admin_login_attempt:ip_segment': { maxCount: 10 },
+  // Per-admin upload throttle (the admin guard already gates these endpoints,
+  // this is a soft cap to bound damage from a compromised admin token).
+  'article_upload:user': { maxCount: 200 },
 }
 
 function getWindowDate(): Date {
@@ -165,5 +170,74 @@ export async function checkIpSegmentLimit(
   return {
     allowed: existing.count < config.maxCount,
     remaining: Math.max(0, config.maxCount - existing.count),
+  }
+}
+
+/**
+ * Atomically check-and-consume an IP-segment-keyed limit. Used by entry
+ * points that don't have a fully resolved `ActorContext` (notably the
+ * NextAuth Credentials authorize callback for admin login brute-force).
+ */
+export async function consumeIpSegmentLimit(
+  action: RateLimitAction,
+  ipHash: string,
+  amount: number = 1
+): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
+  const windowDate = getWindowDate()
+  const resetAt = new Date(windowDate.getTime() + 24 * 60 * 60 * 1000)
+  const config = RATE_LIMITS[`${action}:ip_segment`]
+
+  if (!config) {
+    return { allowed: true, remaining: Infinity, resetAt }
+  }
+
+  if (!ipHash) {
+    // Without an IP we cannot key the bucket; fail open but bounded by other
+    // controls (`admin_login_attempt` only matters with TRUST_PROXY anyway).
+    return { allowed: true, remaining: config.maxCount, resetAt }
+  }
+
+  const existing = await prisma.rateLimit.findUnique({
+    where: {
+      action_actorType_actorKey_windowDate: {
+        action,
+        actorType: 'ip_segment',
+        actorKey: ipHash,
+        windowDate,
+      },
+    },
+  })
+
+  if (existing) {
+    if (existing.count + amount > config.maxCount) {
+      return { allowed: false, remaining: 0, resetAt }
+    }
+
+    const updated = await prisma.rateLimit.update({
+      where: { id: existing.id },
+      data: { count: { increment: amount } },
+    })
+
+    return {
+      allowed: true,
+      remaining: config.maxCount - updated.count,
+      resetAt,
+    }
+  }
+
+  await prisma.rateLimit.create({
+    data: {
+      action,
+      actorType: 'ip_segment',
+      actorKey: ipHash,
+      windowDate,
+      count: amount,
+    },
+  })
+
+  return {
+    allowed: true,
+    remaining: config.maxCount - amount,
+    resetAt,
   }
 }
