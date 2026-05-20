@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { formatDistanceToNow } from 'date-fns'
@@ -9,6 +10,16 @@ import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'AI 编码实践文章',
+  description: '阅读开发者分享的 AI Coding 实践经验、工具对比与使用技巧，与社区一起探索 AI 编程的边界',
+  alternates: { canonical: `${process.env.NEXTAUTH_URL || 'https://logwood.app'}/articles` },
+  openGraph: {
+    title: 'AI 编码实践文章 | LogWood',
+    description: '阅读开发者分享的 AI Coding 实践经验与工具对比',
+  },
+}
 
 interface ArticlesPageProps {
   searchParams?: {

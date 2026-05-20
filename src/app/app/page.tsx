@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
@@ -8,6 +9,16 @@ import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: '应用工坊',
+  description: '发现基于 AI Coding 生态构建的应用、工作流与成品工具，汇聚 AI 编程实践的创新成果',
+  alternates: { canonical: `${process.env.NEXTAUTH_URL || 'https://logwood.app'}/app` },
+  openGraph: {
+    title: '应用工坊 | LogWood',
+    description: '发现基于 AI Coding 生态构建的应用、工作流与成品工具',
+  },
+}
 
 export default async function AppWorkshopPage() {
   const session = await getServerSession(authOptions)

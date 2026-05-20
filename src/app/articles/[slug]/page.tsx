@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
@@ -14,6 +15,33 @@ import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 
 export const dynamic = 'force-dynamic'
+
+const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+}
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const decodedSlug = decodeArticleSlug(params.slug)
+  const article = await getArticleBySlug(decodedSlug)
+  if (!article || article.status !== ArticleStatus.published) return { title: 'Not Found' }
+  const description = article.excerpt
+    ? article.excerpt.slice(0, 160)
+    : stripHtml(article.content).slice(0, 160)
+  return {
+    title: article.title,
+    description,
+    alternates: { canonical: `${BASE_URL}/articles/${params.slug}` },
+    openGraph: {
+      title: `${article.title} | LogWood`,
+      description,
+      url: `${BASE_URL}/articles/${params.slug}`,
+      type: 'article',
+      ...(article.publishedAt ? { publishedTime: article.publishedAt.toISOString() } : {}),
+    },
+  }
+}
 
 export default async function ArticleDetailPage({
   params,
@@ -55,8 +83,26 @@ export default async function ArticleDetailPage({
       })
     : ''
 
+  const articleJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.excerpt || stripHtml(article.content).slice(0, 200),
+    url: `${BASE_URL}/articles/${params.slug}`,
+    datePublished: (article.publishedAt || article.createdAt).toISOString(),
+    dateModified: article.updatedAt.toISOString(),
+    author: article.author
+      ? { '@type': 'Person', name: article.author.name || '匿名' }
+      : { '@type': 'Organization', name: 'LogWood' },
+    publisher: { '@type': 'Organization', name: 'LogWood', url: BASE_URL },
+  }
+
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-220px] left-[-180px] w-[520px] h-[520px] rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="absolute top-[140px] right-[-220px] w-[560px] h-[560px] rounded-full bg-fuchsia-500/10 blur-3xl" />

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { getAppBySlug } from '@/modules/app'
@@ -5,6 +6,24 @@ import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 
 export const dynamic = 'force-dynamic'
+
+const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const app = await getAppBySlug(params.slug)
+  if (!app || app.status !== 'published') return { title: 'Not Found' }
+  return {
+    title: app.title,
+    description: app.summary.slice(0, 160),
+    alternates: { canonical: `${BASE_URL}/app/${app.slug}` },
+    openGraph: {
+      title: `${app.title} | LogWood 应用工坊`,
+      description: app.summary.slice(0, 200),
+      url: `${BASE_URL}/app/${app.slug}`,
+      ...(app.previewImageUrl ? { images: [{ url: app.previewImageUrl }] } : {}),
+    },
+  }
+}
 
 interface AppDetailPageProps {
   params: Promise<{ slug: string }>
@@ -18,8 +37,22 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
     notFound()
   }
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: app.title,
+    description: app.summary,
+    url: `${BASE_URL}/app/${app.slug}`,
+    applicationCategory: 'WebApplication',
+    ...(app.appUrl ? { downloadUrl: app.appUrl } : {}),
+  }
+
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <SiteNav active="app" borderClassName="border-cyan-500/20" />
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
