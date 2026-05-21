@@ -88,6 +88,29 @@ Phase 2（DB migration，已使用 `prisma db push` 兼容现有数据）：
 - ClamAV 病毒扫描 + 上传迁移到对象存储。
 - `Article.tags` / `App.tags` / `Target.features` 从 JSON 字符串迁移为 join 表。
 - CSP 从 report-only 切到 enforce（待生产观察 1-2 周）。
+### 2026-05-20 (afternoon) 全站 SEO 基础设施落地
+
+实施 `docs/SEO_IMPLEMENTATION_PLAN.md` FEAT-002 与 FEAT-003，所有改动严格遵守"不引入新依赖、不改 Prisma schema、不假设不存在的路由"三条硬性约束：
+
+- 新增 `src/shared/seo/{site-config,url,metadata,json-ld,index}.ts` 工具与 `<JsonLd>` 服务端组件，统一全站 metadata / JSON-LD 输出口径。
+- 修复首页 `WebSite` JSON-LD 中失效的 `SearchAction`（站点未实现 `/search`），避免破坏 sitelinks SearchBox 资格。
+- `sitemap.ts` 移除 `/submit` `/emojis` `/tags` 三条静态路由；target 行的 `lastModified` 改为「最近一条 published review.updatedAt 兜底 createdAt」（Target 没有 `updatedAt` 字段且本期不改 schema）。
+- `robots.ts` 同步将上述三条路径加入 disallow，sitemap 字段输出 absolute URL。
+- 站点级 `layout.tsx` 引入 `metadataBase`、Twitter Card、Organization JSON-LD 与默认动态 OG 图 (`/opengraph-image`)；新增 env 驱动的 Google 验证字段。
+- 文章详情升级为完整 `BlogPosting` JSON-LD（含 author / publisher / datePublished / dateModified / keywords / articleSection），canonical 用持久化 slug 而不是请求 param。
+- 所有详情/列表页（articles/app/editor/coding/model/prompt 共 6 个详情 + 4 个列表）注入 `BreadcrumbList` JSON-LD；详情页加可见 `<Breadcrumbs>` 组件。
+- 文章正文 sanitize 抽出到 `src/modules/article/sanitize.ts`，`<h1>` 渲染时降级为 `<h2>` 并强制外链 `rel="noopener noreferrer nofollow"`。
+- `getArticleBySlug` 扩展 include `column`，使面包屑能输出真实专栏名（之前 `article.column` 始终为 undefined）。
+- 低价值 / 管理 / 认证页通过 8 个路由级 `layout.tsx` 注入 `noindex, nofollow`：`/submit`、`/emojis`、`/tags`、`/auth`、`/articles/manage`、`/app/manage`、`/comments/manage`、`/targets/manage`。
+- 新增站点级 `not-found.tsx`，使用语义类（`cyber-card`、`gradient-text`、`text-muted` 等），robots 设为 `index: false, follow: true`。
+- 新增可选环境变量 `SITE_URL`（推荐生产显式设置）与 `GOOGLE_SITE_VERIFICATION`，统一 fallback 链 `SITE_URL → NEXTAUTH_URL → 'https://logwood.app'`。
+- 新增 6 份 SEO 单元测试：`src/shared/seo/{url,metadata,json-ld}.test.ts`、`src/app/{robots,sitemap}.test.ts`、`src/modules/article/sanitize.test.ts`，使用 zod schema 校验 builder 输出形状（BlogPosting / BreadcrumbList / SoftwareApplication）。
+
+被推迟的工作（不阻塞本期合入）：
+
+- 文章详情与工具详情的动态 OG 图（FEAT-003 S9）：保留站点级 `/opengraph-image` 即可；待评估 Prisma + ImageResponse 在 nodejs runtime 下的稳定性后再补。
+- `WebSite.SearchAction`：等 `/search` 路由实现后补回。
+- `Target.updatedAt` 字段：现以最近 published review 的 updatedAt 兜底。
 
 ### 2026-05-20
 - 新增 `docs/SEO_STRATEGY.md`：综合 `docs/seo-claude.md` 与 `docs/seo-codex.md` 的 SEO 建议，结合本仓库实际代码（layout/sitemap/robots/各业务页 generateMetadata/JSON-LD、Prisma schema、反向代理与网络约束），输出 866 行的本期 SEO 单一权威指导文档。所有未来 SEO 改动以此为准。
@@ -126,3 +149,12 @@ Phase 2（DB migration，已使用 `prisma db push` 兼容现有数据）：
 2. 增补核心 API 集成测试（articles/reviews/comments）。
 3. 为审核与限流补充可观测指标（命中率、拦截率、误判率）。
 4. 增加发布前检查流程：强制校验 PROJECT_PLAN 变更记录更新。
+
+### 9.1 SEO 后续项
+
+5. 实现站内搜索 `/search` 后，补回 `WebSite.SearchAction` JSON-LD（移动端 sitelinks SearchBox 资格）。
+6. 为 `Target` 模型补 `updatedAt` 字段；现阶段 sitemap lastmod 用最近 published review.updatedAt 兜底，受评测节奏影响精度有限。
+7. 专栏 / 标签 landing 页路径化：`/articles/columns/[slug]`、`/topics/[slug]`，让现在依靠 query string 的筛选页拥有可索引的 canonical URL。
+8. 公开页从 `force-dynamic` 迁移到 ISR / `revalidatePath`，提升爬虫体验与首屏指标。
+9. 详情页动态 OG 图（文章详情 + 工具详情），与本期推迟项配套实现。
+10. SEO 集成验证：在 CI 跑通 `next build` 后增加站点抓取契约测试（robots.txt / sitemap.xml / 单页 JSON-LD 形状）。

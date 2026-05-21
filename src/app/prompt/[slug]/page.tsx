@@ -7,10 +7,15 @@ import { authOptions } from '@/lib/auth'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { TargetReviewSection } from '@/components/target-review-section'
+import { JsonLd } from '@/components/json-ld'
+import { Breadcrumbs } from '@/components/breadcrumbs'
+import {
+  buildBreadcrumbList,
+  buildMetadata,
+  buildSoftwareApplicationJsonLd,
+} from '@/shared/seo'
 
 export const dynamic = 'force-dynamic'
-
-const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const target = await prisma.target.findFirst({
@@ -19,18 +24,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!target) return { title: 'Not Found' }
   const description = (target as any).description
     ? (target as any).description.slice(0, 160)
-    : `${(target as any).name} AI Prompt 评测 — 查看真实用户评分与使用体验`
+    : `${(target as any).name} AI Prompt 评测，查看真实用户评分与使用体验`
   const name = (target as any).name
-  return {
+  return buildMetadata({
     title: `${name} - AI Prompt 评测`,
     description,
-    alternates: { canonical: `${BASE_URL}/prompt/${(target as any).slug}` },
-    openGraph: {
-      title: `${name} - AI Prompt 评测 | LogWood`,
-      description,
-      url: `${BASE_URL}/prompt/${(target as any).slug}`,
-    },
-  }
+    path: `/prompt/${(target as any).slug}`,
+  })
 }
 
 function parseFeatures(features: string): string[] {
@@ -69,31 +69,29 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
   const avgRating = ratings.length > 0 ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length : null
   const totalReviews = target.reviews.length
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
+  const path = `/prompt/${target.slug}`
+  const jsonLd = buildSoftwareApplicationJsonLd({
     name: target.name,
-    description: target.description || `${target.name} AI Prompt 评测`,
+    description: target.description ?? `${target.name} AI Prompt 评测`,
+    url: path,
     applicationCategory: 'DeveloperApplication',
-    url: `${BASE_URL}/prompt/${target.slug}`,
-    ...(target.websiteUrl ? { sameAs: target.websiteUrl } : {}),
-    ...(totalReviews > 0 && avgRating !== null ? {
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: Math.round((avgRating as number) * 10) / 10,
-        bestRating: 5,
-        worstRating: 1,
-        reviewCount: totalReviews,
-      },
-    } : {}),
-  }
+    sameAs: target.websiteUrl ?? null,
+    reviewCount: totalReviews,
+    ratingValue: avgRating,
+  })
+
+  const breadcrumbItems = [
+    { name: '首页', path: '/' },
+    { name: 'AI Coding', path: '/coding' },
+    { name: 'AI Prompt', path: '/coding?category=prompt' },
+    { name: target.name, path },
+  ]
+  const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd value={jsonLd} />
+      <JsonLd value={breadcrumbJsonLd} />
       <SiteNav
         navItems={[
           {
@@ -116,6 +114,14 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
+        <Breadcrumbs
+          items={breadcrumbItems.map((item, index) =>
+            index === breadcrumbItems.length - 1
+              ? { name: item.name }
+              : { name: item.name, href: item.path },
+          )}
+          className="mb-6"
+        />
         <div className="cyber-card rounded-3xl p-8 mb-8" style={{ borderColor: 'rgba(236, 72, 153, 0.25)' }}>
           <div className="flex items-start gap-6">
             {target.logoUrl && (

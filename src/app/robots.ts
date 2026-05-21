@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
+import { canonicalFor } from '@/shared/seo'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXTAUTH_URL || 'https://logwood.app'
   return {
     rules: {
       userAgent: '*',
@@ -13,8 +13,11 @@ export default function robots(): MetadataRoute.Robots {
         '/comments/manage/',
         '/targets/manage/',
         '/auth/',
+        '/submit',
+        '/emojis',
+        '/tags',
       ],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: canonicalFor('/sitemap.xml'),
   }
 }
