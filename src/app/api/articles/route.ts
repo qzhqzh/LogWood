@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { createArticle, listAllArticlesForManage, listArticles } from '@/modules/article'
 import { isAdminSession } from '@/lib/authz'
+import { parsePage, parsePageSize, parseSearchKeyword } from '@/lib/safe-parse'
 
 const createArticleSchema = z.object({
   title: z.string().min(3).max(120),
@@ -47,9 +48,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ articles: all })
     }
 
-    const page = parseInt(searchParams.get('page') || '1')
-    const pageSize = parseInt(searchParams.get('pageSize') || '12')
-    const search = searchParams.get('search') || undefined
+    const page = parsePage(searchParams.get('page'))
+    const pageSize = parsePageSize(searchParams.get('pageSize'))
+    const search = parseSearchKeyword(searchParams.get('search'))
 
     const result = await listArticles({
       page,

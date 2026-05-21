@@ -15,8 +15,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: canonicalFor('/app'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
   ]
 
+  // Target now exposes its own @updatedAt (Phase 2 of security hardening),
+  // so we no longer need to derive freshness from the latest review.
   const [targets, articles, apps] = await Promise.all([
     prisma.target.findMany({
+      select: { slug: true, type: true, updatedAt: true },
       select: {
         slug: true,
         type: true,
@@ -43,6 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const targetRoutes: MetadataRoute.Sitemap = targets.map((t) => ({
     url: canonicalFor(`/${t.type}/${t.slug}`),
+    lastModified: t.updatedAt,
     lastModified: t.reviews[0]?.updatedAt ?? t.createdAt,
     changeFrequency: 'weekly',
     priority: 0.8,

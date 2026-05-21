@@ -79,25 +79,38 @@ export async function listTargets(filter?: TargetFilter): Promise<TargetWithStat
     where.type = filter.type
   }
 
+  // Load only target metadata + a published-review count. Average rating is
+  // computed from a separate `groupBy` aggregate so we never pull the full
+  // ratings list into memory (R-hot path: a target with 10k reviews used to
+  // load all rows just to compute the mean).
   const targets = await prisma.target.findMany({
     where,
     include: {
       _count: {
         select: { reviews: { where: { status: 'published' } } },
       },
-      reviews: {
-        where: { status: 'published' },
-        select: { rating: true },
-      },
     },
     orderBy: { createdAt: 'desc' },
   })
 
+  const targetIds = targets.map((t) => t.id)
+  const ratingByTarget = new Map<string, number>()
+
+  if (targetIds.length > 0) {
+    const groups = await prisma.review.groupBy({
+      by: ['targetId'],
+      where: { targetId: { in: targetIds }, status: 'published' },
+      _avg: { rating: true },
+    })
+    for (const group of groups) {
+      if (typeof group._avg.rating === 'number') {
+        ratingByTarget.set(group.targetId, Math.round(group._avg.rating * 10) / 10)
+      }
+    }
+  }
+
   return targets.map((target) => {
-    const ratings = target.reviews.map((r) => r.rating)
-    const avgRating = ratings.length > 0
-      ? ratings.reduce((a, b) => a + b, 0) / ratings.length
-      : null
+    const avgRating = ratingByTarget.get(target.id)
 
     return {
       id: target.id,
@@ -110,7 +123,7 @@ export async function listTargets(filter?: TargetFilter): Promise<TargetWithStat
       developer: target.developer,
       features: parseFeatures(target.features),
       _count: target._count,
-      avgRating: avgRating ? Math.round(avgRating * 10) / 10 : undefined,
+      avgRating: avgRating ?? undefined,
     }
   })
 }
@@ -195,19 +208,20 @@ export async function getTargetBySlug(
       _count: {
         select: { reviews: { where: { status: 'published' } } },
       },
-      reviews: {
-        where: { status: 'published' },
-        select: { rating: true },
-      },
     },
   })
 
   if (!target) return null
 
-  const ratings = target.reviews.map((r) => r.rating)
-  const avgRating = ratings.length > 0
-    ? ratings.reduce((a, b) => a + b, 0) / ratings.length
-    : null
+  // Single-target avg via aggregate; avoids loading every review row.
+  const ratingAgg = await prisma.review.aggregate({
+    where: { targetId: target.id, status: 'published' },
+    _avg: { rating: true },
+  })
+
+  const avgRating = typeof ratingAgg._avg.rating === 'number'
+    ? Math.round(ratingAgg._avg.rating * 10) / 10
+    : undefined
 
   return {
     id: target.id,
@@ -220,7 +234,7 @@ export async function getTargetBySlug(
     developer: target.developer,
     features: parseFeatures(target.features),
     _count: target._count,
-    avgRating: avgRating ? Math.round(avgRating * 10) / 10 : undefined,
+    avgRating,
   }
 }
 

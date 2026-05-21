@@ -4,6 +4,7 @@ import { CommentStatus } from '@prisma/client'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { prisma } from '@/lib/prisma'
+import { parsePage, parsePageSize, parseSearchKeyword } from '@/lib/safe-parse'
 
 type ManageStatusFilter = 'all' | 'active' | 'hidden'
 
@@ -20,10 +21,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
-    const pageSize = Math.min(50, Math.max(1, parseInt(searchParams.get('pageSize') || '20', 10)))
+    const page = parsePage(searchParams.get('page'))
+    const pageSize = parsePageSize(searchParams.get('pageSize'), { default: 20, max: 50 })
     const status = (searchParams.get('status') || 'active') as ManageStatusFilter
-    const keyword = searchParams.get('q')?.trim()
+    const keyword = parseSearchKeyword(searchParams.get('q'))
 
     const where: {
       status: CommentStatus | { in: CommentStatus[] }

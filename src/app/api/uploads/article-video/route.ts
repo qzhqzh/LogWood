@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { fileMatchesMime } from '@/lib/file-signature'
 
 const MAX_SIZE_BYTES = 30 * 1024 * 1024
 const ALLOWED_MIME = new Set([
@@ -29,12 +30,6 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   'video/3gpp': '3gp',
 }
 
-function extensionFromName(fileName: string): string {
-  const ext = fileName.split('.').pop()?.toLowerCase().trim()
-  if (!ext || ext.length > 8) return 'mp4'
-  return ext
-}
-
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
@@ -53,21 +48,38 @@ export async function POST(request: Request) {
     }
 
     if (!ALLOWED_MIME.has(file.type)) {
-      return NextResponse.json({ error: `当前类型 ${file.type || 'unknown'} 不支持，仅支持 mp4/webm/ogg/mov/mkv/avi/mpeg/3gp` }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: `当前类型 ${file.type || 'unknown'} 不支持，仅支持 mp4/webm/ogg/mov/mkv/avi/mpeg/3gp`,
+        },
+        { status: 400 },
+      )
     }
 
     if (file.size > MAX_SIZE_BYTES) {
-      return NextResponse.json({ error: '视频大小不能超过 30MB（超过容易超时）' }, { status: 400 })
+      return NextResponse.json(
+        { error: '视频大小不能超过 30MB（超过容易超时）' },
+        { status: 400 },
+      )
     }
 
-    const ext = EXTENSION_BY_MIME[file.type] || extensionFromName(file.name)
+    // Magic-byte check (R-03): refuse uploads whose first bytes do not match
+    // the claimed Content-Type.
+    const buffer = Buffer.from(await file.arrayBuffer())
+    if (!fileMatchesMime(buffer.subarray(0, 32), file.type)) {
+      return NextResponse.json(
+        { error: '文件签名与声明的视频类型不一致，已拒绝' },
+        { status: 400 },
+      )
+    }
+
+    const ext = EXTENSION_BY_MIME[file.type] || 'mp4'
     const fileName = `${Date.now()}-${randomUUID()}.${ext}`
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'articles')
     const absolutePath = path.join(uploadDir, fileName)
 
     await mkdir(uploadDir, { recursive: true })
-    const arrayBuffer = await file.arrayBuffer()
-    await writeFile(absolutePath, Buffer.from(arrayBuffer))
+    await writeFile(absolutePath, buffer)
 
     return NextResponse.json({
       url: `/uploads/articles/${fileName}`,
@@ -77,7 +89,12 @@ export async function POST(request: Request) {
       error instanceof Error &&
       (error.message === 'aborted' || (error as NodeJS.ErrnoException).code === 'ECONNRESET')
     ) {
-      return NextResponse.json({ error: '上传连接已中断，请重试（建议使用稳定网络并控制视频体积）' }, { status: 408 })
+      return NextResponse.json(
+        {
+          error: '上传连接已中断，请重试（建议使用稳定网络并控制视频体积）',
+        },
+        { status: 408 },
+      )
     }
 
     console.error('POST /api/uploads/article-video error:', error)

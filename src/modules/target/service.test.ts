@@ -10,6 +10,10 @@ vi.mock('@/lib/prisma', () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    review: {
+      groupBy: vi.fn(),
+      aggregate: vi.fn(),
+    },
   },
 }))
 
@@ -25,6 +29,10 @@ const prismaMock = prisma as unknown as {
     update: ReturnType<typeof vi.fn>
     delete: ReturnType<typeof vi.fn>
   }
+  review: {
+    groupBy: ReturnType<typeof vi.fn>
+    aggregate: ReturnType<typeof vi.fn>
+  }
 }
 
 describe('target/service', () => {
@@ -32,7 +40,7 @@ describe('target/service', () => {
     vi.clearAllMocks()
   })
 
-  it('listTargets parses features and rounds avg rating', async () => {
+  it('listTargets parses features and rounds avg rating from groupBy aggregate', async () => {
     prismaMock.target.findMany.mockResolvedValue([
       {
         id: 't1',
@@ -45,7 +53,6 @@ describe('target/service', () => {
         developer: null,
         features: '["completion","chat"]',
         _count: { reviews: 3 },
-        reviews: [{ rating: 4 }, { rating: 5 }, { rating: 4 }],
       },
       {
         id: 't2',
@@ -58,8 +65,12 @@ describe('target/service', () => {
         developer: null,
         features: 'invalid-json',
         _count: { reviews: 0 },
-        reviews: [],
       },
+    ])
+    prismaMock.review.groupBy.mockResolvedValue([
+      // (4 + 5 + 4) / 3 = 4.333... -> rounded to 4.3
+      { targetId: 't1', _avg: { rating: 4.3333333 } },
+      // t2 has no published reviews so it isn't returned by groupBy
     ])
 
     const result = await listTargets()
@@ -76,6 +87,30 @@ describe('target/service', () => {
     const result = await getTargetBySlug('editor', 'missing')
 
     expect(result).toBeNull()
+  })
+
+  it('getTargetBySlug computes avg via prisma aggregate', async () => {
+    prismaMock.target.findFirst.mockResolvedValue({
+      id: 't9',
+      name: 'Cursor',
+      slug: 'cursor',
+      type: 'editor',
+      logoUrl: null,
+      description: null,
+      websiteUrl: null,
+      developer: null,
+      features: '[]',
+      _count: { reviews: 2 },
+    })
+    prismaMock.review.aggregate.mockResolvedValue({ _avg: { rating: 4.5 } })
+
+    const result = await getTargetBySlug('editor', 'cursor')
+
+    expect(result?.avgRating).toBe(4.5)
+    expect(prismaMock.review.aggregate).toHaveBeenCalledWith({
+      where: { targetId: 't9', status: 'published' },
+      _avg: { rating: true },
+    })
   })
 
   it('getFeatures deduplicates and sorts values', async () => {

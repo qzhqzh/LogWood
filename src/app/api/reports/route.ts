@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validated = createReportSchema.parse(body)
 
-    const actor = await resolveActorWithFingerprint(validated.deviceFingerprint)
+    const actor = await resolveActorWithFingerprint(validated.deviceFingerprint, { createIfMissing: true })
 
     const result = await createReport(
       {

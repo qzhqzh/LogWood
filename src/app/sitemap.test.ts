@@ -49,6 +49,10 @@ describe('app/sitemap', () => {
     }
   })
 
+  it('uses Target.updatedAt as the canonical sitemap lastmod', async () => {
+    const updatedAt = new Date('2026-04-10T00:00:00Z')
+    prismaMock.target.findMany.mockResolvedValue([
+      { slug: 'cursor', type: 'editor', updatedAt },
   it('uses latest published review.updatedAt as target lastModified, falling back to createdAt', async () => {
     const reviewDate = new Date('2026-04-10T00:00:00Z')
     const createdAt = new Date('2026-01-01T00:00:00Z')
@@ -70,6 +74,11 @@ describe('app/sitemap', () => {
     prismaMock.app.findMany.mockResolvedValue([])
 
     const result = await sitemap()
+    const cursorEntry = result.find((e) => e.url === 'https://logwood.test/editor/cursor')
+    expect(cursorEntry?.lastModified).toEqual(updatedAt)
+  })
+
+  it('selects only the lightweight target fields needed for sitemap rows', async () => {
 
     const cursorEntry = result.find((e) => e.url === 'https://logwood.test/editor/cursor')
     const fallbackEntry = result.find((e) => e.url === 'https://logwood.test/coding/no-reviews')
@@ -85,6 +94,9 @@ describe('app/sitemap', () => {
 
     await sitemap()
 
+    expect(prismaMock.target.findMany).toHaveBeenCalledWith({
+      select: { slug: true, type: true, updatedAt: true },
+    })
     expect(prismaMock.target.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         select: expect.objectContaining({

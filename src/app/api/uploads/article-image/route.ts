@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { fileMatchesMime } from '@/lib/file-signature'
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024
 const ALLOWED_MIME = new Set([
@@ -13,6 +14,15 @@ const ALLOWED_MIME = new Set([
   'image/webp',
   'image/gif',
 ])
+// File extensions we will materialise on disk. Refusing anything outside this
+// map prevents `image/svg+xml` style MIME types from producing weird filenames
+// like `*.svg+xml`.
+const EXTENSION_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
 
 export async function POST(request: Request) {
   try {
@@ -39,14 +49,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '图片大小不能超过 5MB' }, { status: 400 })
     }
 
-    const ext = file.type.split('/')[1] || 'bin'
+    // Read once: we need the bytes anyway to write to disk, and we sanity
+    // check the magic bytes against the claimed MIME before persisting (R-03).
+    const buffer = Buffer.from(await file.arrayBuffer())
+    if (!fileMatchesMime(buffer.subarray(0, 32), file.type)) {
+      return NextResponse.json(
+        { error: '文件签名与声明的类型不一致，已拒绝' },
+        { status: 400 },
+      )
+    }
+
+    const ext = EXTENSION_BY_MIME[file.type] || 'bin'
     const fileName = `${Date.now()}-${randomUUID()}.${ext}`
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'articles')
     const absolutePath = path.join(uploadDir, fileName)
 
     await mkdir(uploadDir, { recursive: true })
-    const arrayBuffer = await file.arrayBuffer()
-    await writeFile(absolutePath, Buffer.from(arrayBuffer))
+    await writeFile(absolutePath, buffer)
 
     return NextResponse.json({
       url: `/uploads/articles/${fileName}`,

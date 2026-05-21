@@ -10,7 +10,7 @@ export async function POST(
     const { id } = await params
     const body = await request.json().catch(() => ({}))
 
-    const actor = await resolveActorWithFingerprint(body.deviceFingerprint)
+    const actor = await resolveActorWithFingerprint(body.deviceFingerprint, { createIfMissing: true })
 
     const result = await toggleReviewLike(id, actor)
 

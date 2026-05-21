@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { deleteArticle, getArticleByIdForManage, updateArticle } from '@/modules/article'
 import { isAdminSession } from '@/lib/authz'
+import { recordAdminAction } from '@/modules/audit'
 
 const updateSchema = z.object({
   title: z.string().min(3).max(120).optional(),
@@ -69,6 +70,18 @@ export async function PATCH(
       return NextResponse.json({ error: 'ERR_ARTICLE_NOT_FOUND' }, { status: 404 })
     }
 
+    // Audit only meaningful state changes; pure body edits aren't logged to
+    // keep the audit table focused on governance-relevant moves.
+    if (validated.status) {
+      await recordAdminAction({
+        actorUserId: session.user.id,
+        action: `article.status.${validated.status}`,
+        targetType: 'article',
+        targetId: params.id,
+        metadata: { newStatus: validated.status },
+      })
+    }
+
     return NextResponse.json(result)
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -100,6 +113,13 @@ export async function DELETE(
     if (!result) {
       return NextResponse.json({ error: 'ERR_ARTICLE_NOT_FOUND' }, { status: 404 })
     }
+
+    await recordAdminAction({
+      actorUserId: session.user.id,
+      action: 'article.delete',
+      targetType: 'article',
+      targetId: params.id,
+    })
 
     return NextResponse.json(result)
   } catch (error) {

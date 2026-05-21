@@ -11,7 +11,10 @@ interface EmojiItem {
 }
 
 export default function EmojisPage() {
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  // Emoji writes are admin-only (server enforces via /api/emojis POST/DELETE).
+  const isAdmin = status === 'authenticated' && session?.user?.role === 'admin'
+  const isAuthed = isAdmin
   const [emojis, setEmojis] = useState<EmojiItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,8 +22,6 @@ export default function EmojisPage() {
   const [symbol, setSymbol] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-
-  const isAuthed = status === 'authenticated'
 
   const loadEmojis = useCallback(async () => {
     try {

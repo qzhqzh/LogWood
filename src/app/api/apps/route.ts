@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { APP_STATUSES, createApp, listAllAppsForManage, listApps, updateApp } from '@/modules/app'
 import { isAdminSession } from '@/lib/authz'
+import { parsePage, parsePageSize } from '@/lib/safe-parse'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,8 +48,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ apps })
     }
 
-    const page = parseInt(searchParams.get('page') || '1')
-    const pageSize = parseInt(searchParams.get('pageSize') || '12')
+    const page = parsePage(searchParams.get('page'))
+    const pageSize = parsePageSize(searchParams.get('pageSize'))
     const result = await listApps({ page, pageSize, status: 'published' })
 
     return NextResponse.json(result)

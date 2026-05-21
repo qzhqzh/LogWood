@@ -9,7 +9,7 @@ export async function POST(
   try {
     const { id } = await params
     const body = await request.json().catch(() => ({}))
-    const actor = await resolveActorWithFingerprint(body.deviceFingerprint)
+    const actor = await resolveActorWithFingerprint(body.deviceFingerprint, { createIfMissing: true })
 
     const result = await toggleArticleLike(id, actor)
     return NextResponse.json(result)
