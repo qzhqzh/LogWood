@@ -6,26 +6,21 @@ import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { JsonLd } from '@/components/json-ld'
+import { SITE_NAME, buildMetadata, buildWebSite } from '@/shared/seo'
 
 export const dynamic = 'force-dynamic'
-
-const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
 
 export async function generateMetadata(): Promise<Metadata> {
   const [reviewCount, targetCount] = await Promise.all([
     prisma.review.count({ where: { status: 'published' } }),
     prisma.target.count(),
   ])
-  return {
-    title: 'LogWood - AI 编码工具评测社区',
+  return buildMetadata({
+    title: `${SITE_NAME} - AI 编码工具评测社区`,
     description: `已收录 ${targetCount} 款 AI 工具、${reviewCount}+ 条真实评测，涵盖 AI Editor、AI Coding、AI Model 与 AI Prompt`,
-    alternates: { canonical: BASE_URL },
-    openGraph: {
-      title: 'LogWood - AI 编码工具评测社区',
-      description: `已收录 ${targetCount} 款 AI 工具、${reviewCount}+ 条真实评测`,
-      url: BASE_URL,
-    },
-  }
+    path: '/',
+  })
 }
 
 const AI_CODING_TARGET_TYPES = ['editor', 'coding', 'model', 'prompt'] as const
@@ -107,25 +102,11 @@ export default async function HomePage() {
       reviewCount: target._count.reviews,
     }
   })
-  const websiteJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'LogWood',
-    description: 'AI 编码工具评测社区',
-    url: BASE_URL,
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${BASE_URL}/editor?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
-    },
-  }
+  const websiteJsonLd = buildWebSite()
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative overflow-hidden">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
-      />
+      <JsonLd value={websiteJsonLd} />
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />

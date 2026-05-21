@@ -4,25 +4,25 @@ import { notFound } from 'next/navigation'
 import { getAppBySlug } from '@/modules/app'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { JsonLd } from '@/components/json-ld'
+import { Breadcrumbs } from '@/components/breadcrumbs'
+import {
+  buildBreadcrumbList,
+  buildMetadata,
+  buildSoftwareApplicationJsonLd,
+} from '@/shared/seo'
 
 export const dynamic = 'force-dynamic'
-
-const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const app = await getAppBySlug(params.slug)
   if (!app || app.status !== 'published') return { title: 'Not Found' }
-  return {
+  return buildMetadata({
     title: app.title,
-    description: app.summary.slice(0, 160),
-    alternates: { canonical: `${BASE_URL}/app/${app.slug}` },
-    openGraph: {
-      title: `${app.title} | LogWood 应用工坊`,
-      description: app.summary.slice(0, 200),
-      url: `${BASE_URL}/app/${app.slug}`,
-      ...(app.previewImageUrl ? { images: [{ url: app.previewImageUrl }] } : {}),
-    },
-  }
+    description: app.summary,
+    path: `/app/${app.slug}`,
+    image: app.previewImageUrl ?? null,
+  })
 }
 
 interface AppDetailPageProps {
@@ -37,25 +37,37 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
     notFound()
   }
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
+  const path = `/app/${app.slug}`
+  const jsonLd = buildSoftwareApplicationJsonLd({
     name: app.title,
     description: app.summary,
-    url: `${BASE_URL}/app/${app.slug}`,
+    url: path,
     applicationCategory: 'WebApplication',
-    ...(app.appUrl ? { downloadUrl: app.appUrl } : {}),
-  }
+    downloadUrl: app.appUrl,
+  })
+
+  const breadcrumbItems = [
+    { name: '首页', path: '/' },
+    { name: '应用工坊', path: '/app' },
+    { name: app.title, path },
+  ]
+  const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd value={jsonLd} />
+      <JsonLd value={breadcrumbJsonLd} />
       <SiteNav active="app" borderClassName="border-cyan-500/20" />
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <Breadcrumbs
+          items={breadcrumbItems.map((item, index) =>
+            index === breadcrumbItems.length - 1
+              ? { name: item.name }
+              : { name: item.name, href: item.path },
+          )}
+          className="mb-6"
+        />
         <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8 items-start">
           <div className="cyber-card rounded-3xl p-8">
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-400 mb-3">{app.name}</p>

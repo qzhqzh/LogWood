@@ -1,19 +1,30 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Providers } from './providers'
+import { JsonLd } from '@/components/json-ld'
+import {
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  TWITTER_CARD,
+  buildOrganization,
+  canonicalFor,
+  getSiteUrl,
+} from '@/shared/seo'
 
-const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
+const SITE_URL = getSiteUrl()
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'LogWood - AI 编码工具评测社区',
-    template: '%s | LogWood',
+    default: `${SITE_NAME} - AI 编码工具评测社区`,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: '专注于 AI Coding 生态的评测社区，统一收录 AI Editor、AI Coding、AI Model 与 AI Prompt 工具和实践内容',
-  keywords: ['AI编码工具', 'AI编程', 'AI代码评测', 'AI Editor', 'AI Coding', 'Claude', 'Cursor', 'Copilot', 'Prompt工具', 'AI Model'],
-  authors: [{ name: 'LogWood Team' }],
-  creator: 'LogWood',
-  publisher: 'LogWood',
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+  authors: [{ name: `${SITE_NAME} Team` }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
   formatDetection: {
     email: false,
     telephone: false,
@@ -36,19 +47,32 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'zh_CN',
-    url: BASE_URL,
-    siteName: 'LogWood',
-    title: 'LogWood - AI 编码工具评测社区',
-    description: '专注于 AI Coding 生态的评测社区，统一收录 AI Editor、AI Coding、AI Model 与 AI Prompt 工具和实践内容',
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} - AI 编码工具评测社区`,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: `${SITE_NAME} - AI 编码工具评测社区`,
+      },
+    ],
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'LogWood - AI 编码工具评测社区',
-    description: '专注于 AI Coding 生态的评测社区，统一收录 AI Editor、AI Coding、AI Model 与 AI Prompt 工具和实践内容',
+    card: TWITTER_CARD,
+    title: `${SITE_NAME} - AI 编码工具评测社区`,
+    description: SITE_DESCRIPTION,
+    images: ['/opengraph-image'],
   },
   alternates: {
-    canonical: BASE_URL,
+    canonical: canonicalFor('/'),
+    languages: { 'zh-CN': '/' },
   },
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
 }
 
 export default function RootLayout({
@@ -66,6 +90,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-[var(--color-bg)] text-[var(--color-fg)] font-sans transition-colors duration-300">
+        <JsonLd value={buildOrganization()} />
         <Providers>{children}</Providers>
       </body>
     </html>

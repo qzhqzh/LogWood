@@ -5,20 +5,18 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { JsonLd } from '@/components/json-ld'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: 'AI Editor 工具评测',
   description: '浏览 Cursor、Windsurf、VS Code 等主流 AI Editor 工具的真实用户评测与评分，助你选择最适合的 AI 编辑器',
-  alternates: { canonical: `${process.env.NEXTAUTH_URL || 'https://logwood.app'}/editor` },
-  openGraph: {
-    title: 'AI Editor 工具评测 | LogWood',
-    description: '浏览主流 AI Editor 工具的真实用户评测与评分',
-  },
-}
+  path: '/editor',
+})
 
 type TagSentiment = 'good' | 'neutral' | 'bad'
 
@@ -108,6 +106,12 @@ export default async function EditorPage() {
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
+      <JsonLd
+        value={buildBreadcrumbList([
+          { name: '首页', path: '/' },
+          { name: 'AI Editor', path: '/editor' },
+        ])}
+      />
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />

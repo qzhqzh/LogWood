@@ -203,6 +203,9 @@ export async function getArticleBySlug(slug: string) {
       author: {
         select: { id: true, name: true, email: true },
       },
+      column: {
+        select: { id: true, name: true, slug: true },
+      },
       _count: {
         select: {
           comments: {

@@ -6,17 +6,23 @@ import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { ArticleStatus } from '@prisma/client'
-import sanitizeHtml from 'sanitize-html'
-import { decodeArticleSlug, getArticleBySlug, increaseArticleView } from '@/modules/article'
+import { decodeArticleSlug, encodeArticleSlug, getArticleBySlug, increaseArticleView } from '@/modules/article'
+import { sanitizeArticleHtml } from '@/modules/article/sanitize'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { ArticleEngagement } from '@/components/article-engagement'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { JsonLd } from '@/components/json-ld'
+import { Breadcrumbs } from '@/components/breadcrumbs'
+import {
+  buildArticleJsonLd,
+  buildBreadcrumbList,
+  buildMetadata,
+  canonicalFor,
+} from '@/shared/seo'
 
 export const dynamic = 'force-dynamic'
-
-const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
@@ -29,18 +35,19 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const description = article.excerpt
     ? article.excerpt.slice(0, 160)
     : stripHtml(article.content).slice(0, 160)
-  return {
+
+  // Canonical uses the persisted slug (not the request param) so
+  // upper/lower-case or differently encoded variants all converge to the
+  // same URL.
+  return buildMetadata({
     title: article.title,
     description,
-    alternates: { canonical: `${BASE_URL}/articles/${params.slug}` },
-    openGraph: {
-      title: `${article.title} | LogWood`,
-      description,
-      url: `${BASE_URL}/articles/${params.slug}`,
-      type: 'article',
-      ...(article.publishedAt ? { publishedTime: article.publishedAt.toISOString() } : {}),
-    },
-  }
+    path: `/articles/${encodeArticleSlug(article.slug)}`,
+    image: article.coverImageUrl,
+    type: 'article',
+    publishedTime: article.publishedAt ?? article.createdAt,
+    modifiedTime: article.updatedAt,
+  })
 }
 
 export default async function ArticleDetailPage({
@@ -59,50 +66,40 @@ export default async function ArticleDetailPage({
 
   await increaseArticleView(decodedSlug)
 
-  const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(article.content)
-  const safeHtml = looksLikeHtml
-    ? sanitizeHtml(article.content, {
-        allowedTags: [
-          'p', 'br', 'strong', 'em', 'u', 's', 'blockquote',
-          'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-          'pre', 'code', 'a', 'hr', 'img', 'figure', 'figcaption', 'video'
-        ],
-        allowedAttributes: {
-          a: ['href', 'name', 'target', 'rel'],
-          img: ['src', 'alt', 'title', 'width', 'height'],
-          video: ['src', 'controls', 'preload', 'class', 'width', 'height'],
-          code: ['class'],
-        },
-        allowedSchemes: ['http', 'https', 'mailto'],
-        transformTags: {
-          a: sanitizeHtml.simpleTransform('a', {
-            target: '_blank',
-            rel: 'noopener noreferrer nofollow',
-          }),
-        },
-      })
-    : ''
+  const canonicalPath = `/articles/${encodeArticleSlug(article.slug)}`
+  const canonicalUrl = canonicalFor(canonicalPath)
 
-  const articleJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: article.title,
-    description: article.excerpt || stripHtml(article.content).slice(0, 200),
-    url: `${BASE_URL}/articles/${params.slug}`,
-    datePublished: (article.publishedAt || article.createdAt).toISOString(),
-    dateModified: article.updatedAt.toISOString(),
-    author: article.author
-      ? { '@type': 'Person', name: article.author.name || '匿名' }
-      : { '@type': 'Organization', name: 'LogWood' },
-    publisher: { '@type': 'Organization', name: 'LogWood', url: BASE_URL },
-  }
+  const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(article.content)
+  const safeHtml = looksLikeHtml ? sanitizeArticleHtml(article.content) : ''
+
+  const description = article.excerpt
+    ? article.excerpt.slice(0, 160)
+    : stripHtml(article.content).slice(0, 200)
+
+  const articleJsonLd = buildArticleJsonLd({
+    url: canonicalPath,
+    title: article.title,
+    description,
+    image: article.coverImageUrl,
+    publishedAt: article.publishedAt ?? article.createdAt,
+    updatedAt: article.updatedAt,
+    author: article.author?.name ? { name: article.author.name } : null,
+    keywords: article.tags as string[],
+    articleSection: article.column?.name ?? null,
+  })
+
+  const breadcrumbItems = [
+    { name: '首页', path: '/' },
+    { name: '社区文章', path: '/articles' },
+    { name: article.column?.name ?? '文章', path: '/articles' },
+    { name: article.title, path: canonicalPath },
+  ]
+  const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative overflow-hidden">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
-      />
+      <JsonLd value={articleJsonLd} />
+      <JsonLd value={breadcrumbJsonLd} />
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-220px] left-[-180px] w-[520px] h-[520px] rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="absolute top-[140px] right-[-220px] w-[560px] h-[560px] rounded-full bg-fuchsia-500/10 blur-3xl" />
@@ -119,6 +116,14 @@ export default async function ArticleDetailPage({
       </div>
 
       <div className="relative max-w-5xl mx-auto px-5 sm:px-8 lg:px-10 pt-10 pb-16">
+        <Breadcrumbs
+          items={breadcrumbItems.map((item, index) =>
+            index === breadcrumbItems.length - 1
+              ? { name: item.name }
+              : { name: item.name, href: item.path },
+          )}
+          className="mb-6"
+        />
         <Link href="/articles" className="inline-flex items-center text-coding hover-text-coding text-sm tracking-wide mb-8">
           ← 返回文章列表
         </Link>
@@ -133,6 +138,7 @@ export default async function ArticleDetailPage({
             <span className="px-3 py-1 rounded-full border border-divider surface-panel">{article.viewCount + 1} 次阅读</span>
             <span className="px-3 py-1 rounded-full border border-divider surface-panel">{article._count.comments} 条评论</span>
           </div>
+          <link rel="canonical" href={canonicalUrl} />
         </header>
 
         {article.excerpt && article.excerpt.trim().length > 0 && (

@@ -6,20 +6,18 @@ import { prisma } from '@/lib/prisma'
 import { TargetType } from '@prisma/client'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { JsonLd } from '@/components/json-ld'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: 'AI Coding 工具评测',
   description: '浏览 GitHub Copilot、Codeium 等 AI Coding 工具的真实用户评测，同时收录 AI Model 与 AI Prompt 工具评测',
-  alternates: { canonical: `${process.env.NEXTAUTH_URL || 'https://logwood.app'}/coding` },
-  openGraph: {
-    title: 'AI Coding 工具评测 | LogWood',
-    description: '浏览 AI Coding、AI Model、AI Prompt 工具的真实用户评测',
-  },
-}
+  path: '/coding',
+})
 
 const CATEGORY_CONFIG: Array<{
   key: TargetType
@@ -92,6 +90,12 @@ export default async function CodingPage({ searchParams }: CodingPageProps) {
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
+      <JsonLd
+        value={buildBreadcrumbList([
+          { name: '首页', path: '/' },
+          { name: 'AI Coding', path: '/coding' },
+        ])}
+      />
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />

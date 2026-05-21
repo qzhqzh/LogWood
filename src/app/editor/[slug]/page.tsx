@@ -8,10 +8,15 @@ import { isAdminSession } from '@/lib/authz'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { TargetReviewSection } from '@/components/target-review-section'
+import { JsonLd } from '@/components/json-ld'
+import { Breadcrumbs } from '@/components/breadcrumbs'
+import {
+  buildBreadcrumbList,
+  buildMetadata,
+  buildSoftwareApplicationJsonLd,
+} from '@/shared/seo'
 
 export const dynamic = 'force-dynamic'
-
-const BASE_URL = process.env.NEXTAUTH_URL || 'https://logwood.app'
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const target = await prisma.target.findFirst({
@@ -21,17 +26,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!target) return { title: 'Not Found' }
   const description = target.description
     ? target.description.slice(0, 160)
-    : `${target.name} AI Editor 工具评测 — 查看真实用户评分与使用体验`
-  return {
+    : `${target.name} AI Editor 工具评测，查看真实用户评分与使用体验`
+  return buildMetadata({
     title: `${target.name} - AI Editor 评测`,
     description,
-    alternates: { canonical: `${BASE_URL}/editor/${target.slug}` },
-    openGraph: {
-      title: `${target.name} - AI Editor 评测 | LogWood`,
-      description,
-      url: `${BASE_URL}/editor/${target.slug}`,
-    },
-  }
+    path: `/editor/${target.slug}`,
+  })
 }
 
 function parseFeatures(features: string): string[] {
@@ -51,7 +51,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
   const session = await getServerSession(authOptions)
   const isAdmin = isAdminSession(session)
   const canPublishReview = Boolean(session?.user?.id)
-  
+
   const target = await prisma.target.findFirst({
     where: { slug, type: 'editor' },
     include: {
@@ -79,31 +79,28 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
 
   const totalReviews = target.reviews.length
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
+  const path = `/editor/${target.slug}`
+  const jsonLd = buildSoftwareApplicationJsonLd({
     name: target.name,
-    description: target.description || `${target.name} AI Editor 工具评测`,
+    description: target.description ?? `${target.name} AI Editor 工具评测`,
+    url: path,
     applicationCategory: 'DeveloperApplication',
-    url: `${BASE_URL}/editor/${target.slug}`,
-    ...(target.websiteUrl ? { sameAs: target.websiteUrl } : {}),
-    ...(totalReviews > 0 && avgRating !== null ? {
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: Math.round(avgRating * 10) / 10,
-        bestRating: 5,
-        worstRating: 1,
-        reviewCount: totalReviews,
-      },
-    } : {}),
-  }
+    sameAs: target.websiteUrl ?? null,
+    reviewCount: totalReviews,
+    ratingValue: avgRating,
+  })
+
+  const breadcrumbItems = [
+    { name: '首页', path: '/' },
+    { name: 'AI Editor', path: '/editor' },
+    { name: target.name, path },
+  ]
+  const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd value={jsonLd} />
+      <JsonLd value={breadcrumbJsonLd} />
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -138,6 +135,14 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
+        <Breadcrumbs
+          items={breadcrumbItems.map((item, index) =>
+            index === breadcrumbItems.length - 1
+              ? { name: item.name }
+              : { name: item.name, href: item.path },
+          )}
+          className="mb-6"
+        />
         <div className="cyber-card rounded-3xl p-8 mb-8">
           <div className="flex items-start gap-6">
             {target.logoUrl && (

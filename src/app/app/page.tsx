@@ -5,20 +5,18 @@ import { getServerSession } from 'next-auth'
 import { listApps } from '@/modules/app'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { JsonLd } from '@/components/json-ld'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: '应用工坊',
   description: '发现基于 AI Coding 生态构建的应用、工作流与成品工具，汇聚 AI 编程实践的创新成果',
-  alternates: { canonical: `${process.env.NEXTAUTH_URL || 'https://logwood.app'}/app` },
-  openGraph: {
-    title: '应用工坊 | LogWood',
-    description: '发现基于 AI Coding 生态构建的应用、工作流与成品工具',
-  },
-}
+  path: '/app',
+})
 
 export default async function AppWorkshopPage() {
   const session = await getServerSession(authOptions)
@@ -27,6 +25,12 @@ export default async function AppWorkshopPage() {
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
+      <JsonLd
+        value={buildBreadcrumbList([
+          { name: '首页', path: '/' },
+          { name: '应用工坊', path: '/app' },
+        ])}
+      />
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
