@@ -23,7 +23,10 @@ RUN set -eux; \
 		rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first to maximize layer cache reuse.
+# Only copy package.json (NOT package-lock.json) to avoid integrity hash
+# mismatches between the npm lockfile and the mirror registry.
 COPY package.json ./
+COPY .npmrc ./
 RUN bun install
 
 # Copy source code (needed for production builds).
