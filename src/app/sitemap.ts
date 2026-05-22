@@ -20,19 +20,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [targets, articles, apps] = await Promise.all([
     prisma.target.findMany({
       select: { slug: true, type: true, updatedAt: true },
-      select: {
-        slug: true,
-        type: true,
-        createdAt: true,
-        // Workaround for missing Target.updatedAt: use latest published review
-        // updatedAt as a proxy for "content freshness" of the target page.
-        reviews: {
-          select: { updatedAt: true },
-          where: { status: 'published' },
-          orderBy: { updatedAt: 'desc' },
-          take: 1,
-        },
-      },
     }),
     prisma.article.findMany({
       select: { slug: true, updatedAt: true },
@@ -47,7 +34,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const targetRoutes: MetadataRoute.Sitemap = targets.map((t) => ({
     url: canonicalFor(`/${t.type}/${t.slug}`),
     lastModified: t.updatedAt,
-    lastModified: t.reviews[0]?.updatedAt ?? t.createdAt,
     changeFrequency: 'weekly',
     priority: 0.8,
   }))

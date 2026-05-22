@@ -53,22 +53,6 @@ describe('app/sitemap', () => {
     const updatedAt = new Date('2026-04-10T00:00:00Z')
     prismaMock.target.findMany.mockResolvedValue([
       { slug: 'cursor', type: 'editor', updatedAt },
-  it('uses latest published review.updatedAt as target lastModified, falling back to createdAt', async () => {
-    const reviewDate = new Date('2026-04-10T00:00:00Z')
-    const createdAt = new Date('2026-01-01T00:00:00Z')
-    prismaMock.target.findMany.mockResolvedValue([
-      {
-        slug: 'cursor',
-        type: 'editor',
-        createdAt,
-        reviews: [{ updatedAt: reviewDate }],
-      },
-      {
-        slug: 'no-reviews',
-        type: 'coding',
-        createdAt,
-        reviews: [],
-      },
     ])
     prismaMock.article.findMany.mockResolvedValue([])
     prismaMock.app.findMany.mockResolvedValue([])
@@ -78,16 +62,7 @@ describe('app/sitemap', () => {
     expect(cursorEntry?.lastModified).toEqual(updatedAt)
   })
 
-  it('selects only the lightweight target fields needed for sitemap rows', async () => {
-
-    const cursorEntry = result.find((e) => e.url === 'https://logwood.test/editor/cursor')
-    const fallbackEntry = result.find((e) => e.url === 'https://logwood.test/coding/no-reviews')
-
-    expect(cursorEntry?.lastModified).toEqual(reviewDate)
-    expect(fallbackEntry?.lastModified).toEqual(createdAt)
-  })
-
-  it('queries targets with the published-review filter and orderBy desc', async () => {
+  it('queries targets with updatedAt select and no reviews join', async () => {
     prismaMock.target.findMany.mockResolvedValue([])
     prismaMock.article.findMany.mockResolvedValue([])
     prismaMock.app.findMany.mockResolvedValue([])
@@ -97,17 +72,6 @@ describe('app/sitemap', () => {
     expect(prismaMock.target.findMany).toHaveBeenCalledWith({
       select: { slug: true, type: true, updatedAt: true },
     })
-    expect(prismaMock.target.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        select: expect.objectContaining({
-          reviews: expect.objectContaining({
-            where: { status: 'published' },
-            orderBy: { updatedAt: 'desc' },
-            take: 1,
-          }),
-        }),
-      }),
-    )
   })
 
   it('includes article and app routes with absolute URLs', async () => {
