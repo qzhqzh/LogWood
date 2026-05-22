@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { APP_STATUSES, createApp, listAllAppsForManage, listApps, updateApp } from '@/modules/app'
 import { isAdminSession } from '@/lib/authz'
@@ -73,6 +74,8 @@ export async function POST(request: NextRequest) {
     const validated: CreateAppPayload = createAppSchema.parse(body)
     const app = await createApp(validated, session.user.id)
 
+    revalidatePath('/app')
+    revalidatePath('/')
     return NextResponse.json(app, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -101,6 +104,9 @@ export async function PATCH(request: NextRequest) {
     const validated: UpdateAppPayload = updateAppSchema.parse(body)
     const app = await updateApp(validated)
 
+    revalidatePath('/app')
+    revalidatePath(`/app/${app.slug}`)
+    revalidatePath('/')
     return NextResponse.json(app)
   } catch (error) {
     if (error instanceof z.ZodError) {

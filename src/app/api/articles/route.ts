@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { ArticleStatus } from '@prisma/client'
 import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { createArticle, listAllArticlesForManage, listArticles } from '@/modules/article'
 import { isAdminSession } from '@/lib/authz'
@@ -89,6 +90,8 @@ export async function POST(request: NextRequest) {
     const validated = createArticleSchema.parse(body)
 
     const result = await createArticle(validated, session.user.id)
+    revalidatePath('/articles')
+    revalidatePath('/')
     return NextResponse.json(result, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {

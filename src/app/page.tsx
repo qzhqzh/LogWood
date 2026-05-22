@@ -9,7 +9,7 @@ import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
 import { SITE_NAME, buildMetadata, buildWebSite } from '@/shared/seo'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export async function generateMetadata(): Promise<Metadata> {
   const [reviewCount, targetCount] = await Promise.all([

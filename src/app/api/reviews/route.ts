@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { resolveActorWithFingerprint } from '@/modules/identity'
 import { createReview, getReviews } from '@/modules/review'
 import { parsePage, parsePageSize } from '@/lib/safe-parse'
@@ -56,6 +57,8 @@ export async function POST(request: NextRequest) {
       actor
     )
 
+    // Revalidate pages that display review data (target detail + homepage stats)
+    revalidatePath('/')
     return NextResponse.json(result, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {

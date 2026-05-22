@@ -11,7 +11,7 @@ import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 export const metadata: Metadata = buildMetadata({
   title: 'AI Coding 工具评测',

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { listTargets, getTargetBySlug, getFeatures } from '@/modules/target'
 import { TargetType } from '@prisma/client'
 import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { createTarget, updateTarget, deleteTarget } from '@/modules/target'
 import { isAdminSession } from '@/lib/authz'
@@ -109,6 +110,9 @@ export async function POST(request: NextRequest) {
     const validated = createTargetSchema.parse(body)
     const result = await createTarget(validated)
 
+    revalidatePath('/editor')
+    revalidatePath('/coding')
+    revalidatePath('/')
     return NextResponse.json(result, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -148,6 +152,10 @@ export async function PATCH(request: NextRequest) {
       metadata: { name: validated.name, type: validated.type },
     })
 
+    revalidatePath('/editor')
+    revalidatePath('/coding')
+    revalidatePath(`/${validated.type}/${result.slug}`)
+    revalidatePath('/')
     return NextResponse.json(result)
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -190,6 +198,9 @@ export async function DELETE(request: NextRequest) {
       targetId: validated.id,
     })
 
+    revalidatePath('/editor')
+    revalidatePath('/coding')
+    revalidatePath('/')
     return NextResponse.json(result)
   } catch (error) {
     if (error instanceof z.ZodError) {

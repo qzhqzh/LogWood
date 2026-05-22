@@ -85,13 +85,17 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   images: {
-    // TODO(security R-04): tighten to an explicit allowlist of hostnames once
-    // we audit which external image domains are actually in use (target
-    // logos, article covers, app preview images).
+    // Only allow images from known sources. All article/app images are
+    // uploaded by admins to local /uploads/ (served by same origin).
+    // GitHub avatars are needed for OAuth user profiles.
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.githubusercontent.com',
       },
     ],
   },

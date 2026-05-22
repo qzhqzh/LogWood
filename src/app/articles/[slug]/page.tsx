@@ -22,7 +22,7 @@ import {
   canonicalFor,
 } from '@/shared/seo'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()

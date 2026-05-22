@@ -12,7 +12,7 @@ import {
   buildSoftwareApplicationJsonLd,
 } from '@/shared/seo'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const app = await getAppBySlug(params.slug)
