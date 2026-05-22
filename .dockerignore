@@ -7,3 +7,6 @@ Dockerfile*
 docker-compose*.yml
 .env
 .env.local
+package-lock.json
+bun.lockb
+bun.lock
