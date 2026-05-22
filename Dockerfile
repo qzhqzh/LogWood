@@ -23,11 +23,11 @@ RUN set -eux; \
 		rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first to maximize layer cache reuse.
-# Only copy package.json (NOT package-lock.json) to avoid integrity hash
-# mismatches between the npm lockfile and the mirror registry.
-COPY package.json ./
-COPY .npmrc ./
-RUN bun install
+# Copy only package.json and .npmrc; explicitly delete any npm lockfile
+# that may leak in via build context to prevent bun from migrating it
+# (which causes IntegrityCheckFailed when using a mirror registry).
+COPY package.json .npmrc ./
+RUN rm -f package-lock.json bun.lockb bun.lock && bun install
 
 # Copy source code (needed for production builds).
 # In dev mode, bind mount overrides this COPY.
