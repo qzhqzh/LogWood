@@ -56,8 +56,6 @@ export default function TagsPage() {
   const [submittingSentiment, setSubmittingSentiment] = useState<TagSentiment | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const isAuthed = status === 'authenticated'
-
   const loadTags = useCallback(async () => {
     try {
       setLoading(true)
