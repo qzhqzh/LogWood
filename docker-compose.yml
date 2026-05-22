@@ -45,10 +45,9 @@ services:
       PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://registry.npmmirror.com/-/binary/prisma}
     ports:
       - "10001:3000"
-    user: root
     volumes:
       - .:/app
-      - /app/node_modules
+      - node_modules:/app/node_modules
     command: sh /app/scripts/entrypoint.sh
 
   nginx:
@@ -64,3 +63,4 @@ services:
 
 volumes:
   postgres_data:
+  node_modules:
