@@ -45,6 +45,7 @@ services:
       PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://registry.npmmirror.com/-/binary/prisma}
     ports:
       - "10001:3000"
+    user: root
     volumes:
       - .:/app
       - /app/node_modules
