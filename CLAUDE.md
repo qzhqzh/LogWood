@@ -111,7 +111,7 @@ Identity constraint: Every review/comment has EITHER `userId` OR `anonymousUserI
 
 ### Auth
 
-- **GitHub OAuth**: Configured via `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` (optional, supports proxy via `GITHUB_OAUTH_PROXY`)
+- **GitHub OAuth**: Configured via `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
 - **Admin credentials**: `ADMIN_EMAIL` / `ADMIN_PASSWORD` (or `ADMIN_PASSWORD_HASH` for bcrypt)
 - **Session**: JWT-based, includes `role` field (`admin` | `user`)
 - **Production requirement**: `NEXTAUTH_URL` must be a public HTTPS domain, NOT localhost

@@ -2,7 +2,6 @@ import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import GitHubProvider from 'next-auth/providers/github'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import { HttpsProxyAgent } from 'https-proxy-agent'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { hashIp } from '@/lib/ip'
@@ -14,7 +13,6 @@ export type UserRole = 'admin' | 'user'
 const adminEmail = process.env.ADMIN_EMAIL
 const adminPassword = process.env.ADMIN_PASSWORD
 const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH
-const githubOAuthProxy = process.env.GITHUB_OAUTH_PROXY?.trim()
 const nextAuthUrl = process.env.NEXTAUTH_URL || ''
 const nextAuthSecret = process.env.NEXTAUTH_SECRET || ''
 
@@ -102,11 +100,6 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
             httpOptions: {
               timeout: 60000,
-              ...(githubOAuthProxy
-                ? {
-                    agent: new HttpsProxyAgent(githubOAuthProxy),
-                  }
-                : {}),
             },
           }),
         ]
