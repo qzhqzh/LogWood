@@ -23,8 +23,7 @@ RUN set -eux; \
 		rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first to maximize layer cache reuse.
-COPY package*.json ./
-COPY .npmrc ./.npmrc
+COPY package.json ./
 RUN bun install
 
 # Copy source code (needed for production builds).
