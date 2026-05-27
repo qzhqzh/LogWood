@@ -13,6 +13,10 @@ export type UserRole = 'admin' | 'user'
 const adminEmail = process.env.ADMIN_EMAIL
 const adminPassword = process.env.ADMIN_PASSWORD
 const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH
+const adminGithubEmails = (process.env.ADMIN_GITHUB_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean)
 const nextAuthUrl = process.env.NEXTAUTH_URL || ''
 const nextAuthSecret = process.env.NEXTAUTH_SECRET || ''
 
@@ -181,6 +185,12 @@ export const authOptions: NextAuthOptions = {
 
       if (account?.provider === 'admin-credentials') {
         token.role = 'admin'
+        token.authProvider = account.provider
+      } else if (account?.provider === 'github') {
+        // Check if GitHub user email is in admin list
+        const userEmail = user.email?.toLowerCase()
+        const isAdmin = userEmail && adminGithubEmails.includes(userEmail)
+        token.role = isAdmin ? 'admin' : 'user'
         token.authProvider = account.provider
       } else if (account?.provider) {
         token.role = 'user'

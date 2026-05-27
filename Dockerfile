@@ -6,6 +6,7 @@ ARG PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
 
 ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY} \
 		PRISMA_ENGINES_MIRROR=${PRISMA_ENGINES_MIRROR} \
+		PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 \
 		# Default to production. docker-compose can override this back to
 		# development for local hot-reload via `NODE_ENV=development`.
 		NODE_ENV=production
