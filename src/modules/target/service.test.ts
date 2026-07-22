@@ -52,6 +52,9 @@ describe('target/service', () => {
         websiteUrl: null,
         developer: null,
         features: '["completion","chat"]',
+        previewImageUrl: null,
+        sourceUrl: null,
+        compareGroup: null,
         _count: { reviews: 3 },
       },
       {
@@ -64,6 +67,9 @@ describe('target/service', () => {
         websiteUrl: null,
         developer: null,
         features: 'invalid-json',
+        previewImageUrl: null,
+        sourceUrl: null,
+        compareGroup: null,
         _count: { reviews: 0 },
       },
     ])
@@ -100,6 +106,9 @@ describe('target/service', () => {
       websiteUrl: null,
       developer: null,
       features: '[]',
+      previewImageUrl: null,
+      sourceUrl: null,
+      compareGroup: null,
       _count: { reviews: 2 },
     })
     prismaMock.review.aggregate.mockResolvedValue({ _avg: { rating: 4.5 } })

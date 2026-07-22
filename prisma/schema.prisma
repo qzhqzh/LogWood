@@ -20,6 +20,18 @@ enum AppStatus {
   archived
 }
 
+enum CandidateStatus {
+  watching
+  evaluating
+  promoted
+  dropped
+}
+
+enum CandidatePromoteTo {
+  tool
+  gallery
+}
+
 enum TagSentiment {
   good
   bad
@@ -93,6 +105,8 @@ model User {
   reports       Report[]
   articles      Article[]
   apps          App[]
+  skills        Skill[]
+  candidates    Candidate[]
   articleComments ArticleComment[]
   accounts      Account[]
   sessions      Session[]
@@ -122,22 +136,27 @@ model AnonymousUser {
 }
 
 model Target {
-  id          String       @id @default(cuid())
-  name        String
-  slug        String       @unique
-  type        TargetType
-  logoUrl     String?
-  description String?
-  websiteUrl  String?
-  developer   String?
-  features    String
-  createdAt   DateTime     @default(now())
+  id               String       @id @default(cuid())
+  name             String
+  slug             String       @unique
+  type             TargetType
+  logoUrl          String?
+  description      String?
+  websiteUrl       String?
+  developer        String?
+  features         String
+  // Skill 室扩展字段（可空，兼容历史行）
+  previewImageUrl  String?
+  sourceUrl        String?
+  compareGroup     String?
+  createdAt        DateTime     @default(now())
   // Default to now() so existing rows get a non-null value during the
   // additive `prisma db push`. Auto-updates on every write thereafter.
-  updatedAt   DateTime     @default(now()) @updatedAt
+  updatedAt        DateTime     @default(now()) @updatedAt
 
-  reviews     Review[]
+  reviews          Review[]
 
+  @@index([compareGroup])
   @@map("targets")
 }
 
@@ -145,7 +164,11 @@ model Review {
   id               String        @id @default(cuid())
   userId           String?
   anonymousUserId  String?
-  targetId         String
+  /// Exactly one of targetId / skillId / appId / candidateId should be set (enforced in service).
+  targetId         String?
+  skillId          String?
+  appId            String?
+  candidateId      String?
   content          String
   rating           Int
   language         String        @default("zh")
@@ -158,11 +181,17 @@ model Review {
 
   user             User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
   anonymousUser    AnonymousUser? @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
-  target           Target        @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  target           Target?       @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  skill            Skill?        @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  app              App?          @relation(fields: [appId], references: [id], onDelete: Cascade)
+  candidate        Candidate?    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   likes            ReviewLike[]
   comments         Comment[]
 
   @@index([targetId])
+  @@index([skillId])
+  @@index([appId])
+  @@index([candidateId])
   @@index([userId])
   @@index([anonymousUserId])
   @@index([status])
@@ -289,6 +318,67 @@ model Emoji {
   @@map("emojis")
 }
 
+enum SkillStatus {
+  draft
+  published
+  archived
+}
+
+model Skill {
+  id             String      @id @default(cuid())
+  title          String
+  slug           String      @unique
+  /// Grouping key for shelves, e.g. frontend / style / workflow / image / copy
+  category       String
+  summary        String?
+  /// The skill body: prompt, instructions, or reusable text
+  prompt         String
+  effectImageUrl String?
+  /// Short note describing what the effect shows
+  effectNote     String?
+  sourceUrl      String?
+  tags           String      @default("[]")
+  status         SkillStatus @default(published)
+  authorUserId   String?
+  sortOrder      Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  author         User?       @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  reviews        Review[]
+
+  @@index([status, category, sortOrder])
+  @@index([status, updatedAt])
+  @@map("skills")
+}
+
+model Candidate {
+  id                String               @id @default(cuid())
+  title             String
+  slug              String               @unique
+  summary           String?
+  websiteUrl        String?
+  sourceUrl         String?
+  logoUrl           String?
+  previewImageUrl   String?
+  tags              String               @default("[]")
+  status            CandidateStatus      @default(watching)
+  sortOrder         Int                  @default(0)
+  promotedTo        CandidatePromoteTo?
+  promotedTargetId  String?
+  promotedAppId     String?
+  authorUserId      String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  author            User?                @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  reviews           Review[]
+
+  @@index([status, sortOrder])
+  @@index([status, updatedAt])
+  @@map("candidates")
+}
+
 model App {
   id              String    @id @default(cuid())
   name            String
@@ -305,10 +395,12 @@ model App {
   updatedAt       DateTime  @updatedAt
 
   author          User?     @relation(fields: [authorUserId], references: [id])
+  reviews         Review[]
 
   @@index([status, createdAt])
   @@map("apps")
 }
+
 
 model ArticleComment {
   id               String          @id @default(cuid())

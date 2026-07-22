@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { ReviewList } from '@/components/review-list'
-import { InlineReviewComposer } from '@/components/inline-review-composer'
+import { ReviewPanel } from '@/components/review-panel'
 
 interface TargetReviewSectionProps {
   targetId: string
@@ -10,17 +8,11 @@ interface TargetReviewSectionProps {
 }
 
 export function TargetReviewSection({ targetId, canPublishReview }: TargetReviewSectionProps) {
-  const [refreshToken, setRefreshToken] = useState(0)
-
   return (
-    <div>
-      {canPublishReview && (
-        <InlineReviewComposer
-          targetId={targetId}
-          onSubmitted={() => setRefreshToken((prev) => prev + 1)}
-        />
-      )}
-      <ReviewList key={`${targetId}-${refreshToken}`} targetId={targetId} />
-    </div>
+    <ReviewPanel
+      subjectType="target"
+      subjectId={targetId}
+      canPublishReview={canPublishReview}
+    />
   )
 }

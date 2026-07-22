@@ -1,23 +1,33 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { ReviewSubjectType } from '@/modules/review/constants'
+import { REVIEW_SUBJECT_QUERY_KEY } from '@/modules/review/constants'
 
 type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error'
 
 interface InlineReviewComposerProps {
-  targetId: string
+  subjectType?: ReviewSubjectType
+  subjectId?: string
+  /** @deprecated use subjectType/subjectId */
+  targetId?: string
   onSubmitted?: () => void
 }
 
-export function InlineReviewComposer({ targetId, onSubmitted }: InlineReviewComposerProps) {
+export function InlineReviewComposer({
+  subjectType: subjectTypeProp,
+  subjectId: subjectIdProp,
+  targetId,
+  onSubmitted,
+}: InlineReviewComposerProps) {
+  const subjectType = subjectTypeProp || 'target'
+  const subjectId = subjectIdProp || targetId || ''
   const [rating, setRating] = useState(5)
   const [content, setContent] = useState('')
   const [status, setStatus] = useState<SubmitStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const canSubmit = useMemo(() => {
-    return content.trim().length >= 3
-  }, [content])
+  const canSubmit = useMemo(() => content.trim().length >= 3 && Boolean(subjectId), [content, subjectId])
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault()
@@ -27,11 +37,12 @@ export function InlineReviewComposer({ targetId, onSubmitted }: InlineReviewComp
       setStatus('submitting')
       setErrorMessage('')
 
+      const bodyKey = REVIEW_SUBJECT_QUERY_KEY[subjectType]
       const res = await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          targetId,
+          [bodyKey]: subjectId,
           rating,
           content: content.trim(),
         }),

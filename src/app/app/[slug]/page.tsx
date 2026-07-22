@@ -6,6 +6,7 @@ import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
 import { Breadcrumbs } from '@/components/breadcrumbs'
+import { ReviewPanel } from '@/components/review-panel'
 import {
   buildBreadcrumbList,
   buildMetadata,
@@ -48,7 +49,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '应用工坊', path: '/app' },
+    { name: '画廊', path: '/app' },
     { name: app.title, path },
   ]
   const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
@@ -95,6 +96,10 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
               )}
             </div>
           </div>
+        </div>
+
+        <div className="mt-10">
+          <ReviewPanel subjectType="app" subjectId={app.id} title="评测这件作品" />
         </div>
       </section>
       <SiteFooter />

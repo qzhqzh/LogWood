@@ -6,6 +6,18 @@ vi.mock('@/lib/prisma', () => ({
     review: {
       create: vi.fn(),
     },
+    target: {
+      findUnique: vi.fn(),
+    },
+    skill: {
+      findUnique: vi.fn(),
+    },
+    app: {
+      findUnique: vi.fn(),
+    },
+    candidate: {
+      findUnique: vi.fn(),
+    },
   },
 }))
 
@@ -14,24 +26,19 @@ vi.mock('@/modules/rate-limit', () => ({
   checkIpSegmentLimit: vi.fn().mockResolvedValue({ allowed: true }),
 }))
 
-vi.mock('@/modules/target', () => ({
-  getTargetById: vi.fn(),
-}))
-
 vi.mock('@/modules/like', () => ({
   assessContent: vi.fn(),
 }))
 
 import { prisma } from '@/lib/prisma'
-import { getTargetById } from '@/modules/target'
 import { assessContent } from '@/modules/like'
 import { createReview } from './service'
 
 const prismaMock = prisma as unknown as {
   review: { create: ReturnType<typeof vi.fn> }
+  target: { findUnique: ReturnType<typeof vi.fn> }
 }
 
-const getTargetByIdMock = getTargetById as unknown as ReturnType<typeof vi.fn>
 const assessContentMock = assessContent as unknown as ReturnType<typeof vi.fn>
 
 describe('review/service createReview', () => {
@@ -53,7 +60,7 @@ describe('review/service createReview', () => {
   })
 
   it('throws not found when target missing', async () => {
-    getTargetByIdMock.mockResolvedValue(null)
+    prismaMock.target.findUnique.mockResolvedValue(null)
 
     await expect(
       createReview(
@@ -68,7 +75,7 @@ describe('review/service createReview', () => {
   })
 
   it('creates pending review when content is flagged', async () => {
-    getTargetByIdMock.mockResolvedValue({ id: 't1' })
+    prismaMock.target.findUnique.mockResolvedValue({ id: 't1' })
     assessContentMock.mockReturnValue({ flagged: true, reason: 'sensitive_word' })
     prismaMock.review.create.mockResolvedValue({
       id: 'r1',
@@ -90,6 +97,8 @@ describe('review/service createReview', () => {
         data: expect.objectContaining({
           status: ReviewStatus.pending,
           language: 'zh',
+          targetId: 't1',
+          skillId: null,
         }),
       })
     )

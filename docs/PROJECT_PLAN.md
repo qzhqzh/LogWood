@@ -9,15 +9,20 @@
 - 新成员应先阅读本文件，再阅读 SPEC 与模块文档。
 
 ## 2. 项目定位
-- 项目名称：LogWood
-- 定位：AI 编码工具评测社区（AI Editor / AI Coding）
-- 核心价值：沉淀真实使用反馈，支持工具横向比较和社区内容沉淀。
+- 项目名称：空心树洞（仓库名仍可为 LogWood）
+- 副标题：放下执念，重新生长
+- 定位：个人策展的 Skill 库 + 画廊 + AI 造物台
+- 核心价值：收藏可对比的 Skill / 美图与示例站，并用 AI 帮内容重新生长
 
 ## 3. 当前范围（Core Scope）
-- 工具目录与详情：/editor、/coding、/:type/[slug]
-- 评测闭环：发布、列表、详情、排序（latest/hot）
+- Skill 室：`/skills`（独立 `Skill` 模型：提示词 × 效果标本，按分类层架；管理 `/skills/manage`）
+- 候选评测：`/candidates`（短名单观察/评测；可晋升到工具收藏或画廊；管理 `/candidates/manage`）
+- 工具收藏：`/tools`（历史 Target/评测；`/coding`、`/editor` 列表重定向至此）
+- 画廊：`/app`（原应用工坊作品继续作为展陈）
+- 造物台：`/forge`（AI 创作占位）
+- 洞笔记：`/articles`
+- 评测闭环：多态 Review，可挂 Target / Skill / App / Candidate
 - 互动能力：点赞、评论、举报
-- 内容能力：文章发布、文章管理、文章列表与详情
 - 身份能力：登录用户 + 匿名用户
 - 治理能力：限流、内容风险判定、自动隐藏与审核流
 
@@ -31,8 +36,10 @@
 
 ## 5. 模块边界（高层）
 - identity：登录身份、匿名身份解析
-- target：工具目录与工具统计
-- review：评测发布与查询
+- skill：Skill 标本 CRUD、分类层架、效果图
+- candidate：候选短名单、晋升到工具/画廊
+- target：历史工具目录与工具统计
+- review：多态评测发布与查询（target/skill/app/candidate）
 - comment：评论发布与查询
 - like：点赞及基础内容风险判定函数
 - moderation：举报、自动折叠、处理状态流转
@@ -50,6 +57,27 @@
 - 当前 web 容器默认启动开发模式，正式生产建议使用 build + start。
 
 ## 8. 变更记录
+
+### 2026-07-23 (候选评测 + 多态 Review + 热更新)
+- 新增 `Candidate` 模型与 `/candidates` 展览/详情/管理；支持晋升到工具收藏或画廊。
+- `Review` 多态挂载：`targetId`（历史保留）+ `skillId` / `appId` / `candidateId`；共用 `ReviewPanel`。
+- Skill / 画廊 / 工具详情均可写评测。
+- 本地开发切 `NODE_ENV=development` 热更新，避免反复 production build。
+
+### 2026-07-23 (Skill 独立板块)
+- 新增独立 Prisma 模型 `Skill`（与 Target 解耦）：提示词、效果图、分类、标签、状态。
+- 新模块 `src/modules/skill` + API `/api/skills` + 效果图上传 `/api/uploads/skill-effect`。
+- Skill 室全新 UI：分类层架 + 提示词/效果双栏标本；详情可复制；管理页 `/skills/manage`。
+- 历史工具目录迁至 `/tools`；主导航 Skill 室只展示新标本。
+- 首页精选改用真实 Skill；种子含 5 份示例标本。
+
+### 2026-07-23
+- 产品重包装为「空心树洞」，副标题「放下执念，重新生长」。
+- 信息架构改为三室：Skill 室 `/skills`、画廊 `/app`（`/gallery` 重定向）、造物台 `/forge`；文章改称洞笔记。
+- 历史 `Target`（editor/coding/model/prompt）以 Skill 分类自然陈列，DB 枚举与详情 URL 不变；`/coding`、`/editor` 列表重定向到 Skill 室。
+- Target 增量字段：`previewImageUrl` / `sourceUrl` / `compareGroup`；Skill 效果图上传 `/api/uploads/skill-preview`。
+- 新增同洞对比页 `/compare?ids=` / `?group=`；造物台草稿接口 `/api/forge/draft`（本地模板，预留模型接入）。
+- 更新站点 SEO、导航、页脚、OG 图与 sitemap 静态路由。
 
 ### 2026-07-22
 - 应用工坊管理页：详细表述改为富文本编辑器；详情页按 HTML 渲染。

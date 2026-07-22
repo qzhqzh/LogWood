@@ -26,9 +26,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!target) return { title: 'Not Found' }
   const description = target.description
     ? target.description.slice(0, 160)
-    : `${target.name} AI Editor 工具评测，查看真实用户评分与使用体验`
+    : `${target.name} 创作器 Skill 评测与使用体验`
   return buildMetadata({
-    title: `${target.name} - AI Editor 评测`,
+    title: `${target.name} - 创作器 Skill`,
     description,
     path: `/editor/${target.slug}`,
   })
@@ -82,7 +82,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
   const path = `/editor/${target.slug}`
   const jsonLd = buildSoftwareApplicationJsonLd({
     name: target.name,
-    description: target.description ?? `${target.name} AI Editor 工具评测`,
+    description: target.description ?? `${target.name} 创作器 Skill`,
     url: path,
     applicationCategory: 'DeveloperApplication',
     sameAs: target.websiteUrl ?? null,
@@ -92,7 +92,8 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: 'AI Editor', path: '/editor' },
+    { name: '工具收藏', path: '/tools' },
+    { name: '创作器', path: '/tools?category=editor' },
     { name: target.name, path },
   ]
   const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
@@ -107,29 +108,8 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
       </div>
 
       <SiteNav
-        navItems={[
-          {
-            href: '/editor',
-            label: 'AI Editor',
-            className: 'text-cyan-400 font-medium tracking-wide',
-          },
-          {
-            href: '/coding',
-            label: 'AI Coding',
-            className: 'text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide',
-          },
-          {
-            href: '/app',
-            label: '应用工坊',
-            className: 'text-purple-400 hover:text-purple-300 transition-colors font-medium tracking-wide',
-          },
-          {
-            href: '/articles',
-            label: '社区文章',
-            className: 'text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide',
-          },
-        ]}
-        actionLabel={isAdmin ? '评测管理' : undefined}
+        active="skills"
+        actionLabel={isAdmin ? 'Skill 管理' : undefined}
         actionHref={isAdmin ? '/targets/manage/editor' : undefined}
         borderClassName="border-cyan-500/20"
       />

@@ -83,19 +83,19 @@ function SubmitForm() {
 
   const targetGroups = [
     {
-      label: 'AI Editor',
+      label: '创作器',
       options: targets.filter(t => t.type === 'editor').map(t => ({ value: t.id, label: t.name })),
     },
     {
-      label: 'AI Coding',
+      label: '编码助手',
       options: targets.filter(t => t.type === 'coding').map(t => ({ value: t.id, label: t.name })),
     },
     {
-      label: 'AI Model',
+      label: '模型能力',
       options: targets.filter(t => t.type === 'model').map(t => ({ value: t.id, label: t.name })),
     },
     {
-      label: 'AI Prompt',
+      label: '提示与流程',
       options: targets.filter(t => t.type === 'prompt').map(t => ({ value: t.id, label: t.name })),
     },
   ]
@@ -129,7 +129,7 @@ function SubmitForm() {
             groups={targetGroups}
             value={formData.targetId}
             onChange={(value) => setFormData({ ...formData, targetId: value })}
-            placeholder="请选择 AI 工具..."
+            placeholder="请选择 Skill..."
           />
         )}
       </div>
@@ -217,18 +217,7 @@ export default function SubmitPage() {
       </div>
 
       <SiteNav
-        navItems={[
-          {
-            href: '/editor',
-            label: 'AI Editor',
-            className: 'text-gray-400 hover:text-cyan-400 transition-colors font-medium tracking-wide',
-          },
-          {
-            href: '/coding',
-            label: 'AI Coding',
-            className: 'text-gray-400 hover:text-purple-400 transition-colors font-medium tracking-wide',
-          },
-        ]}
+        active="skills"
         borderClassName="border-cyan-500/20"
       />
 
@@ -238,7 +227,7 @@ export default function SubmitPage() {
             <div className="inline-block mb-4 px-4 py-1 border border-pink-500/30 rounded-full bg-pink-500/5">
               <span className="text-pink-400 text-sm tracking-widest uppercase">SHARE YOUR EXPERIENCE</span>
             </div>
-            <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">发布评测</h1>
+            <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">发布 Skill 评测</h1>
           </div>
           <Suspense fallback={<div className="text-center py-8 text-gray-500">加载中...</div>}>
             <SubmitForm />

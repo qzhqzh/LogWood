@@ -25,6 +25,16 @@ const optionalHttpUrl = z.preprocess((value) => {
   return `https://${trimmed}`
 }, z.string().url().optional())
 
+const optionalAssetUrl = z.preprocess((value) => {
+  if (typeof value !== 'string') return value
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  return trimmed
+}, z.string().refine(
+  (v) => /^https?:\/\//i.test(v) || v.startsWith('/'),
+  { message: '必须是 http(s) URL 或 / 开头的路径' },
+).optional())
+
 const optionalDescription = z.preprocess((value) => {
   if (value === null || value === undefined) return undefined
   if (typeof value !== 'string') return value
@@ -42,6 +52,9 @@ const createTargetSchema = z.object({
   websiteUrl: optionalHttpUrl,
   developer: z.string().max(80).optional(),
   features: z.array(z.string().min(1).max(30)).optional(),
+  previewImageUrl: optionalAssetUrl,
+  sourceUrl: optionalHttpUrl,
+  compareGroup: z.string().max(80).optional(),
 })
 
 const updateTargetSchema = createTargetSchema.extend({
@@ -111,7 +124,9 @@ export async function POST(request: NextRequest) {
     const result = await createTarget(validated)
 
     revalidatePath('/editor')
+    revalidatePath('/skills')
     revalidatePath('/coding')
+    revalidatePath('/')
     revalidatePath('/')
     return NextResponse.json(result, { status: 201 })
   } catch (error) {
@@ -153,7 +168,9 @@ export async function PATCH(request: NextRequest) {
     })
 
     revalidatePath('/editor')
+    revalidatePath('/skills')
     revalidatePath('/coding')
+    revalidatePath('/')
     revalidatePath(`/${validated.type}/${result.slug}`)
     revalidatePath('/')
     return NextResponse.json(result)
@@ -199,7 +216,9 @@ export async function DELETE(request: NextRequest) {
     })
 
     revalidatePath('/editor')
+    revalidatePath('/skills')
     revalidatePath('/coding')
+    revalidatePath('/')
     revalidatePath('/')
     return NextResponse.json(result)
   } catch (error) {

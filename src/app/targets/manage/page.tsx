@@ -10,10 +10,10 @@ import { SiteFooter } from '@/components/site-footer'
 type TargetType = 'editor' | 'coding' | 'model' | 'prompt'
 
 const TARGET_TYPE_ITEMS: Array<{ key: TargetType; label: string; href: string; backHref: string }> = [
-  { key: 'editor', label: 'AI Editor', href: '/targets/manage/editor', backHref: '/editor' },
-  { key: 'coding', label: 'AI Coding', href: '/targets/manage/coding', backHref: '/coding?category=coding' },
-  { key: 'model', label: 'AI Model', href: '/targets/manage/model', backHref: '/coding?category=model' },
-  { key: 'prompt', label: 'AI Prompt', href: '/targets/manage/prompt', backHref: '/coding?category=prompt' },
+  { key: 'editor', label: '创作器', href: '/targets/manage/editor', backHref: '/tools?category=editor' },
+  { key: 'coding', label: '编码助手', href: '/targets/manage/coding', backHref: '/tools?category=coding' },
+  { key: 'model', label: '模型能力', href: '/targets/manage/model', backHref: '/tools?category=model' },
+  { key: 'prompt', label: '提示与流程', href: '/targets/manage/prompt', backHref: '/tools?category=prompt' },
 ]
 
 interface TargetItem {
@@ -26,6 +26,9 @@ interface TargetItem {
   websiteUrl?: string | null
   developer?: string | null
   features: string[]
+  previewImageUrl?: string | null
+  sourceUrl?: string | null
+  compareGroup?: string | null
 }
 
 interface ValidationIssue {
@@ -67,8 +70,8 @@ function ManageTargetsPageContent() {
   const scopedType = parseScopedType(searchParams.get('type'))
   const managePath = scopedType ? `/targets/manage?type=${scopedType}` : '/targets/manage'
   const activeTypeItem = scopedType ? TARGET_TYPE_ITEMS.find((item) => item.key === scopedType) : null
-  const titleText = activeTypeItem ? `${activeTypeItem.label} 评测管理` : '评测目标管理'
-  const backHref = activeTypeItem?.backHref || '/coding'
+  const titleText = activeTypeItem ? `${activeTypeItem.label}管理` : '工具收藏管理'
+  const backHref = activeTypeItem?.backHref || '/tools'
   const { data: session, status: sessionStatus } = useSession()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -77,9 +80,13 @@ function ManageTargetsPageContent() {
   const [description, setDescription] = useState('')
   const [websiteUrl, setWebsiteUrl] = useState('')
   const [developer, setDeveloper] = useState('')
+  const [previewImageUrl, setPreviewImageUrl] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [compareGroup, setCompareGroup] = useState('')
   const [features, setFeatures] = useState<string[]>([])
   const [targets, setTargets] = useState<TargetItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [uploadingPreview, setUploadingPreview] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const visibleTargets = useMemo(
@@ -98,6 +105,9 @@ function ManageTargetsPageContent() {
     setDescription('')
     setWebsiteUrl('')
     setDeveloper('')
+    setPreviewImageUrl('')
+    setSourceUrl('')
+    setCompareGroup('')
     setFeatures([])
   }
 
@@ -109,8 +119,27 @@ function ManageTargetsPageContent() {
     setDescription(target.description || '')
     setWebsiteUrl(target.websiteUrl || '')
     setDeveloper(target.developer || '')
+    setPreviewImageUrl(target.previewImageUrl || '')
+    setSourceUrl(target.sourceUrl || '')
+    setCompareGroup(target.compareGroup || '')
     setFeatures(target.features)
     setError(null)
+  }
+
+  async function uploadPreview(file: File) {
+    setUploadingPreview(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/uploads/skill-preview', { method: 'POST', body: form })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '上传失败')
+      setPreviewImageUrl(data.url as string)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '上传失败')
+    } finally {
+      setUploadingPreview(false)
+    }
   }
 
   async function loadTargets() {
@@ -175,6 +204,9 @@ function ManageTargetsPageContent() {
           description: description.trim() || undefined,
           websiteUrl: websiteUrl.trim() || undefined,
           developer: developer.trim() || undefined,
+          previewImageUrl: previewImageUrl.trim() || undefined,
+          sourceUrl: sourceUrl.trim() || undefined,
+          compareGroup: compareGroup.trim() || undefined,
           features,
         }),
       })
@@ -269,10 +301,10 @@ function ManageTargetsPageContent() {
                 disabled={Boolean(scopedType)}
                 className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)] disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <option value="editor">AI Editor</option>
-                <option value="coding">AI Coding</option>
-                <option value="model">AI Model</option>
-                <option value="prompt">AI Prompt</option>
+                <option value="editor">创作器</option>
+                <option value="coding">编码助手</option>
+                <option value="model">模型能力</option>
+                <option value="prompt">提示与流程</option>
               </select>
             </div>
           </div>
@@ -282,7 +314,42 @@ function ManageTargetsPageContent() {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <input value={developer} onChange={(e) => setDeveloper(e.target.value)} className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]" placeholder="开发者 / 团队" />
-            <div className="text-xs text-gray-500 flex items-center">标签已改为标签池维护，可在下方选择或快速创建。</div>
+            <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]" placeholder="来源 URL（仓库 / 文档）" />
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm mb-2 text-gray-300">效果图</label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                disabled={uploadingPreview || loading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void uploadPreview(file)
+                }}
+                className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)] file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-cyan-600 file:text-white"
+              />
+              <input
+                value={previewImageUrl}
+                onChange={(e) => setPreviewImageUrl(e.target.value)}
+                className="mt-2 w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
+                placeholder="或粘贴效果图 URL / 路径"
+              />
+              {previewImageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={previewImageUrl} alt="效果图预览" className="mt-2 h-20 w-20 rounded-lg object-cover border border-cyan-500/20" />
+              )}
+            </div>
+            <div>
+              <label className="block text-sm mb-2 text-gray-300">对比分组键</label>
+              <input
+                value={compareGroup}
+                onChange={(e) => setCompareGroup(e.target.value)}
+                className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
+                placeholder="例如 frontend-nav / style-neo"
+              />
+              <p className="text-xs text-gray-500 mt-2">相同分组的工具可在对比页并排查看。</p>
+            </div>
           </div>
           <div>
             <label className="block text-sm mb-2 text-gray-300">标签</label>
@@ -309,8 +376,19 @@ function ManageTargetsPageContent() {
                   <div>
                     <p className="text-[var(--color-text-strong)]">{item.name}</p>
                     <p className="text-xs text-gray-500">{item.type} / {item.slug}</p>
+                    {item.compareGroup && (
+                      <p className="text-xs text-purple-300 mt-1">对比组：{item.compareGroup}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
+                    {item.compareGroup && (
+                      <Link
+                        href={`/compare?group=${encodeURIComponent(item.compareGroup)}`}
+                        className="text-purple-300 hover:text-purple-200 text-sm"
+                      >
+                        对比
+                      </Link>
+                    )}
                     <button type="button" onClick={() => startEditing(item)} className="text-cyan-400 hover:text-cyan-300 text-sm">编辑</button>
                     <button
                       type="button"

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LogWood is an AI coding tools review community (AI Editor / AI Coding). Users can browse tools, publish reviews, comment, like, and report content. The platform supports both anonymous and authenticated participation with rate limiting and content moderation.
+空心树洞（仓库名 LogWood）是个人策展平台：Skill 库、美图/示例站画廊、AI 造物台。副标题：放下执念，重新生长。历史 AI 工具评测数据以 Skill 分类继续呈现，并保留评测、评论、点赞与内容治理能力。
 
 ## Tech Stack
 
@@ -77,7 +77,7 @@ The codebase uses a modular architecture under `src/modules/`. Each module has:
 - `service.ts` — core business logic
 - `index.ts` — re-exports from service.ts
 
-**Modules**: `review`, `like`, `comment`, `moderation`, `rate-limit`, `identity`, `target`, `article`, `article-column`, `app`, `tag`, `emoji`
+**Modules**: `skill`, `candidate`, `review`, `like`, `comment`, `moderation`, `rate-limit`, `identity`, `target`, `article`, `article-column`, `app`, `tag`, `emoji`
 
 **Service layer pattern**: Route handlers call service functions, which use Prisma directly. Modules interact through exported functions, not by calling Prisma across module boundaries.
 
@@ -92,7 +92,9 @@ The codebase uses a modular architecture under `src/modules/`. Each module has:
 ### API Routes
 
 All API routes live under `src/app/api/`:
-- `/api/reviews` — review CRUD
+- `/api/skills` — Skill 标本 CRUD（展览页公开读，写入需管理员）
+- `/api/candidates` — 候选短名单 CRUD；`/api/candidates/[id]/promote` 晋升
+- `/api/reviews` — 多态评测（targetId / skillId / appId / candidateId）
 - `/api/comments` — comment CRUD
 - `/api/reviews/[id]/like`, `/api/comments/[id]/like` — like toggles
 - `/api/reports` — report creation
@@ -101,13 +103,19 @@ All API routes live under `src/app/api/`:
 - `/api/tags` — tag management
 - `/api/targets`, `/api/apps` — target/app management
 - `/api/auth/[...nextauth]` — NextAuth handler
-- `/api/uploads/*` — file uploads (article images/videos)
+- `/api/uploads/*` — file uploads (article images/videos, skill effects)
 
 ### Database Models (from `prisma/schema.prisma`)
 
-Key models: `User`, `AnonymousUser`, `Target`, `Review`, `Comment`, `Article`, `ArticleColumn`, `App`, `Tag`, `Emoji`, `Report`, `RateLimit`
+Key models: `User`, `AnonymousUser`, `Skill`, `Candidate`, `Target`, `Review`, `Comment`, `Article`, `ArticleColumn`, `App`, `Tag`, `Emoji`, `Report`, `RateLimit`
 
 Identity constraint: Every review/comment has EITHER `userId` OR `anonymousUserId`, never both (enforced at application level).
+
+Review subject constraint: Every review has exactly one of `targetId` / `skillId` / `appId` / `candidateId` (enforced in service layer).
+
+### Local development (hot reload)
+
+Set `NODE_ENV=development` in `.env`, then `docker compose up -d web`. Entrypoint runs `bun run dev` with source bind-mount — no production rebuild on each edit. Only rebuild the image when Dockerfile / dependencies change.
 
 ### Auth
 

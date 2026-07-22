@@ -48,9 +48,15 @@ public/uploads/articles/*
 !public/uploads/articles/.gitkeep
 public/uploads/apps/*
 !public/uploads/apps/.gitkeep
+public/uploads/skills/*
+!public/uploads/skills/.gitkeep
 
 # IDE
 .idea
 .vscode
 *.swp
 *.swo
+
+public/uploads/skill-effects/*
+!public/uploads/skill-effects/.gitkeep
+!public/uploads/skill-effects/seed-*.png

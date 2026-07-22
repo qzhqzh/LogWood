@@ -9,15 +9,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // `/emojis`, `/tags`) are excluded here and disallowed in robots.ts.
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: canonicalFor('/'), lastModified: now, changeFrequency: 'daily', priority: 1 },
-    { url: canonicalFor('/editor'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
-    { url: canonicalFor('/coding'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
-    { url: canonicalFor('/articles'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
-    { url: canonicalFor('/app'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
+    { url: canonicalFor('/skills'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { url: canonicalFor('/candidates'), lastModified: now, changeFrequency: 'daily', priority: 0.85 },
+    { url: canonicalFor('/tools'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
+    { url: canonicalFor('/app'), lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: canonicalFor('/forge'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
+    { url: canonicalFor('/compare'), lastModified: now, changeFrequency: 'weekly', priority: 0.6 },
+    { url: canonicalFor('/articles'), lastModified: now, changeFrequency: 'daily', priority: 0.7 },
   ]
 
   // Target now exposes its own @updatedAt (Phase 2 of security hardening),
   // so we no longer need to derive freshness from the latest review.
-  const [targets, articles, apps] = await Promise.all([
+  const [targets, articles, apps, candidates] = await Promise.all([
     prisma.target.findMany({
       select: { slug: true, type: true, updatedAt: true },
     }),
@@ -28,6 +31,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     prisma.app.findMany({
       select: { slug: true, updatedAt: true },
       where: { status: 'published' },
+    }),
+    prisma.candidate.findMany({
+      select: { slug: true, updatedAt: true },
+      where: { status: { in: ['watching', 'evaluating', 'promoted'] } },
     }),
   ])
 
@@ -52,5 +59,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }))
 
-  return [...staticRoutes, ...targetRoutes, ...articleRoutes, ...appRoutes]
+  const candidateRoutes: MetadataRoute.Sitemap = candidates.map((c) => ({
+    url: canonicalFor(`/candidates/${c.slug}`),
+    lastModified: c.updatedAt,
+    changeFrequency: 'weekly',
+    priority: 0.75,
+  }))
+
+  return [...staticRoutes, ...targetRoutes, ...articleRoutes, ...appRoutes, ...candidateRoutes]
 }

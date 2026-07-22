@@ -13,12 +13,12 @@ import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 export const revalidate = 300
 
 export const metadata: Metadata = buildMetadata({
-  title: '应用工坊',
-  description: '发现基于 AI Coding 生态构建的应用、工作流与成品工具，汇聚 AI 编程实践的创新成果',
+  title: '画廊',
+  description: '美图、创意与示例站展览——把值得留下的视觉与作品陈列在空心树洞里',
   path: '/app',
 })
 
-export default async function AppWorkshopPage() {
+export default async function GalleryPage() {
   const session = await getServerSession(authOptions)
   const isAdmin = isAdminSession(session)
   const { apps } = await listApps({ page: 1, pageSize: 24 })
@@ -28,7 +28,7 @@ export default async function AppWorkshopPage() {
       <JsonLd
         value={buildBreadcrumbList([
           { name: '首页', path: '/' },
-          { name: '应用工坊', path: '/app' },
+          { name: '画廊', path: '/app' },
         ])}
       />
       <div className="fixed inset-0 pointer-events-none">
@@ -37,8 +37,8 @@ export default async function AppWorkshopPage() {
       </div>
 
       <SiteNav
-        active="app"
-        actionLabel={isAdmin ? 'App管理' : undefined}
+        active="gallery"
+        actionLabel={isAdmin ? '画廊管理' : undefined}
         actionHref={isAdmin ? '/app/manage' : undefined}
       />
 
@@ -46,19 +46,19 @@ export default async function AppWorkshopPage() {
         <div className="mb-12">
           <div>
             <div className="inline-block mb-4 px-4 py-1 border border-purple-500/30 rounded-full bg-purple-500/5">
-              <span className="text-purple-400 text-sm tracking-widest uppercase">APP WORKSHOP</span>
+              <span className="text-purple-400 text-sm tracking-widest uppercase">GALLERY</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] mb-4 gradient-text">应用工坊</h1>
+            <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] mb-4 gradient-text">画廊</h1>
             <p className="text-gray-400 text-lg max-w-3xl">
-              收录基于 AI Coding 生态构建的应用、工作流与成品工具，面向用户重点展示标题、简介、详细描述和预览图。
+              展示美图、创意与示例网站。既有收藏以画廊作品继续陈列，重点看见标题、简介、详述与预览图。
             </p>
           </div>
         </div>
 
         {apps.length === 0 ? (
           <div className="cyber-card rounded-2xl p-10 text-center">
-            <p className="text-gray-400 mb-4">当前还没有上架的 App。</p>
-            <Link href="/app/manage" className="cyber-button px-5 py-2 rounded-lg inline-block">新增第一个 App</Link>
+            <p className="text-gray-400 mb-4">画廊还空着，放进第一件作品吧。</p>
+            <Link href="/app/manage" className="cyber-button px-5 py-2 rounded-lg inline-block">新增作品</Link>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
