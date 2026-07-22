@@ -12,22 +12,26 @@
 
 export const SITE_NAME = '空心树洞'
 
-export const SITE_TAGLINE = '放下执念，重新生长'
+export const SITE_TAGLINE = '大浪淘沙，找寻灵感'
 
 export const SITE_DESCRIPTION =
-  '空心树洞——收藏 Skill、展览美图与示例站，并用 AI 帮你把灵感重新生长成可对比、可复用的内容。'
+  '空心树洞是 AI 灵感炼成与实践沉淀社区：把灵感与资源经过试用、评测和打磨，沉淀为可复用的模板、提示词、工作流与 Skill，同时保存吐槽、失败和技术反思。'
 
 export const SITE_KEYWORDS: string[] = [
   '空心树洞',
+  'AI Skill',
   'Skill 库',
-  '前端 Skill',
-  '图片风格',
-  '灵感画廊',
-  '示例网站',
-  '创意展览',
-  'AI 创作',
-  '效果图对比',
-  '个人策展',
+  '提示词',
+  'Prompt',
+  'AI 工作流',
+  '模型评测',
+  '软件评测',
+  '资源评测',
+  '灵感池',
+  '吐槽室',
+  '技术小结',
+  '可复用模板',
+  'AI 实践社区',
 ]
 
 export const SITE_LOCALE = 'zh_CN'
