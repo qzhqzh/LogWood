@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { signIn, useSession } from 'next-auth/react'
 import { TagPicker } from '@/components/tag-picker'
 import { SiteFooter } from '@/components/site-footer'
+
+const RichTextEditor = dynamic(() => import('@/components/rich-text-editor'), { ssr: false })
 
 type AppStatus = 'draft' | 'published' | 'archived'
 
@@ -31,19 +34,23 @@ export default function ManageAppsPage() {
   const [summary, setSummary] = useState('')
   const [description, setDescription] = useState('')
   const [previewImageUrl, setPreviewImageUrl] = useState('')
+  const [previewFile, setPreviewFile] = useState<File | null>(null)
+  const [previewPreview, setPreviewPreview] = useState<string | null>(null)
+  const [uploadingPreview, setUploadingPreview] = useState(false)
   const [tags, setTags] = useState<string[]>([])
   const [status, setStatus] = useState<AppStatus>('published')
   const [apps, setApps] = useState<AppItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [descriptionTextLen, setDescriptionTextLen] = useState(0)
 
   const canSubmit = useMemo(() => {
     return name.trim().length >= 2
       && title.trim().length >= 2
       && summary.trim().length >= 10
-      && description.trim().length >= 20
+      && descriptionTextLen >= 20
       && appUrl.trim().length > 0
-  }, [name, title, summary, description, appUrl])
+  }, [name, title, summary, descriptionTextLen, appUrl])
   const isAdmin = session?.user?.role === 'admin'
 
   function resetForm() {
@@ -54,8 +61,11 @@ export default function ManageAppsPage() {
     setSummary('')
     setDescription('')
     setPreviewImageUrl('')
+    setPreviewFile(null)
+    setPreviewPreview(null)
     setTags([])
     setStatus('published')
+    setDescriptionTextLen(0)
   }
 
   function startEditing(app: AppItem) {
@@ -66,9 +76,59 @@ export default function ManageAppsPage() {
     setSummary(app.summary)
     setDescription(app.description)
     setPreviewImageUrl(app.previewImageUrl || '')
+    setPreviewFile(null)
+    setPreviewPreview(null)
     setTags(app.tags)
     setStatus(app.status)
     setError(null)
+    // estimate plain text length from HTML for initial canSubmit check
+    const plainText = app.description.replace(/<[^>]*>/g, '').trim()
+    setDescriptionTextLen(plainText.length)
+  }
+
+  function handlePreviewSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPreviewFile(file)
+    setPreviewPreview(URL.createObjectURL(file))
+  }
+
+  async function handlePasteScreenshot() {
+    try {
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith('image/'))
+        if (imageType) {
+          const blob = await item.getType(imageType)
+          const ext = imageType.split('/')[1] || 'png'
+          const file = new File([blob], `screenshot-${Date.now()}.${ext}`, { type: imageType })
+          setPreviewFile(file)
+          setPreviewPreview(URL.createObjectURL(file))
+          return
+        }
+      }
+      setError('剪贴板中没有图片')
+    } catch (e) {
+      setError('无法读取剪贴板，请确保已授权剪贴板权限')
+    }
+  }
+
+  async function uploadPreview(): Promise<string | null> {
+    if (!previewFile) return null
+    setUploadingPreview(true)
+    try {
+      const form = new FormData()
+      form.append('file', previewFile)
+      const res = await fetch('/api/uploads/app-preview', { method: 'POST', body: form })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '上传失败')
+      return data.url as string
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '上传失败')
+      return null
+    } finally {
+      setUploadingPreview(false)
+    }
   }
 
   async function loadApps() {
@@ -123,6 +183,15 @@ export default function ManageAppsPage() {
     try {
       setLoading(true)
       setError(null)
+
+      // Upload preview image if a new file was selected
+      let finalPreviewUrl = previewImageUrl.trim()
+      if (previewFile) {
+        const uploaded = await uploadPreview()
+        if (!uploaded) return // upload failed, error already set
+        finalPreviewUrl = uploaded
+      }
+
       const res = await fetch('/api/apps', {
         method: editingId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -133,7 +202,7 @@ export default function ManageAppsPage() {
           title,
           summary,
           description,
-          previewImageUrl: previewImageUrl.trim() || undefined,
+          previewImageUrl: finalPreviewUrl || undefined,
           tags,
           status,
         }),
@@ -192,12 +261,38 @@ export default function ManageAppsPage() {
           </div>
           <div>
             <label className="block text-sm mb-2 text-gray-300">详细表述</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={6} className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]" placeholder="产品能力、使用方式、适合人群、差异点..." />
+            <RichTextEditor value={description || '<p></p>'} onChange={setDescription} onTextLengthChange={setDescriptionTextLen} />
           </div>
           <div className="grid md:grid-cols-3 gap-4">
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-sm mb-2 text-gray-300">预览图</label>
-              <input value={previewImageUrl} onChange={(e) => setPreviewImageUrl(e.target.value)} className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]" placeholder="https://..." />
+              <div className="flex items-start gap-4">
+                <div className="flex-1 space-y-2">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handlePreviewSelect}
+                    className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)] file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-cyan-600 file:text-white file:cursor-pointer"
+                  />
+                  <button
+                    type="button"
+                    onClick={handlePasteScreenshot}
+                    className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-sm text-cyan-300 hover:border-cyan-400/50 hover:text-cyan-200"
+                  >
+                    📋 粘贴截图
+                  </button>
+                  <p className="text-xs text-gray-500">支持 jpg/png/webp/gif，最大 5MB</p>
+                </div>
+                {(previewPreview || previewImageUrl) && (
+                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-cyan-500/30 flex-shrink-0">
+                    <img
+                      src={previewPreview || previewImageUrl}
+                      alt="预览"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-sm mb-2 text-gray-300">状态</label>

@@ -51,6 +51,12 @@
 
 ## 8. 变更记录
 
+### 2026-07-22
+- 应用工坊管理页：详细表述改为富文本编辑器；详情页按 HTML 渲染。
+- 新增 `/api/uploads/app-preview`，支持预览图本地上传与剪贴板粘贴；`previewImageUrl` 允许 `/` 相对路径。
+- docker-compose：补充 `SITE_URL` / `ADMIN_GITHUB_EMAILS`；postgres 改本地 bind mount；nginx 只读挂载 `public/uploads`；默认国内 npm 源调整为华为云。
+- `.gitignore` 补充 `*.bak`、`/data/`、`public/uploads/apps/*`。
+
 ### 2026-05-20 (evening) 安全与架构加固落地（FEAT-005）
 
 实施 `docs/SECURITY_HARDENING_PLAN.md` Phase 1 + Phase 2，把 `docs/SECURITY_REVIEW_2026-04-01.md` 列出的 R-01 ~ R-08 中的 7 项关闭、1 项部分关闭，并补足配套的可观测/可维护性短板。

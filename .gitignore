@@ -26,6 +26,8 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.bak
+*.bak
 
 # vercel
 .vercel
@@ -38,9 +40,14 @@ next-env.d.ts
 prisma/*.db
 prisma/*.db-journal
 
-# runtime uploads (article screenshots/media)
+# local postgres data (bind mount)
+/data/
+
+# runtime uploads (article / app screenshots/media)
 public/uploads/articles/*
 !public/uploads/articles/.gitkeep
+public/uploads/apps/*
+!public/uploads/apps/.gitkeep
 
 # IDE
 .idea

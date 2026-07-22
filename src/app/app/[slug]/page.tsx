@@ -73,7 +73,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-400 mb-3">{app.name}</p>
             <h1 className="text-4xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] mb-4">{app.title}</h1>
             <p className="text-xl text-gray-300 mb-6">{app.summary}</p>
-            <div className="prose prose-invert max-w-none text-gray-300 whitespace-pre-line">{app.description}</div>
+            <div className="prose prose-invert max-w-none text-gray-300 tiptap-editor-content" dangerouslySetInnerHTML={{ __html: app.description }} />
             {app.tags.length > 0 && (
               <div className="mt-8 flex flex-wrap gap-2">
                 {app.tags.map((tag: string) => (

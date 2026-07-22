@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: logwood
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -21,8 +21,8 @@ services:
       dockerfile: Dockerfile
       args:
         DEBIAN_MIRROR: ${DEBIAN_MIRROR:-http://mirrors.tuna.tsinghua.edu.cn}
-        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
-        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://registry.npmmirror.com/-/binary/prisma}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://repo.huaweicloud.com/repository/npm/}
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     container_name: logwood-web
     restart: unless-stopped
     depends_on:
@@ -31,18 +31,20 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/logwood?schema=public
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:10001}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://logwood.qzhqzh.com}
+      SITE_URL: ${SITE_URL:-https://www.qzhqzh.com}
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required - generate with openssl rand -base64 32}"
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+      ADMIN_GITHUB_EMAILS: ${ADMIN_GITHUB_EMAILS:-}
       LOGWOOD_TRUST_PROXY: ${LOGWOOD_TRUST_PROXY:-true}
       LOGWOOD_IP_HASH_SECRET: ${LOGWOOD_IP_HASH_SECRET:-}
       CHOKIDAR_USEPOLLING: "true"
-      NPM_CONFIG_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
-      PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-https://registry.npmmirror.com/-/binary/prisma}
+      NPM_CONFIG_REGISTRY: ${NPM_REGISTRY:-https://repo.huaweicloud.com/repository/npm/}
+      PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
     ports:
       - "10001:3000"
     volumes:
@@ -60,7 +62,7 @@ services:
       - "10000:10000"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public/uploads:/app/public/uploads:ro
 
 volumes:
-  postgres_data:
   node_modules:

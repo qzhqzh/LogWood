@@ -14,10 +14,13 @@ const createAppSchema = z.object({
   appUrl: z.string().url(),
   title: z.string().min(2).max(120),
   summary: z.string().min(10).max(240),
-  description: z.string().min(20).max(10000),
+  description: z.string().min(20).max(100000),
   previewImageUrl: z.preprocess(
     (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
-    z.string().url().optional()
+    z.string().refine(
+      (v) => /^https?:\/\//.test(v) || v.startsWith('/'),
+      { message: 'previewImageUrl 必须是 http(s) 或 / 开头的合法路径' }
+    ).optional()
   ),
   tags: z.array(z.string().min(1).max(30)).optional(),
   status: z.enum(APP_STATUSES).optional(),
