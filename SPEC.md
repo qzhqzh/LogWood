@@ -1,14 +1,30 @@
-﻿# LogWood 项目规划（重构版）
+# LogWood 历史评测 MVP 规格（Legacy）
+
+> **文档状态：历史执行规格，不再定义当前产品定位。**  
+> 当前产品定义以 [`docs/PRODUCT_POSITIONING.md`](./docs/PRODUCT_POSITIONING.md) 为唯一权威来源；当前实现、风险和迁移计划见 [`docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md)；双线生命线升级由 [Issue #15](../../issues/15) 跟踪。
+>
+> 本文件仍用于理解最初评测、互动、限流和治理闭环。新增功能不得继续扩大这里“AI 编码工具评测社区”“Target 只有 editor/coding”等历史假设；接口和数据模型应同时核对当前代码与模块文档。
 
 ## 1. 文档目的
-本规划用于指导 LogWood MVP 到 Phase 3 的实现与验收，确保范围、接口、约束、风控、测试和里程碑可直接执行。
 
-## 2. 产品定位与目标
-- 产品名称：LogWood（AI 编码工具评测社区）
-- 核心价值：沉淀真实评测数据，帮助用户比较 AI Editor / AI Coding 工具在不同能力维度上的表现
-- MVP 核心闭环：工具页 -> 发布评测 -> 浏览排序 -> 点赞评论 -> 举报治理
+本规划最初用于指导 LogWood MVP 到 Phase 3 的实现与验收，确保范围、接口、约束、风控、测试和里程碑可直接执行。
 
-## 3. 已锁定决策
+当前用途：
+
+- 保存最初评测闭环的设计依据。
+- 为历史数据和旧路由兼容提供参考。
+- 帮助判断哪些能力可以被 Resource / Skill / Evaluation / Quick Take 新模型继续复用。
+
+## 2. 历史产品定位与目标
+
+- 历史产品名称：LogWood（AI 编码工具评测社区）
+- 历史核心价值：沉淀真实评测数据，帮助用户比较 AI Editor / AI Coding 工具在不同能力维度上的表现
+- 历史 MVP 核心闭环：工具页 → 发布评测 → 浏览排序 → 点赞评论 → 举报治理
+
+> 现定位为“空心树洞——大浪淘沙，找寻灵感”，围绕资产进化线与经验沉淀线持续演进；参见 `docs/PRODUCT_POSITIONING.md`。
+
+## 3. 已锁定决策（历史 MVP）
+
 - 首发策略：评测闭环优先
 - 匿名策略：完全开放（可发评、评论、点赞）+ 基础风控
 - 定价信息：MVP 不做自动同步
@@ -53,7 +69,7 @@
 - `moderationService`：敏感词、举报、折叠与审核策略
 - `rateLimitService`：匿名/登录/IP 维度限流与审计
 
-## 6. 数据模型（执行版）
+## 6. 数据模型（历史执行版）
 
 ### 6.1 枚举定义
 - `TargetType`: `editor | coding`
@@ -61,6 +77,8 @@
 - `CommentStatus`: `published | pending | hidden | deleted`
 - `ReportTargetType`: `review | comment`
 - `ReportStatus`: `open | resolved | rejected`
+
+> 当前 Prisma schema 已扩展 Model、Prompt、Skill、Candidate、App、多态 Review 等能力；本节只表示最初设计，不是当前 schema 的准确清单。
 
 ### 6.2 表结构与关键约束
 
@@ -134,7 +152,7 @@
 - `updatedAt`
 - 唯一键：`(action, actorType, actorKey, windowDate)`
 
-## 7. API 契约（Phase 1）
+## 7. API 契约（历史 Phase 1）
 
 ### 7.1 POST `/api/reviews`
 - 入参：`targetId, category, rating, content, language`
@@ -177,16 +195,18 @@
   - 点赞 `<= 50/日`
 - IP 段总互动：`<= 200/日`
 - 风险动作：
-  - 命中敏感词或高风险行为 -> `pending`
-  - 举报累计到阈值 -> 自动 `hidden`
+  - 命中敏感词或高风险行为 → `pending`
+  - 举报累计到阈值 → 自动 `hidden`
 
-## 9. 页面与路由
+## 9. 页面与路由（历史规划）
 - `/`：热门评测、最新评测、分类入口
 - `/editor`、`/coding`：工具列表（支持筛选）
 - `/:type/[slug]`：工具详情 + 该工具评测流
 - `/review/[id]`：评测正文、点赞、评论、举报
 - `/submit`：提交评测
 - `/profile`：我的评测、我的互动、设置（匿名用户展示本机历史）
+
+> 当前路由已包含 `/skills`、`/candidates`、`/tools`、`/app`、`/forge` 和 `/articles`；以代码和 `PROJECT_PLAN.md` 为准。
 
 ## 10. 测试与验收
 
@@ -195,8 +215,8 @@
 - 接口边界：评分/长度限制、限流响应码
 - 业务行为：pending 不公开、hot 排序正确、幂等点赞
 - E2E：
-  - 匿名发布 -> 浏览 -> 举报 -> 折叠
-  - 登录发布 -> 评论互动 -> 个人中心可见
+  - 匿名发布 → 浏览 → 举报 → 折叠
+  - 登录发布 → 评论互动 → 个人中心可见
   - 多语言内容发布与检索
 
 ### 10.2 Phase 1 DoD
@@ -205,7 +225,7 @@
 - 基础风控可配置且生效
 - 观测指标可用：DAU、发布量、举报率、折叠率
 
-## 11. 里程碑
+## 11. 历史里程碑
 - Week 1：Prisma Schema + 认证打通
 - Week 2：评测 API + 页面（发布/列表/详情）
 - Week 3：点赞评论 + 限流 + 举报
@@ -220,10 +240,12 @@
 - 风险：接口与模型不同步
   - 缓解：先 schema 再 API，契约测试强约束
 
-## 13. 非目标（MVP 不做）
+## 13. 非目标（历史 MVP）
 - 官方定价自动抓取
 - 复杂推荐系统
 - 多端原生 App
 
 ---
-最后更新：2026-02-24
+
+原文最后更新：2026-02-24  
+Legacy 标记与产品定位链接更新：2026-07-23
