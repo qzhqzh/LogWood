@@ -4,7 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-空心树洞（仓库名 LogWood）是个人策展平台：Skill 库、美图/示例站画廊、AI 造物台。副标题：放下执念，重新生长。历史 AI 工具评测数据以 Skill 分类继续呈现，并保留评测、评论、点赞与内容治理能力。
+空心树洞（仓库名 `LogWood`）是 **AI 灵感炼成与实践沉淀社区**，品牌副标题为：**大浪淘沙，找寻灵感**。
+
+产品围绕同一个灵感、资源或 Skill 建立两条可追溯的轨道：
+
+1. **资产进化线**：灵感 / 资源 → 候选 → 试用 → 验证 → 模板 / Prompt / Workflow → 可复用 Skill → Quick Start / 技能包 → 维护或归档。
+2. **经验沉淀线**：吐槽 / 快评 → 讨论 / 求证 → 实验与失败样本 → 技术小结 → 评测报告 / 前沿观点 / 复盘反思。
+
+完整产品定义以 `docs/PRODUCT_POSITIONING.md` 为唯一权威来源。整体迁移由 GitHub Issue #15 跟踪。
+
+### Product invariants
+
+- 同一个 Subject 的成熟度变化不得静默复制成互不关联的新对象。
+- 历史 Review、Comment、Like、作者、slug 和可访问路径必须保留。
+- Candidate 最终应成为 Resource 生命周期状态；Gallery/App 最终映射为 Resource 或 Skill Example。
+- Skill 不等于一段 Prompt；目标模型包含版本、依赖、示例、Quick Start、评测和最近验证时间。
+- Evaluation 与 Quick Take 语义不同：正式评测需要上下文和证据，吐槽 / 快评可以低门槛但应关联 Subject。
+- AI 只负责整理、建议和连接，不得伪造测试或把未验证内容包装成事实。
+- 当前 Forge 仍是本地模板生成，不得在公开文案或代码注释中声称已接入真实模型。
 
 ## Tech Stack
 
@@ -26,11 +43,11 @@ NODE_ENV=development docker compose up --build
 
 # Access services
 docker compose exec web bunx prisma db push       # Sync schema to DB
-docker compose exec web bunx prisma generate       # Regenerate Prisma Client
-docker compose exec web bun run db:seed            # Seed test data
-docker compose exec web bun run test               # Run tests
-docker compose exec web bun run lint               # Run ESLint
-docker compose down                                # Stop and cleanup
+docker compose exec web bunx prisma generate      # Regenerate Prisma Client
+docker compose exec web bun run db:seed           # Seed test data
+docker compose exec web bun run test              # Run tests
+docker compose exec web bun run lint              # Run ESLint
+docker compose down                               # Stop and cleanup
 ```
 
 ### Prisma Commands
@@ -57,7 +74,7 @@ Set `FORCE_DB_SEED=1` in `.env` and restart `docker compose up --build`.
 
 ### Deployment Architecture
 
-```
+```text
 [Client] → [Upstream Nginx (SSL termination)] → [Nginx (:10000, gzip/cache/rate-limit)] → [Next.js (:3000)]
 ```
 
@@ -77,9 +94,11 @@ The codebase uses a modular architecture under `src/modules/`. Each module has:
 - `service.ts` — core business logic
 - `index.ts` — re-exports from service.ts
 
-**Modules**: `skill`, `candidate`, `review`, `like`, `comment`, `moderation`, `rate-limit`, `identity`, `target`, `article`, `article-column`, `app`, `tag`, `emoji`
+**Modules**: `skill`, `candidate`, `review`, `like`, `comment`, `moderation`, `rate-limit`, `identity`, `target`, `article`, `article-column`, `app`, `forge`, `tag`, `emoji`
 
 **Service layer pattern**: Route handlers call service functions, which use Prisma directly. Modules interact through exported functions, not by calling Prisma across module boundaries.
+
+During the product migration, prefer a compatibility / adapter layer over an immediate destructive merge of `Target`, `Candidate`, `App`, and `Skill`.
 
 ### Key Patterns
 
@@ -88,6 +107,7 @@ The codebase uses a modular architecture under `src/modules/`. Each module has:
 - **Content moderation**: `assessContent()` in `like/service.ts` checks against sensitive words. Flagged content gets `status=pending`.
 - **Report auto-hide**: When a target accumulates 5+ open reports, `applyAutoHideIfThresholdReached()` automatically hides/archives it.
 - **Like toggle**: `toggleReviewLike` / `toggleCommentLike` in `like/service.ts` are idempotent — existing likes are removed (not double-counted).
+- **Migration safety**: Data migrations must support dry-run, counts / reconciliation, repeatability, and rollback. Do not change historical IDs or slugs without an explicit ADR and redirect plan.
 
 ### API Routes
 
@@ -102,6 +122,7 @@ All API routes live under `src/app/api/`:
 - `/api/articles/[id]/like`, `/api/articles/[id]/comments` — article engagement
 - `/api/tags` — tag management
 - `/api/targets`, `/api/apps` — target/app management
+- `/api/forge/draft` — local template draft generation; not a real LLM call
 - `/api/auth/[...nextauth]` — NextAuth handler
 - `/api/uploads/*` — file uploads (article images/videos, skill effects)
 
@@ -112,6 +133,8 @@ Key models: `User`, `AnonymousUser`, `Skill`, `Candidate`, `Target`, `Review`, `
 Identity constraint: Every review/comment has EITHER `userId` OR `anonymousUserId`, never both (enforced at application level).
 
 Review subject constraint: Every review has exactly one of `targetId` / `skillId` / `appId` / `candidateId` (enforced in service layer).
+
+This polymorphic Review implementation is a compatibility foundation, not the final domain model. New evaluation fields should be additive and schema-versioned so historical records remain readable.
 
 ### Local development (hot reload)
 
@@ -136,10 +159,13 @@ The project supports light/dark theme with a token + semantic class system:
 
 ## Key Documentation
 
-- **Project plan**: `docs/PROJECT_PLAN.md` — current status, milestones, recent changes. MUST be updated for any feature/architecture/deployment changes.
-- **Spec**: `SPEC.md` — API contracts, data models, rate limits, moderation rules
-- **Style guide**: `docs/STYLE_GUIDE.md` — visual design system and component patterns
-- **Module specs**: `docs/modules/<module>/module-spec.md` and `docs/modules/<module>/test-cases.md`
+- **Product positioning**: `docs/PRODUCT_POSITIONING.md` — product definition SSOT; read before proposing navigation, content models, migration, AI behavior, or public copy.
+- **Project plan**: `docs/PROJECT_PLAN.md` — current status, execution stages, risks and recent changes. MUST be updated for feature / architecture / deployment / migration changes.
+- **Legacy spec**: `SPEC.md` — historical AI coding review MVP contracts; do not treat its old product positioning as current.
+- **Epic**: GitHub Issue #15 — dual-track lifecycle implementation plan.
+- **SEO strategy**: `docs/SEO_STRATEGY.md` — metadata, JSON-LD, sitemap and SEO change constraints.
+- **Style guide**: `docs/STYLE_GUIDE.md` — visual design system and component patterns.
+- **Module specs**: `docs/modules/<module>/module-spec.md` and `docs/modules/<module>/test-cases.md`.
 
 ## Testing
 
@@ -150,7 +176,9 @@ bun run test          # Run all tests
 bun run test:watch    # Watch mode
 ```
 
-Priority: service layer business rules (validation, rate limiting, state machines, moderation) > API integration > E2E.
+Priority: service layer business rules (validation, rate limiting, state machines, moderation, subject continuity and migration mappings) > API integration > E2E.
+
+Any Candidate promotion or Subject migration change must include tests proving that historical Review / Comment / Like data remains reachable.
 
 ## Environment Variables
 
