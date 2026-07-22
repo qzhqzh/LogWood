@@ -1,379 +1,233 @@
-# LogWood
+# 空心树洞（LogWood）
 
-AI 编码工具评测社区，聚焦 AI Editor 与 AI Coding 助手的真实使用反馈与能力对比。
+> **大浪淘沙，找寻灵感**
 
-## Overview
+空心树洞是一套 **AI 灵感炼成与实践沉淀社区**：从一个念头、一条链接或一次踩坑出发，经过试用、评测与反复打磨，把值得留下的经验炼成可复用、可验证、可快速上手的模板、提示词、工作流和技能包；同时保存这段路上的吐槽、失败、讨论、技术小结与深度反思。
 
-LogWood 的目标是构建一个高质量、可持续迭代的评测平台：
-- 用户可以围绕具体工具和能力标签发布评测、点赞、评论与举报。
-- 平台在开放匿名参与的同时，通过限流、风控、审核机制控制噪音与刷量。
-- 架构上采用“可演进的模块化单体”，优先保证一致性、稳定性和迭代效率。
+## 产品生命线
 
-当前规划基于 [SPEC.md](./SPEC.md)，并按 Phase 1 -> Phase 3 分阶段落地。
+项目围绕同一个灵感、资源或 Skill 建立两条互相关联的轨道。
 
-## Project Plan (必读)
+```mermaid
+flowchart LR
+  I[随手灵感 / 外部资源] --> C[灵感池 / 候选]
+  C --> T[试用与任务验证]
+  T --> E[结构化评测 / 对比 / 淘汰]
+  E --> R[模板 / Prompt / Workflow]
+  R --> S[可复用 Skill]
+  S --> P[Quick Start / 技能包]
 
-- 项目计划书：[`docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md)
-- 该文件用于快速理解项目现状、边界、部署、风险与近期变更。
-- 凡是功能新增、功能修复、架构调整、部署策略变化，必须同步更新项目计划书。
+  C --> Q[吐槽 / 快评 / 提问]
+  T --> Q
+  Q --> D[讨论 / 求证 / 失败样本]
+  D --> N[技术小结]
+  N --> A[评测报告 / 前沿观点 / 复盘反思]
 
-## Core Features
+  D --> E
+  A --> R
+```
 
-- 工具目录与详情：`/editor`、`/coding`、`/:type/[slug]`
-- 评测闭环：发布、列表、详情、排序（latest/hot）
-- 互动能力：点赞（幂等）、评论、举报
-- 社区文章：文章发布管理、文章列表、文章详情展示
-- 身份体系：匿名用户 + 登录用户（GitHub 普通用户 + 系统管理员账号）
-- 治理机制：限流、敏感词、风险转 `pending`、举报折叠
-- 多语言内容：界面中文，内容支持多语言输入与检索
+### 资产进化线
 
-## Tech Stack
+```text
+灵感或资源
+  → 待观察
+  → 试用
+  → 验证
+  → 可复用模板 / Prompt / Workflow
+  → 带版本、示例和 Quick Start 的技能包
+  → 持续升级或归档
+```
 
-- Frontend: Next.js 14 (App Router) + TypeScript + Tailwind CSS
-- Backend: Next.js Route Handlers + Service Layer
-- Database: PostgreSQL + Prisma ORM
-- Auth: NextAuth.js
-- Deploy: Vercel
+### 经验沉淀线
 
-## Theme System (Light/Dark)
+```text
+即时吐槽 / 快评
+  → 提问、讨论与求证
+  → 实验记录与失败样本
+  → 技术小结
+  → 评测报告 / 前沿观点 / 复盘反思
+```
 
-项目已支持全局主题切换（白天/黑夜），并采用“token + 语义类”组织方式：
+两条线共享同一个内容对象和来源链。最终成品不抹掉中间的试错，沿途经验也能够反过来推动 Skill 继续改进。
 
-- 主题 token 文件：`src/app/theme.css`
-  - 统一维护 `html[data-theme='dark']` 与 `html[data-theme='light']` 的颜色变量。
-  - 业务组件应优先使用这些变量，不直接写具体色值。
+完整产品定义见 [`docs/PRODUCT_POSITIONING.md`](./docs/PRODUCT_POSITIONING.md)。整体升级计划见 [Issue #15](../../issues/15)。
 
-- 全局语义类入口：`src/app/globals.css`
-  - 维护跨页面可复用语义类（如 `text-muted`、`text-coding`、`status-info`、`border-divider`、`surface-panel`）。
-  - 这些类是普通 CSS 工具类，不是 Tailwind 内置色板；伪类请使用已定义辅助类（如 `hover-text-coding`、`group-hover-text-coding`）。
+## 产品结构
 
-- 主题初始化与切换：
-  - `src/app/layout.tsx`：首屏脚本初始化 `data-theme`，避免闪烁。
-  - `src/components/theme-toggle.tsx`：全局切换按钮，状态持久化到 `localStorage` 的 `logwood-theme`。
+目标信息架构收口为四个稳定入口：
 
-维护约定：
-- 新增组件时优先复用语义类，避免新增 `text-gray-*`、`bg-[#xxxxxx]` 这类硬编码。
-- 如确实需要新颜色语义，先在 `theme.css` 增加 token，再在 `globals.css` 增加语义类映射。
+| 入口 | 作用 |
+|---|---|
+| 找灵感 | 收录模型、软件、服务、仓库、网站、知识资源和一句话灵感，并进入试用与评测生命线 |
+| Skill 库 | 陈列已经具备复用价值的 Prompt、Template、Workflow、Agent Skill 和技能包 |
+| 吐槽室 | 承接吐槽、提问、求证、踩坑、发现和替代方案，保存真实摩擦与失败样本 |
+| 洞笔记 | 沉淀技术小结、正式评测、前沿观察、项目复盘和自我反思 |
 
-## SEO
+AI 造物台不是独立内容支柱，而是贯穿以上入口的 **AI 炼成助手**：帮助提取资源信息、设计评测、整理原始记录、比较版本、生成 Quick Start 和沉淀文章草稿。AI 不替代真实测试，也不伪造证据。
 
-LogWood 已落地全站 SEO 基础设施。所有页面共用同一套工具集与一致的 metadata / JSON-LD 输出。
+## 当前实现
 
-设计与策略文档（变更前必读）：
-- 综合方案：[`docs/SEO_STRATEGY.md`](./docs/SEO_STRATEGY.md)（单一权威指导，包含历史决策、采纳/不采纳裁决、未来工作）
-- 执行清单：[`docs/SEO_IMPLEMENTATION_PLAN.md`](./docs/SEO_IMPLEMENTATION_PLAN.md)
+仓库已具备下一阶段重构所需的大部分底座：
 
-工具集（`src/shared/seo/`）：
-- `site-config.ts`：`SITE_NAME` / `SITE_DESCRIPTION` / `SITE_KEYWORDS` 与 `getSiteUrl()`
-- `url.ts`：`toAbsoluteUrl()` / `canonicalFor()` / `joinPath()`
-- `metadata.ts`：`buildMetadata()` 一次性生成 Next.js `Metadata`（canonical、OG、Twitter、robots、article 字段）
-- `json-ld.ts`：`buildOrganization` / `buildWebSite` / `buildBreadcrumbList` / `buildArticleJsonLd` / `buildSoftwareApplicationJsonLd`
+- Skill 室：`/skills`，独立 `Skill` 模型、分类层架、提示词与效果标本
+- 候选评测：`/candidates`，当前作为观察和晋升工作流
+- 历史工具收藏：`/tools`，保留 Editor、Coding、Model、Prompt 数据和旧路由
+- 画廊：`/app`，当前承载应用、作品与示例站
+- 造物台：`/forge`，当前为本地模板草稿生成，尚未接入真实模型
+- 洞笔记：`/articles`，文章、专栏、评论与点赞
+- 多态评测：Review 可关联 Target、Skill、App 或 Candidate
+- 社区互动：匿名或登录发布、评论、点赞、举报
+- 内容治理：限流、敏感内容判定、自动隐藏与审核流
+- 工程底座：模块化单体、PostgreSQL、Prisma、NextAuth、Docker Compose
 
-注入点：
-- 站点级：`src/app/layout.tsx`（metadataBase + 默认 OG 图 + Organization JSON-LD），`src/app/opengraph-image.tsx`（默认 1200x630 动态图，edge runtime）
-- 首页：`src/app/page.tsx`（WebSite JSON-LD，已移除失效的 SearchAction）
-- 站点地图与抓取：`src/app/sitemap.ts`（target lastmod 用最近 published review.updatedAt 兜底）+ `src/app/robots.ts`
-- 详情/列表页：`src/app/{articles,app,editor,coding,model,prompt}/...`（统一通过 builders + `<JsonLd>` + `<Breadcrumbs>`）
-- 低价值/管理/认证页：8 个路由级 `layout.tsx` 注入 `noindex`
-- 未找到页面：`src/app/not-found.tsx`
+> 当前路由和数据模型仍反映前一阶段的产品包装。Issue #15 将以兼容历史数据为前提，逐步统一 Resource、Skill、Evaluation、Quick Take、Note 和 Example 的语义。
 
-关键环境变量：
-- `NEXTAUTH_URL`：登录回调与回退站点 URL
-- `SITE_URL`（可选，推荐生产配置）：用于 metadataBase / canonical / sitemap / og:url
-- `GOOGLE_SITE_VERIFICATION`（可选）：Google Search Console 验证 token
+## 核心原则
 
-验证速查（生产环境）：
-- `curl -s https://<host>/robots.txt`
-- `curl -s https://<host>/sitemap.xml | head -40`
-- 浏览器 view-source 文章详情页应能看到 `BlogPosting` + `BreadcrumbList` 两块 JSON-LD
-- `https://<host>/opengraph-image` 应返回 1200x630 PNG
+1. **同一对象持续生长**：状态变化不创建断裂的新对象。
+2. **证据优于声量**：热度用于发现，证据决定可信度。
+3. **过程和结果同等重要**：失败、吐槽和判断变化必须可追溯。
+4. **复用优于收藏**：内容最终应帮助用户快速开始或避免重复踩坑。
+5. **兼容优于重写**：历史数据先挂接、再迁移，不为模型整洁牺牲内容资产。
+6. **AI 辅助而不代替**：未经验证的内容不能被包装成事实。
+7. **版本和时效可见**：模型、软件、Skill 和结论都可能过期。
 
-详细的运行时验证步骤见 [`docs/SEO_STRATEGY.md`](./docs/SEO_STRATEGY.md) 的「当前实现速览」章节。
+## 文档索引
 
-维护约束：
-- 任何 SEO 相关改动必须先阅读 `docs/SEO_STRATEGY.md` 并在其末尾追加变更记录
-- 不引入新依赖时优先复用 `src/shared/seo` 工具，禁止在页面里手写 canonical / og 字段
-- 新增依赖前需评估对 SEO 输出（metadata / JSON-LD / sitemap）的影响
+| 文档 | 责任 |
+|---|---|
+| [`docs/PRODUCT_POSITIONING.md`](./docs/PRODUCT_POSITIONING.md) | 产品定位、双线生命线、内容对象、迁移原则和衡量方式；产品定义 SSOT |
+| [`docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md) | 当前实现、架构边界、风险、近期变更和执行计划 |
+| [`SPEC.md`](./SPEC.md) | 现有评测 MVP 的历史执行规格；重构前需结合产品定位文档阅读 |
+| [`docs/SEO_STRATEGY.md`](./docs/SEO_STRATEGY.md) | SEO 策略和变更约束 |
+| [`docs/STYLE_GUIDE.md`](./docs/STYLE_GUIDE.md) | 视觉系统与组件样式规范 |
+| [`docs/modules/`](./docs/modules/) | 各业务模块的契约与测试清单 |
 
-## Run With Docker Compose
+## 技术栈
 
-项目已支持通过 Docker Compose 同时启动前端（Next.js）和数据库（PostgreSQL）。
+- Frontend：Next.js 14 App Router、React 18、TypeScript、Tailwind CSS
+- Backend：Next.js Route Handlers、Service Layer
+- Database：PostgreSQL、Prisma ORM
+- Auth：NextAuth.js（GitHub OAuth + 管理员凭证）
+- Editor：Tiptap
+- Test：Vitest
+- Deploy：Docker Compose；保留 Vercel 运行能力
 
-1. 准备环境变量（可选 GitHub OAuth）：
+## 快速启动
+
+### 1. 准备环境变量
 
 ```bash
 cp .env.example .env
 ```
 
-2. 一键启动：
+生产环境至少需要正确配置：
+
+- `DATABASE_URL`
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
+
+GitHub 登录和管理员账号相关变量见 `.env.example`。
+
+### 2. 启动服务
 
 ```bash
 docker compose up --build
 ```
 
-默认已为 Docker 安装链路切到国内源：
-- Debian apt：清华镜像
-- npm registry：npmmirror
-- Prisma engines：npmmirror Prisma 二进制镜像
+默认服务：
 
-如需切换为其他镜像，可在 `.env` 中覆盖：
+- Web：`http://localhost:3000`，或由 Compose / 代理映射的公开端口
+- PostgreSQL：仅容器内部访问
 
-```bash
-DEBIAN_MIRROR=http://mirrors.ustc.edu.cn
-NPM_REGISTRY=https://registry.npmmirror.com
-PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
-```
-
-首次部署会自动完成：
-- Prisma Client 生成
-- 数据库结构同步（`prisma db push`）
-- 当数据库为空时初始化种子数据（工具目录 + 示例文章）
-
-3. 访问服务：
-- Frontend: `http://localhost:3000`
-- PostgreSQL: 仅容器内部访问（`web` 通过 `postgres:5432` 连接）
-
-说明：
-- `web` 容器启动时会自动执行 `prisma generate` 和 `prisma db push`，用于初始化/同步数据库结构。
-- 种子数据仅在检测到空库时自动执行，避免每次重启都重复初始化。
-- 如需强制重新导入种子，可临时设置 `FORCE_DB_SEED=1` 后重启 `web` 服务。
-- 如果你需要停止并清理容器和网络：
+本地热更新：
 
 ```bash
-docker compose down
+NODE_ENV=development docker compose up --build
 ```
 
-## Database Update Workflow
-
-当前项目的数据库结构管理由 Prisma CLI 完成，业务数据读写走 Next.js Route Handlers（即项目内后端逻辑）。
-
-常用命令（在 Compose 环境内执行）：
+### 3. 常用命令
 
 ```bash
-# 修改 prisma/schema.prisma 后，同步结构到数据库
-docker compose exec web npx prisma db push
+# 同步 Prisma schema
+docker compose exec web bunx prisma db push
 
-# 生成 Prisma Client
-docker compose exec web npx prisma generate
+# 重新生成 Prisma Client
+docker compose exec web bunx prisma generate
 
-# 初始化或补充测试数据
-docker compose exec web npm run db:seed
+# 初始化或补充种子数据
+docker compose exec web bun run db:seed
+
+# 运行测试
+docker compose exec web bun run test
+
+# 运行 lint
+docker compose exec web bun run lint
 ```
 
-## Article Feature
-
-已内置文章能力：
-- 展示页：`/articles`
-- 详情页：`/articles/[slug]`
-- 管理页：`/articles/manage`
-
-说明：
-- 管理接口（创建/编辑/归档）需系统管理员会话。
-- 当前内容字段先使用纯文本/Markdown 方式，后续可平滑升级为富文本 JSON。
-
-建议：
-- 本地开发可以使用 `db push` 快速迭代。
-- 当需要可追踪、可回滚的正式变更时，使用 Prisma migration（`prisma migrate`）管理版本化 SQL。
-
-## Architecture (Modular Monolith)
-
-推荐使用模块化单体而不是过早微服务化，每个模块内部高内聚、模块间低耦合。
-
-```mermaid
-flowchart LR
-  U[User/Anonymous] --> WEB[Next.js App Router]
-  WEB --> API[Route Handlers]
-
-  subgraph Modules[Application Modules]
-    ID[identity]
-    TG[target]
-    RV[review]
-    CM[comment]
-    LK[like]
-    MD[moderation]
-    RL[rate-limit]
-  end
-
-  API --> ID
-  API --> TG
-  API --> RV
-  API --> CM
-  API --> LK
-  API --> MD
-  API --> RL
-
-  RV --> ID
-  RV --> TG
-  RV --> MD
-  RV --> RL
-
-  CM --> ID
-  CM --> RV
-  CM --> MD
-  CM --> RL
-
-  LK --> ID
-  LK --> RV
-  LK --> CM
-  LK --> RL
-
-  MD --> RV
-  MD --> CM
-  MD --> ID
-
-  DB[(PostgreSQL + Prisma)]
-  ID --> DB
-  TG --> DB
-  RV --> DB
-  CM --> DB
-  LK --> DB
-  MD --> DB
-  RL --> DB
-```
-
-建议模块边界：
-- `target`: 工具目录、工具详情、标签管理
-- `review`: 评测发布、查询、排序、状态流转
-- `like`: 点赞幂等、计数维护
-- `comment`: 评论发布、查询、状态流转
-- `moderation`: 敏感词、举报、折叠、审核
-- `identity`: 登录用户与匿名用户身份识别
-- `rate-limit`: 用户/设备/IP 维度限流与审计
-
-## API Scope (Phase 1)
-
-- `POST /api/reviews`
-- `GET /api/reviews`
-- `POST /api/reviews/:id/like`
-- `POST /api/comments`
-- `POST /api/reports`
-
-详细字段与行为约束见 [SPEC.md](./SPEC.md)。
-
-## Project Structure (Recommended)
-
-> 以下为建议目录，用于后续代码落地时保持一致性。
+如需强制重新导入种子数据，在环境变量中临时设置：
 
 ```text
-src/
-  app/                    # Next.js routes/pages
-  modules/
-    review/
-      domain/             # entities, value objects, domain services
-      application/        # use cases
-      infra/              # prisma repository, mapper
-      api/                # route handler adapters, dto schemas
-      tests/              # module contract + integration tests
-    like/
-    comment/
-    moderation/
-    target/
-    identity/
-    rate-limit/
-  shared/
-    kernel/               # shared types/errors/result abstractions
-    config/               # env and runtime config
-    observability/        # logs, metrics, tracing
+FORCE_DB_SEED=1
 ```
 
-## How To Keep Modules Decoupled and Stable
+## 架构
 
-你提出的方向是正确的：通过模块解耦 + 独立规范 + 独立测试，可以在不重构全局的情况下迭代小模块。  
-工程上建议采用以下成熟组合，而不是只靠“约定”：
+项目采用可演进的模块化单体。主要模块位于 `src/modules/`：
 
-1. 固定模块契约（Contract First）
-- 每个模块必须维护 `module-spec.md`（输入、输出、错误码、状态机、边界条件）。
-- 对外只暴露 application 层接口与 DTO，不允许跨模块直接访问对方数据库表。
+- `skill`：Skill 标本 CRUD、分类、效果图
+- `candidate`：当前候选短名单和晋升流程
+- `target`：历史模型、软件、工具和 Prompt 目录
+- `review`：多态评测发布、查询与统计
+- `comment` / `like`：互动能力
+- `moderation` / `rate-limit`：治理、举报与行为限流
+- `identity`：登录和匿名身份
+- `article` / `article-column`：洞笔记与专栏
+- `app`：当前画廊、应用和项目内容
+- `forge`：造物台草稿生成
 
-2. 统一分层与依赖规则
-- 强制依赖方向：`api -> application -> domain -> infra`。
-- 模块之间只能通过 `application contract` 交互，禁止跨模块调用 `infra` 实现。
+Route Handler 调用模块 service；跨模块应通过公开 service 契约协作，避免直接访问其他模块的 Prisma 模型。
 
-3. 契约测试 + 集成测试双轨
-- 契约测试：验证模块公开接口语义稳定。
-- 集成测试：验证跨模块协作链路（如评测发布 -> 风控 -> 状态流转）。
-- E2E 测试：覆盖核心用户闭环。
+## 数据兼容约束
 
-4. 版本化与兼容策略
-- API 变更采用版本号或兼容字段扩展策略。
-- 非兼容改动必须先发 ADR（Architecture Decision Record）并附迁移方案。
+产品升级必须遵守：
 
-5. 质量门禁（CI）
-- PR 必须通过：lint、type-check、unit、contract、integration。
-- 关键模块设置最小覆盖率阈值与变更影响检查。
+- 不删除历史内容
+- 不改变历史 Review ID
+- 保留旧 slug 和可访问路径
+- Candidate 进入下一阶段后，原评测、评论和点赞仍然可追溯
+- 历史自由评测以旧 schema 兼容展示
+- 新模型稳定后再通过 redirect、canonical 和迁移脚本收口
+- 数据迁移支持 dry-run、统计核对、可重复执行和回滚
 
-6. 可观测与回滚
-- 每个模块定义核心指标（成功率、延迟、错误分布、风控命中率）。
-- 通过 feature flag 灰度上线，支持快速回滚。
+## 测试策略
 
-## Module Standard Template (Recommended)
+优先级：
 
-每个模块建议固定以下文档与测试资产：
-- `modules/<name>/module-spec.md`
-- `modules/<name>/CHANGELOG.md`
-- `modules/<name>/tests/contract/*.test.ts`
-- `modules/<name>/tests/integration/*.test.ts`
-
-`module-spec.md` 最小字段建议：
-- 目标与边界（In Scope / Out of Scope）
-- 领域模型与状态机
-- 输入输出 DTO
-- 错误码与异常语义
-- 幂等与并发规则
-- 风控与限流规则
-- 观测指标
-- 兼容性与迁移要求
-
-## Module Specs (Concrete)
-
-基于当前 `SPEC.md` 的模块实规与测试清单已落地到：
-- `docs/modules/README.md`
-- `docs/modules/<module>/module-spec.md`
-- `docs/modules/<module>/test-cases.md`
-
-## Roadmap
-
-- Phase 1 (4-6 weeks): 评测闭环 MVP（发布、浏览、互动、举报、基础风控）
-- Phase 2 (2-3 weeks): 审核台、反刷增强、排序升级
-- Phase 3 (2-4 weeks): 榜单 2.0、用户中心增强、定价模块扩展
-
-## Contributing
-
-当前仓库处于规划阶段，欢迎通过 Issue/PR 补充：
-- 数据模型细化（Prisma Schema）
-- API 契约与错误码规范
-- 模块规范模板与测试模板
-- 可观测与风控策略落地方案
-
-## Testing Strategy (Recommended)
-
-随着功能增多和模块重构，建议尽早建立测试体系，优先顺序如下：
-
-1. 先覆盖高价值单元测试（必要）
-- 覆盖 `src/modules/*/service.ts` 的核心业务规则：校验、状态流转、限流、排序、幂等逻辑。
-- 这些逻辑最容易在重构时回归，且测试成本低、反馈快。
-
-2. 再补 API 集成测试（强烈建议）
-- 覆盖关键路由：`/api/reviews`、`/api/comments`、`/api/articles`。
-- 验证请求参数、错误码、鉴权和数据库写入行为。
-
-3. 最后补少量 E2E（按闭环）
-- 例如“发布文章 -> 列表可见 -> 详情可读”。
-- 保持数量少但覆盖主流程，避免维护成本过高。
-
-单元测试细粒度建议（平衡点）：
-- 以“函数行为”为粒度（service 层 public function 一条用例组）。
-- 每个函数至少覆盖：成功路径、参数非法、权限/限流失败、边界值。
-- 不建议为纯展示组件写大量细碎测试，可由 E2E 覆盖。
-
-目标不是追求 100% 覆盖率，而是优先守住高风险模块回归。
-
-执行单元测试（Compose 环境）：
+1. Service 层业务规则：校验、鉴权、限流、状态机、内容风险和数据迁移
+2. API 集成测试：请求参数、错误码、鉴权和数据库写入
+3. 少量核心 E2E：围绕完整用户生命线验证
 
 ```bash
-docker compose exec web npm run test
+bun run test
+bun run test:watch
 ```
+
+## 贡献方式
+
+当前最重要的工作由 [Issue #15](../../issues/15) 跟踪，包括：
+
+- 统一产品文档和命名
+- 建立 Resource / Skill 成熟度生命线
+- 区分 Evaluation 与 Quick Take
+- 处理 Target、Candidate、App、Skill 的历史数据关系
+- 建立吐槽室与洞笔记的 Subject 关联
+- 扩展 Skill 的版本、依赖、示例、Quick Start 和技能包能力
+- 接入真实 AI 炼成助手并保留来源和人工确认
+
+功能、架构、部署或迁移策略发生变化时，必须同步更新 `docs/PROJECT_PLAN.md`。
 
 ## License
 
-待定
+待定。
