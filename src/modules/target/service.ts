@@ -16,6 +16,9 @@ export interface TargetWithStats {
   websiteUrl: string | null
   developer: string | null
   features: string[]
+  previewImageUrl: string | null
+  sourceUrl: string | null
+  compareGroup: string | null
   _count?: {
     reviews: number
   }
@@ -30,6 +33,9 @@ export interface CreateTargetInput {
   websiteUrl?: string
   developer?: string
   features?: string[]
+  previewImageUrl?: string
+  sourceUrl?: string
+  compareGroup?: string
 }
 
 export interface UpdateTargetInput {
@@ -41,6 +47,9 @@ export interface UpdateTargetInput {
   websiteUrl?: string
   developer?: string
   features?: string[]
+  previewImageUrl?: string
+  sourceUrl?: string
+  compareGroup?: string
 }
 
 function parseFeatures(features: string): string[] {
@@ -122,6 +131,9 @@ export async function listTargets(filter?: TargetFilter): Promise<TargetWithStat
       websiteUrl: target.websiteUrl,
       developer: target.developer,
       features: parseFeatures(target.features),
+      previewImageUrl: target.previewImageUrl,
+      sourceUrl: target.sourceUrl,
+      compareGroup: target.compareGroup,
       _count: target._count,
       avgRating: avgRating ?? undefined,
     }
@@ -142,6 +154,9 @@ export async function createTarget(input: CreateTargetInput) {
       websiteUrl: input.websiteUrl || null,
       developer: input.developer || null,
       features: JSON.stringify(input.features || []),
+      previewImageUrl: input.previewImageUrl || null,
+      sourceUrl: input.sourceUrl || null,
+      compareGroup: input.compareGroup?.trim() || null,
     },
     select: {
       id: true,
@@ -172,6 +187,9 @@ export async function updateTarget(input: UpdateTargetInput) {
       websiteUrl: input.websiteUrl || null,
       developer: input.developer || null,
       features: JSON.stringify(input.features || []),
+      previewImageUrl: input.previewImageUrl || null,
+      sourceUrl: input.sourceUrl || null,
+      compareGroup: input.compareGroup?.trim() || null,
     },
     select: {
       id: true,
@@ -233,9 +251,96 @@ export async function getTargetBySlug(
     websiteUrl: target.websiteUrl,
     developer: target.developer,
     features: parseFeatures(target.features),
+    previewImageUrl: target.previewImageUrl,
+    sourceUrl: target.sourceUrl,
+    compareGroup: target.compareGroup,
     _count: target._count,
     avgRating,
   }
+}
+
+export async function getTargetsByIds(ids: string[]): Promise<TargetCompareCard[]> {
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean))).slice(0, 4)
+  if (uniqueIds.length === 0) return []
+
+  const targets = await prisma.target.findMany({
+    where: { id: { in: uniqueIds } },
+    include: {
+      _count: {
+        select: { reviews: { where: { status: 'published' } } },
+      },
+      reviews: {
+        where: { status: 'published' },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: {
+          id: true,
+          content: true,
+          rating: true,
+          createdAt: true,
+          user: { select: { name: true } },
+          anonymousUser: { select: { displayName: true } },
+        },
+      },
+    },
+  })
+
+  const ratingByTarget = new Map<string, number>()
+  const groups = await prisma.review.groupBy({
+    by: ['targetId'],
+    where: { targetId: { in: uniqueIds }, status: 'published' },
+    _avg: { rating: true },
+  })
+  for (const group of groups) {
+    if (typeof group._avg.rating === 'number') {
+      ratingByTarget.set(group.targetId, Math.round(group._avg.rating * 10) / 10)
+    }
+  }
+
+  const byId = new Map(targets.map((t) => [t.id, t]))
+  return uniqueIds
+    .map((id) => byId.get(id))
+    .filter((t): t is NonNullable<typeof t> => Boolean(t))
+    .map((target) => ({
+      id: target.id,
+      name: target.name,
+      slug: target.slug,
+      type: target.type,
+      logoUrl: target.logoUrl,
+      description: target.description,
+      websiteUrl: target.websiteUrl,
+      developer: target.developer,
+      features: parseFeatures(target.features),
+      previewImageUrl: target.previewImageUrl,
+      sourceUrl: target.sourceUrl,
+      compareGroup: target.compareGroup,
+      _count: target._count,
+      avgRating: ratingByTarget.get(target.id),
+      recentReviews: target.reviews.map((review) => ({
+        id: review.id,
+        content: review.content,
+        rating: review.rating,
+        createdAt: review.createdAt,
+        authorName: review.user?.name || review.anonymousUser?.displayName || '匿名',
+      })),
+    }))
+}
+
+export type TargetCompareCard = TargetWithStats & {
+  recentReviews: Array<{
+    id: string
+    content: string
+    rating: number
+    createdAt: Date
+    authorName: string
+  }>
+}
+
+export async function listTargetsByCompareGroup(compareGroup: string): Promise<TargetWithStats[]> {
+  const trimmed = compareGroup.trim()
+  if (!trimmed) return []
+  const all = await listTargets()
+  return all.filter((t) => t.compareGroup === trimmed)
 }
 
 export async function getTargetById(id: string) {

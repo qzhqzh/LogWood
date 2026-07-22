@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
+import { SITE_NAME } from '@/shared/seo'
 
 export const metadata: Metadata = {
   title: '页面未找到',
@@ -32,7 +33,7 @@ export default function NotFound() {
           </h1>
           <p className="text-muted text-lg max-w-xl mx-auto mb-10 leading-relaxed">
             你访问的页面可能已经下线、链接拼写有误，或者还没创建。
-            可以从下面的入口继续浏览 LogWood 的内容。
+            可以从下面的入口继续在{SITE_NAME}里逛。
           </p>
 
           <div className="flex flex-wrap justify-center gap-3">
@@ -43,16 +44,16 @@ export default function NotFound() {
               回到首页
             </Link>
             <Link
-              href="/coding"
+              href="/skills"
               className="px-6 py-2.5 rounded-lg font-semibold tracking-wide border border-divider text-coding hover-text-coding surface-panel transition-colors"
             >
-              AI Coding
+              Skill 室
             </Link>
             <Link
-              href="/articles"
-              className="px-6 py-2.5 rounded-lg font-semibold tracking-wide border border-divider text-article hover-text-article surface-panel transition-colors"
+              href="/app"
+              className="px-6 py-2.5 rounded-lg font-semibold tracking-wide border border-divider text-app hover-text-app surface-panel transition-colors"
             >
-              社区文章
+              画廊
             </Link>
           </div>
         </div>

@@ -12,6 +12,12 @@ export function FooterAdminLinks() {
 
   return (
     <>
+      <Link href="/candidates/manage" className="text-muted hover:text-amber-200 transition-colors">
+        候选管理
+      </Link>
+      <Link href="/skills/manage" className="text-muted hover-text-coding transition-colors">
+        Skill 管理
+      </Link>
       <Link href="/tags" className="text-muted hover-text-coding transition-colors">
         标签管理
       </Link>

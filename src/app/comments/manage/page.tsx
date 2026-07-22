@@ -156,7 +156,7 @@ export default function ManageCommentsPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">评论管理</h1>
-          <Link href="/coding" className="text-cyan-400 hover:text-cyan-300">前往 AI Coding</Link>
+          <Link href="/skills" className="text-cyan-400 hover:text-cyan-300">前往 Skill 室</Link>
         </div>
 
         <div className="cyber-card rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-3">

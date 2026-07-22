@@ -122,7 +122,7 @@ export default function SignInPage() {
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="cyber-card rounded-2xl p-8 max-w-md w-full">
-          <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">登录 LogWood</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-strong)] mb-2">登录 空心树洞</h1>
           <p className="text-gray-400 mb-6">
             支持 GitHub 普通用户登录（可评论）和系统管理员登录（可管理内容）。
           </p>

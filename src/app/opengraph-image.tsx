@@ -1,7 +1,8 @@
 import { ImageResponse } from 'next/og'
+import { SITE_NAME, SITE_TAGLINE } from '@/shared/seo/site-config'
 
 export const runtime = 'edge'
-export const alt = 'LogWood - AI 编码工具评测社区'
+export const alt = `${SITE_NAME} - ${SITE_TAGLINE}`
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -40,14 +41,14 @@ export default function OpengraphImage() {
             marginBottom: 48,
           }}
         >
-          AI Coding Review Platform
+          HOLLOW TREE
         </div>
 
         <div
           style={{
-            fontSize: 132,
+            fontSize: 96,
             fontWeight: 800,
-            lineHeight: 1,
+            lineHeight: 1.1,
             letterSpacing: -2,
             textAlign: 'center',
             backgroundImage:
@@ -57,32 +58,32 @@ export default function OpengraphImage() {
             display: 'flex',
           }}
         >
-          LogWood
+          {SITE_NAME}
         </div>
 
         <div
           style={{
             marginTop: 36,
-            fontSize: 38,
+            fontSize: 36,
             fontWeight: 600,
             color: '#cfe7ff',
             textAlign: 'center',
             display: 'flex',
           }}
         >
-          AI 编码工具评测社区
+          {SITE_TAGLINE}
         </div>
 
         <div
           style={{
             marginTop: 16,
-            fontSize: 24,
+            fontSize: 22,
             color: '#7c93b3',
             textAlign: 'center',
             display: 'flex',
           }}
         >
-          AI Editor · AI Coding · AI Model · AI Prompt
+          Skill · 画廊 · 造物台
         </div>
       </div>
     ),

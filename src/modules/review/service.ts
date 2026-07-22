@@ -2,11 +2,18 @@ import { prisma } from '@/lib/prisma'
 import { ReviewStatus } from '@prisma/client'
 import { ActorContext } from '@/modules/identity'
 import { checkAndConsume, checkIpSegmentLimit } from '@/modules/rate-limit'
-import { getTargetById } from '@/modules/target'
 import { assessContent } from '@/modules/like'
+import type { ReviewSubjectType } from './constants'
+
+export type { ReviewSubjectType } from './constants'
+export { REVIEW_SUBJECT_QUERY_KEY } from './constants'
 
 export interface CreateReviewInput {
-  targetId: string
+  /** Preferred polymorphic subject */
+  subjectType?: ReviewSubjectType
+  subjectId?: string
+  /** Legacy: treated as subjectType=target */
+  targetId?: string
   rating: number
   content: string
   language?: string
@@ -15,6 +22,9 @@ export interface CreateReviewInput {
 export interface ReviewQuery {
   sort?: 'latest' | 'hot'
   targetId?: string
+  skillId?: string
+  appId?: string
+  candidateId?: string
   language?: string
   page?: number
   pageSize?: number
@@ -22,7 +32,10 @@ export interface ReviewQuery {
 
 export interface ReviewWithAuthor {
   id: string
-  targetId: string
+  targetId: string | null
+  skillId: string | null
+  appId: string | null
+  candidateId: string | null
   content: string
   rating: number
   commentCount: number
@@ -42,7 +55,7 @@ export interface ReviewWithAuthor {
     name: string
     slug: string
     type: string
-  }
+  } | null
   isLikedByMe?: boolean
 }
 
@@ -50,6 +63,49 @@ const CONTENT_MIN_LENGTH = 3
 const CONTENT_MAX_LENGTH = 2000
 const RATING_MIN = 1
 const RATING_MAX = 5
+
+function resolveSubject(input: {
+  subjectType?: ReviewSubjectType
+  subjectId?: string
+  targetId?: string
+}): { subjectType: ReviewSubjectType; subjectId: string } {
+  if (input.subjectType && input.subjectId) {
+    return { subjectType: input.subjectType, subjectId: input.subjectId }
+  }
+  if (input.targetId) {
+    return { subjectType: 'target', subjectId: input.targetId }
+  }
+  throw new Error('ERR_REVIEW_VALIDATION')
+}
+
+async function assertSubjectExists(subjectType: ReviewSubjectType, subjectId: string) {
+  if (subjectType === 'target') {
+    const row = await prisma.target.findUnique({ where: { id: subjectId }, select: { id: true } })
+    if (!row) throw new Error('ERR_TARGET_NOT_FOUND')
+    return
+  }
+  if (subjectType === 'skill') {
+    const row = await prisma.skill.findUnique({ where: { id: subjectId }, select: { id: true } })
+    if (!row) throw new Error('ERR_SKILL_NOT_FOUND')
+    return
+  }
+  if (subjectType === 'app') {
+    const row = await prisma.app.findUnique({ where: { id: subjectId }, select: { id: true } })
+    if (!row) throw new Error('ERR_APP_NOT_FOUND')
+    return
+  }
+  const row = await prisma.candidate.findUnique({ where: { id: subjectId }, select: { id: true } })
+  if (!row) throw new Error('ERR_CANDIDATE_NOT_FOUND')
+}
+
+function subjectCreateData(subjectType: ReviewSubjectType, subjectId: string) {
+  return {
+    targetId: subjectType === 'target' ? subjectId : null,
+    skillId: subjectType === 'skill' ? subjectId : null,
+    appId: subjectType === 'app' ? subjectId : null,
+    candidateId: subjectType === 'candidate' ? subjectId : null,
+  }
+}
 
 export async function createReview(
   input: CreateReviewInput,
@@ -63,10 +119,8 @@ export async function createReview(
     throw new Error('ERR_REVIEW_VALIDATION')
   }
 
-  const target = await getTargetById(input.targetId)
-  if (!target) {
-    throw new Error('ERR_TARGET_NOT_FOUND')
-  }
+  const { subjectType, subjectId } = resolveSubject(input)
+  await assertSubjectExists(subjectType, subjectId)
 
   const rateLimitResult = await checkAndConsume('review_create', actor)
   if (!rateLimitResult.allowed) {
@@ -85,7 +139,7 @@ export async function createReview(
     data: {
       userId: actor.userId,
       anonymousUserId: actor.anonymousUserId,
-      targetId: input.targetId,
+      ...subjectCreateData(subjectType, subjectId),
       content: input.content,
       rating: input.rating,
       language: input.language || 'zh',
@@ -107,20 +161,21 @@ export async function getReviews(
   const {
     sort = 'latest',
     targetId,
+    skillId,
+    appId,
+    candidateId,
     language,
     page = 1,
     pageSize = 20,
   } = query
 
-  const where: any = { status: ReviewStatus.published }
+  const where: Record<string, unknown> = { status: ReviewStatus.published }
 
-  if (targetId) {
-    where.targetId = targetId
-  }
-
-  if (language) {
-    where.language = language
-  }
+  if (targetId) where.targetId = targetId
+  if (skillId) where.skillId = skillId
+  if (appId) where.appId = appId
+  if (candidateId) where.candidateId = candidateId
+  if (language) where.language = language
 
   const orderBy = sort === 'hot'
     ? [{ likesCount: 'desc' as const }, { createdAt: 'desc' as const }]
@@ -183,6 +238,9 @@ export async function getReviews(
     reviews: reviews.map((review) => ({
       id: review.id,
       targetId: review.targetId,
+      skillId: review.skillId,
+      appId: review.appId,
+      candidateId: review.candidateId,
       content: review.content,
       rating: review.rating,
       commentCount: commentCountMap.get(review.id) ?? 0,
@@ -240,6 +298,9 @@ export async function getReviewById(
   return {
     id: review.id,
     targetId: review.targetId,
+    skillId: review.skillId,
+    appId: review.appId,
+    candidateId: review.candidateId,
     content: review.content,
     rating: review.rating,
     commentCount: await prisma.comment.count({
@@ -262,13 +323,24 @@ export async function getReviewById(
   }
 }
 
-export async function getReviewStats(targetId: string): Promise<{
+export async function getReviewStats(filter: {
+  targetId?: string
+  skillId?: string
+  appId?: string
+  candidateId?: string
+}): Promise<{
   total: number
   avgRating: number
   ratingDistribution: Record<number, number>
 }> {
+  const where: Record<string, unknown> = { status: ReviewStatus.published }
+  if (filter.targetId) where.targetId = filter.targetId
+  if (filter.skillId) where.skillId = filter.skillId
+  if (filter.appId) where.appId = filter.appId
+  if (filter.candidateId) where.candidateId = filter.candidateId
+
   const reviews = await prisma.review.findMany({
-    where: { targetId, status: ReviewStatus.published },
+    where,
     select: { rating: true },
   })
 

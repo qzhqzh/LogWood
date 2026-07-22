@@ -25,7 +25,12 @@ export async function GET(
     }
 
     if (includeStats) {
-      const stats = await getReviewStats(review.targetId)
+      const stats = await getReviewStats({
+        targetId: review.targetId || undefined,
+        skillId: review.skillId || undefined,
+        appId: review.appId || undefined,
+        candidateId: review.candidateId || undefined,
+      })
       return NextResponse.json({ review, stats })
     }
 

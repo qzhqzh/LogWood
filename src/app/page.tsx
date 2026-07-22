@@ -2,62 +2,29 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
-import { formatDistanceToNow } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
-import { SITE_NAME, buildMetadata, buildWebSite } from '@/shared/seo'
+import { SITE_NAME, SITE_TAGLINE, buildMetadata, buildWebSite } from '@/shared/seo'
+import { countPublishedSkills, listPublishedSkills, skillCategoryLabel } from '@/modules/skill'
 
 export const revalidate = 60
 
 export async function generateMetadata(): Promise<Metadata> {
-  const [reviewCount, targetCount] = await Promise.all([
-    prisma.review.count({ where: { status: 'published' } }),
-    prisma.target.count(),
+  const [skillCount, appCount] = await Promise.all([
+    countPublishedSkills(),
+    prisma.app.count({ where: { status: 'published' } }),
   ])
   return buildMetadata({
-    title: `${SITE_NAME} - AI 编码工具评测社区`,
-    description: `已收录 ${targetCount} 款 AI 工具、${reviewCount}+ 条真实评测，涵盖 AI Editor、AI Coding、AI Model 与 AI Prompt`,
+    title: `${SITE_NAME} - ${SITE_TAGLINE}`,
+    description: `已收藏 ${skillCount} 份 Skill 标本、${appCount} 件画廊作品。${SITE_TAGLINE}`,
     path: '/',
   })
 }
 
-const AI_CODING_TARGET_TYPES = ['editor', 'coding', 'model', 'prompt'] as const
-
-function parseFeatures(features: string): string[] {
-  try {
-    return JSON.parse(features)
-  } catch {
-    return []
-  }
-}
-
 export default async function HomePage() {
-  const [targets, reviews, featuredApps, featuredArticles, aiCodingTargetsCount, appTargetsCount, communityArticleCount] = await Promise.all([
-    prisma.target.findMany({
-      include: {
-        _count: {
-          select: { reviews: { where: { status: 'published' } } },
-        },
-        reviews: {
-          where: { status: 'published' },
-          select: { rating: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 8,
-    }),
-    prisma.review.findMany({
-      where: { status: 'published' },
-      orderBy: { createdAt: 'desc' },
-      take: 3,
-      include: {
-        user: { select: { name: true } },
-        anonymousUser: { select: { displayName: true } },
-        target: { select: { name: true, slug: true, type: true } },
-      },
-    }),
+  const [featuredSkills, featuredApps, featuredArticles, skillCount, galleryCount, noteCount] = await Promise.all([
+    listPublishedSkills().then((items) => items.slice(0, 6)),
     prisma.app.findMany({
       where: { status: 'published' },
       orderBy: { createdAt: 'desc' },
@@ -67,12 +34,13 @@ export default async function HomePage() {
         slug: true,
         title: true,
         summary: true,
+        previewImageUrl: true,
       },
     }),
     prisma.article.findMany({
       where: { status: 'published' },
       orderBy: { createdAt: 'desc' },
-      take: 8,
+      take: 4,
       select: {
         id: true,
         slug: true,
@@ -80,28 +48,11 @@ export default async function HomePage() {
         excerpt: true,
       },
     }),
-    prisma.target.count({
-      where: {
-        type: { in: [...AI_CODING_TARGET_TYPES] },
-      },
-    }),
+    countPublishedSkills(),
     prisma.app.count({ where: { status: 'published' } }),
     prisma.article.count({ where: { status: 'published' } }),
   ])
 
-  const targetsWithStats = targets.map((target) => {
-    const ratings = target.reviews.map((r) => r.rating)
-    const avgRating = ratings.length > 0
-      ? ratings.reduce((a, b) => a + b, 0) / ratings.length
-      : null
-
-    return {
-      ...target,
-      features: parseFeatures(target.features),
-      avgRating: avgRating ? Math.round(avgRating * 10) / 10 : null,
-      reviewCount: target._count.reviews,
-    }
-  })
   const websiteJsonLd = buildWebSite()
 
   return (
@@ -114,49 +65,48 @@ export default async function HomePage() {
 
       <SiteNav />
 
-      <section className="relative pt-20 pb-32 px-4">
+      <section className="relative pt-20 pb-28 px-4">
         <div className="max-w-7xl mx-auto text-center">
           <div className="inline-block mb-6 px-4 py-1 border border-cyan-500/30 rounded-full bg-cyan-500/5">
-            <span className="text-cyan-400 text-sm tracking-widest uppercase">AI Coding Review Platform</span>
+            <span className="text-cyan-400 text-sm tracking-widest">HOLLOW TREE · CURATION</span>
           </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold font-['Orbitron'] mb-6 leading-tight">
-            <span className="gradient-text">AI 编码工具</span>
-            <br />
-            <span className="text-[var(--color-text-strong)]">评测社区</span>
+
+          <h1 className="text-5xl md:text-7xl font-bold font-['Orbitron'] mb-4 leading-tight">
+            <span className="gradient-text">{SITE_NAME}</span>
           </h1>
-          
-          <p className="text-xl text-muted max-w-2xl mx-auto mb-10 leading-relaxed">
-            沉淀真实评测数据，帮助开发者在{' '}
-            <span className="text-coding">AI Coding</span> 视角下统一比较{' '}
-            <span className="text-[var(--color-text-strong)]">AI Editor、AI Coding、AI Model、AI Prompt</span>
-            {' '}4 个分区的工具、方法与实践内容
+
+          <p className="text-2xl md:text-3xl text-[var(--color-text-strong)] mb-6 font-light tracking-wide">
+            {SITE_TAGLINE}
           </p>
 
-          <div className="flex justify-center gap-4 mb-16">
-            <Link href="/coding" className="cyber-button px-8 py-3 rounded-lg font-semibold text-lg tracking-wide">
-              AI Coding
+          <p className="text-lg text-muted max-w-2xl mx-auto mb-10 leading-relaxed">
+            Skill 室收提示词与效果标本；画廊展美图与示例站；造物台帮你把灵感重新生长。
+          </p>
+
+          <div className="flex flex-wrap justify-center gap-4 mb-16">
+            <Link href="/skills" className="cyber-button px-8 py-3 rounded-lg font-semibold text-lg tracking-wide">
+              进入 Skill 室
             </Link>
             <Link href="/app" className="px-8 py-3 rounded-lg font-semibold text-lg tracking-wide border border-[var(--color-success-border)] text-app hover:bg-[var(--color-success-bg)] transition-all">
-              应用工坊
+              逛画廊
             </Link>
-            <Link href="/articles" className="px-8 py-3 rounded-lg font-semibold text-lg tracking-wide border border-[var(--color-danger-border)] text-article hover:bg-[var(--color-danger-bg)] transition-all">
-              阅读社区文章
+            <Link href="/forge" className="px-8 py-3 rounded-lg font-semibold text-lg tracking-wide border border-[var(--color-danger-border)] text-article hover:bg-[var(--color-danger-bg)] transition-all">
+              打开造物台
             </Link>
           </div>
 
           <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
             <div className="cyber-card rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold font-['Orbitron'] text-coding mb-2">{aiCodingTargetsCount}</div>
-              <div className="text-muted text-sm tracking-wide">AI Coding</div>
+              <div className="text-4xl font-bold font-['Orbitron'] text-coding mb-2">{skillCount}</div>
+              <div className="text-muted text-sm tracking-wide">Skill 标本</div>
             </div>
             <div className="cyber-card rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold font-['Orbitron'] text-app mb-2">{appTargetsCount}</div>
-              <div className="text-muted text-sm tracking-wide">应用工坊</div>
+              <div className="text-4xl font-bold font-['Orbitron'] text-app mb-2">{galleryCount}</div>
+              <div className="text-muted text-sm tracking-wide">画廊</div>
             </div>
             <div className="cyber-card rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold font-['Orbitron'] text-article mb-2">{communityArticleCount}</div>
-              <div className="text-muted text-sm tracking-wide">社区文章</div>
+              <div className="text-4xl font-bold font-['Orbitron'] text-article mb-2">{noteCount}</div>
+              <div className="text-muted text-sm tracking-wide">洞笔记</div>
             </div>
           </div>
         </div>
@@ -166,112 +116,41 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-10">
             <div>
-              <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">热门工具</h2>
-              <p className="text-soft">探索最受关注的 AI 编码工具</p>
+              <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">Skill 标本</h2>
+              <p className="text-soft">提示词 × 效果，按分类归档</p>
             </div>
-            <Link href="/editor" className="text-coding hover-text-coding transition-colors flex items-center gap-2">
-              查看全部 <span>→</span>
+            <Link href="/skills" className="text-coding hover-text-coding transition-colors flex items-center gap-2">
+              进入 Skill 室 <span>→</span>
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {targetsWithStats.map((target, index) => (
-              <Link
-                key={target.id}
-                href={`/${target.type}/${target.slug}`}
-                className="cyber-card rounded-2xl p-6 group transition-all duration-300 hover:scale-105"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="flex items-start gap-4 mb-4">
-                  {target.logoUrl && (
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 p-2 flex items-center justify-center">
-                      <Image
-                        src={target.logoUrl}
-                        alt={target.name}
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="w-8 h-8 rounded object-contain"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-bold text-[var(--color-text-strong)] group-hover:text-cyan-400 transition-colors">
-                      {target.name}
-                    </h3>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      target.type === 'editor' 
-                        ? 'chip-coding'
-                        : 'chip-app'
-                    }`}>
-                      {target.type === 'editor' ? 'EDITOR' : 'CODING'}
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-soft text-sm mb-4 line-clamp-2">{target.description}</p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {target.avgRating && (
-                      <>
-                        <span className="text-yellow-400 text-lg">★</span>
-                        <span className="font-bold text-[var(--color-text-strong)]">{target.avgRating}</span>
-                      </>
-                    )}
-                  </div>
-                  <span className="text-soft text-sm">{target.reviewCount} 条评测</span>
-                </div>
-
-                {target.features.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-4">
-                    {target.features.slice(0, 2).map((feature) => (
-                      <span
-                        key={feature}
-                        className="px-2 py-0.5 chip-coding text-xs rounded"
-                      >
-                        {feature}
-                      </span>
-                    ))}
-                    {target.features.length > 2 && (
-                      <span className="px-2 py-0.5 status-info text-xs rounded border">
-                        +{target.features.length - 2}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20 px-4 border-t border-divider">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-10">
-            <div>
-              <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">应用工坊</h2>
-              <p className="text-soft">精选应用展示</p>
+          {featuredSkills.length === 0 ? (
+            <div className="cyber-card rounded-2xl p-10 text-center text-soft">
+              Skill 室还空着。管理员可前往{' '}
+              <Link href="/skills/manage" className="text-cyan-400">/skills/manage</Link> 录入第一份标本。
             </div>
-            <Link href="/app" className="text-app hover-text-app transition-colors flex items-center gap-2">
-              查看全部 <span>→</span>
-            </Link>
-          </div>
-
-          {featuredApps.length === 0 ? (
-            <div className="cyber-card rounded-2xl p-8 text-center text-soft">暂无应用工坊内容</div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-6">
-              {featuredApps.map((app) => (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredSkills.map((skill) => (
                 <Link
-                  key={app.id}
-                  href={`/app/${app.slug}`}
-                  className="cyber-card rounded-2xl p-6 group transition-all duration-300 hover:scale-105"
+                  key={skill.id}
+                  href={`/skills/${skill.slug}`}
+                  className="cyber-card rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform"
                 >
-                  <h3 className="text-xl font-semibold text-[var(--color-text-strong)] group-hover:text-purple-300 transition-colors mb-3 line-clamp-2">
-                    {app.title}
-                  </h3>
-                  <p className="text-muted text-sm line-clamp-3">{app.summary}</p>
+                  {skill.effectImageUrl ? (
+                    <div className="relative h-36 bg-gradient-to-br from-cyan-500/10 to-purple-500/10">
+                      <Image src={skill.effectImageUrl} alt={skill.title} fill unoptimized className="object-cover" />
+                    </div>
+                  ) : null}
+                  <div className="p-5">
+                    <span className="text-xs text-purple-300">{skillCategoryLabel(skill.category)}</span>
+                    <h3 className="mt-1 text-lg font-semibold text-[var(--color-text-strong)] group-hover:text-cyan-300">
+                      {skill.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-muted line-clamp-2 font-mono">
+                      {skill.prompt.slice(0, 120)}
+                    </p>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -283,8 +162,48 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-10">
             <div>
-              <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">社区文章</h2>
-              <p className="text-soft">最新文章</p>
+              <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">画廊展陈</h2>
+              <p className="text-soft">美图、创意与示例站——看见才会想生长</p>
+            </div>
+            <Link href="/app" className="text-app hover-text-app transition-colors flex items-center gap-2">
+              查看全部 <span>→</span>
+            </Link>
+          </div>
+
+          {featuredApps.length === 0 ? (
+            <div className="cyber-card rounded-2xl p-8 text-center text-soft">画廊还空着，先放一件你想留下的作品</div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-6">
+              {featuredApps.map((app) => (
+                <Link
+                  key={app.id}
+                  href={`/app/${app.slug}`}
+                  className="cyber-card rounded-2xl overflow-hidden group transition-all duration-300 hover:scale-105"
+                >
+                  {app.previewImageUrl ? (
+                    <div className="relative h-40 bg-gradient-to-br from-cyan-500/10 to-purple-500/10">
+                      <Image src={app.previewImageUrl} alt={app.title} fill className="object-cover" />
+                    </div>
+                  ) : null}
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold text-[var(--color-text-strong)] group-hover:text-purple-300 transition-colors mb-3 line-clamp-2">
+                      {app.title}
+                    </h3>
+                    <p className="text-muted text-sm line-clamp-3">{app.summary}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="py-20 px-4 border-t border-divider">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-10">
+            <div>
+              <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">洞笔记</h2>
+              <p className="text-soft">长一点的思考与生长记录</p>
             </div>
             <Link href="/articles" className="text-article hover-text-article transition-colors flex items-center gap-2">
               查看全部 <span>→</span>
@@ -292,7 +211,7 @@ export default async function HomePage() {
           </div>
 
           {featuredArticles.length === 0 ? (
-            <div className="cyber-card rounded-2xl p-8 text-center text-soft">暂无社区文章</div>
+            <div className="cyber-card rounded-2xl p-8 text-center text-soft">还没有洞笔记</div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {featuredArticles.map((article) => (
@@ -312,77 +231,13 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="py-20 px-4 border-t border-divider">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-10">
-            <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-2">最新评测</h2>
-            <p className="text-soft">来自社区的真实使用体验</p>
-          </div>
-
-          {reviews.length === 0 ? (
-            <div className="cyber-card rounded-2xl p-12 text-center">
-              <div className="text-6xl mb-4">🤖</div>
-              <h3 className="text-xl font-bold text-[var(--color-text-strong)] mb-2">暂无评测数据</h3>
-              <p className="text-soft mb-6">成为第一个发布评测的人吧！</p>
-              <Link href="/coding" className="cyber-button px-6 py-2 rounded-lg inline-block">
-                前往 AI Coding
-              </Link>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {reviews.map((review) => {
-                const targetHref = review.target
-                  ? `/${review.target.type}/${review.target.slug}`
-                  : '/coding'
-
-                return (
-                <Link
-                  key={review.id}
-                  href={targetHref}
-                  className="cyber-card rounded-2xl p-6 group transition-all duration-300 hover:scale-105"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center">
-                        <span className="text-sm">{review.user ? '👤' : '🎭'}</span>
-                      </div>
-                      <div>
-                        <div className="font-medium text-[var(--color-text-strong)]">
-                          {review.user?.name || review.anonymousUser?.displayName || '匿名用户'}
-                        </div>
-                        <div className="text-xs text-soft">
-                          {formatDistanceToNow(new Date(review.createdAt), {
-                            addSuffix: true,
-                            locale: zhCN,
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded">
-                      <span className="text-yellow-400">★</span>
-                      <span className="font-bold text-yellow-400">{review.rating}</span>
-                    </div>
-                  </div>
-
-                  {review.target && (
-                    <div className="text-sm text-coding mb-3 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[var(--color-accent-coding)]"></span>
-                      {review.target.name}
-                    </div>
-                  )}
-                  <p className="text-muted line-clamp-3 mb-4">{review.content}</p>
-
-                  <div className="flex items-center gap-4 text-sm text-soft">
-                    <span className="flex items-center gap-1">
-                      <span>👍</span> {review.likesCount}
-                    </span>
-                    <span className="text-coding group-hover-text-coding">查看工具页 →</span>
-                  </div>
-                </Link>
-                )
-              })}
-            </div>
-          )}
+      <section className="py-16 px-4 border-t border-divider">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl font-bold font-['Orbitron'] gradient-text mb-3">造物台</h2>
+          <p className="text-muted mb-6">把一句灵感长成可落地的草稿——提示词、结构、下一步。</p>
+          <Link href="/forge" className="cyber-button px-8 py-3 rounded-lg inline-block font-semibold">
+            打开造物台
+          </Link>
         </div>
       </section>
 

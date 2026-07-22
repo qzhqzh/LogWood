@@ -6,6 +6,7 @@ import {
   SITE_DESCRIPTION,
   SITE_KEYWORDS,
   SITE_NAME,
+  SITE_TAGLINE,
   TWITTER_CARD,
   buildOrganization,
   canonicalFor,
@@ -17,12 +18,12 @@ const SITE_URL = getSiteUrl()
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} - AI 编码工具评测社区`,
+    default: `${SITE_NAME} - ${SITE_TAGLINE}`,
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
   keywords: SITE_KEYWORDS,
-  authors: [{ name: `${SITE_NAME} Team` }],
+  authors: [{ name: SITE_NAME }],
   creator: SITE_NAME,
   publisher: SITE_NAME,
   formatDetection: {
@@ -49,20 +50,20 @@ export const metadata: Metadata = {
     locale: 'zh_CN',
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: `${SITE_NAME} - AI 编码工具评测社区`,
+    title: `${SITE_NAME} - ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
     images: [
       {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: `${SITE_NAME} - AI 编码工具评测社区`,
+        alt: `${SITE_NAME} - ${SITE_TAGLINE}`,
       },
     ],
   },
   twitter: {
     card: TWITTER_CARD,
-    title: `${SITE_NAME} - AI 编码工具评测社区`,
+    title: `${SITE_NAME} - ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
     images: ['/opengraph-image'],
   },

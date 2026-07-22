@@ -226,7 +226,7 @@ export default function ManageAppsPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">App 管理</h1>
-          <Link href="/app" className="text-cyan-400 hover:text-cyan-300">前往应用工坊</Link>
+          <Link href="/app" className="text-cyan-400 hover:text-cyan-300">前往画廊</Link>
         </div>
 
         <form onSubmit={submitApp} className="cyber-card rounded-2xl p-6 mb-8 space-y-4">

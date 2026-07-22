@@ -5,6 +5,7 @@ vi.mock('@/lib/prisma', () => ({
     target: { findMany: vi.fn() },
     article: { findMany: vi.fn() },
     app: { findMany: vi.fn() },
+    candidate: { findMany: vi.fn() },
   },
 }))
 
@@ -15,6 +16,7 @@ const prismaMock = prisma as unknown as {
   target: { findMany: ReturnType<typeof vi.fn> }
   article: { findMany: ReturnType<typeof vi.fn> }
   app: { findMany: ReturnType<typeof vi.fn> }
+  candidate: { findMany: ReturnType<typeof vi.fn> }
 }
 
 const ORIGINAL_SITE_URL = process.env.SITE_URL
@@ -34,17 +36,20 @@ describe('app/sitemap', () => {
     prismaMock.target.findMany.mockResolvedValue([])
     prismaMock.article.findMany.mockResolvedValue([])
     prismaMock.app.findMany.mockResolvedValue([])
+    prismaMock.candidate.findMany.mockResolvedValue([])
 
     const result = await sitemap()
     const urls = result.map((entry) => entry.url)
 
     expect(urls).toContain('https://logwood.test')
-    expect(urls).toContain('https://logwood.test/editor')
-    expect(urls).toContain('https://logwood.test/coding')
+    expect(urls).toContain('https://logwood.test/skills')
+    expect(urls).toContain('https://logwood.test/candidates')
+    expect(urls).toContain('https://logwood.test/forge')
+    expect(urls).toContain('https://logwood.test/compare')
     expect(urls).toContain('https://logwood.test/articles')
     expect(urls).toContain('https://logwood.test/app')
 
-    for (const blocked of ['/submit', '/emojis', '/tags']) {
+    for (const blocked of ['/submit', '/emojis', '/tags', '/editor', '/coding']) {
       expect(urls.some((u) => u.endsWith(blocked))).toBe(false)
     }
   })
@@ -56,6 +61,7 @@ describe('app/sitemap', () => {
     ])
     prismaMock.article.findMany.mockResolvedValue([])
     prismaMock.app.findMany.mockResolvedValue([])
+    prismaMock.candidate.findMany.mockResolvedValue([])
 
     const result = await sitemap()
     const cursorEntry = result.find((e) => e.url === 'https://logwood.test/editor/cursor')
@@ -66,6 +72,7 @@ describe('app/sitemap', () => {
     prismaMock.target.findMany.mockResolvedValue([])
     prismaMock.article.findMany.mockResolvedValue([])
     prismaMock.app.findMany.mockResolvedValue([])
+    prismaMock.candidate.findMany.mockResolvedValue([])
 
     await sitemap()
 
@@ -82,6 +89,7 @@ describe('app/sitemap', () => {
     prismaMock.app.findMany.mockResolvedValue([
       { slug: 'taskbox', updatedAt: new Date('2026-03-02T00:00:00Z') },
     ])
+    prismaMock.candidate.findMany.mockResolvedValue([])
 
     const result = await sitemap()
     const urls = result.map((e) => e.url)

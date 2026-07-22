@@ -24,10 +24,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!target) return { title: 'Not Found' }
   const description = (target as any).description
     ? (target as any).description.slice(0, 160)
-    : `${(target as any).name} AI Prompt 评测，查看真实用户评分与使用体验`
+    : `${(target as any).name} 提示与流程 Skill 评测与使用体验`
   const name = (target as any).name
   return buildMetadata({
-    title: `${name} - AI Prompt 评测`,
+    title: `${name} - 提示与流程 Skill`,
     description,
     path: `/prompt/${(target as any).slug}`,
   })
@@ -72,7 +72,7 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
   const path = `/prompt/${target.slug}`
   const jsonLd = buildSoftwareApplicationJsonLd({
     name: target.name,
-    description: target.description ?? `${target.name} AI Prompt 评测`,
+    description: target.description ?? `${target.name} 提示与流程 Skill`,
     url: path,
     applicationCategory: 'DeveloperApplication',
     sameAs: target.websiteUrl ?? null,
@@ -82,8 +82,8 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: 'AI Coding', path: '/coding' },
-    { name: 'AI Prompt', path: '/coding?category=prompt' },
+    { name: '工具收藏', path: '/tools' },
+    { name: '提示与流程', path: '/tools?category=prompt' },
     { name: target.name, path },
   ]
   const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
@@ -93,23 +93,7 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
       <JsonLd value={jsonLd} />
       <JsonLd value={breadcrumbJsonLd} />
       <SiteNav
-        navItems={[
-          {
-            href: '/coding?category=prompt',
-            label: 'AI Prompt',
-            className: 'text-pink-300 font-medium tracking-wide',
-          },
-          {
-            href: '/app',
-            label: '应用工坊',
-            className: 'text-cyan-400 hover:text-cyan-300 transition-colors font-medium tracking-wide',
-          },
-          {
-            href: '/articles',
-            label: '社区文章',
-            className: 'text-pink-400 hover:text-pink-300 transition-colors font-medium tracking-wide',
-          },
-        ]}
+        active="skills"
         borderClassName="border-pink-500/20"
       />
 

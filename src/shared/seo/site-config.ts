@@ -10,22 +10,24 @@
  * with paths that always start with `/`.
  */
 
-export const SITE_NAME = 'LogWood'
+export const SITE_NAME = '空心树洞'
+
+export const SITE_TAGLINE = '放下执念，重新生长'
 
 export const SITE_DESCRIPTION =
-  '专注于 AI Coding 生态的评测社区，统一收录 AI Editor、AI Coding、AI Model 与 AI Prompt 工具和实践内容'
+  '空心树洞——收藏 Skill、展览美图与示例站，并用 AI 帮你把灵感重新生长成可对比、可复用的内容。'
 
 export const SITE_KEYWORDS: string[] = [
-  'AI编码工具',
-  'AI编程',
-  'AI代码评测',
-  'AI Editor',
-  'AI Coding',
-  'Claude',
-  'Cursor',
-  'Copilot',
-  'Prompt工具',
-  'AI Model',
+  '空心树洞',
+  'Skill 库',
+  '前端 Skill',
+  '图片风格',
+  '灵感画廊',
+  '示例网站',
+  '创意展览',
+  'AI 创作',
+  '效果图对比',
+  '个人策展',
 ]
 
 export const SITE_LOCALE = 'zh_CN'

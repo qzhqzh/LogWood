@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import type { ReviewSubjectType } from '@/modules/review/constants'
+import { REVIEW_SUBJECT_QUERY_KEY } from '@/modules/review/constants'
 
 interface Review {
   id: string
@@ -33,10 +35,19 @@ interface Comment {
 }
 
 interface ReviewListProps {
-  targetId: string
+  subjectType?: ReviewSubjectType
+  subjectId?: string
+  /** @deprecated use subjectType/subjectId */
+  targetId?: string
 }
 
-export function ReviewList({ targetId }: ReviewListProps) {
+export function ReviewList({
+  subjectType: subjectTypeProp,
+  subjectId: subjectIdProp,
+  targetId,
+}: ReviewListProps) {
+  const subjectType = subjectTypeProp || 'target'
+  const subjectId = subjectIdProp || targetId || ''
   const [reviews, setReviews] = useState<Review[]>([])
   const [commentsByReviewId, setCommentsByReviewId] = useState<Record<string, Comment[]>>({})
   const [loadingCommentsByReviewId, setLoadingCommentsByReviewId] = useState<Record<string, boolean>>({})
@@ -46,10 +57,12 @@ export function ReviewList({ targetId }: ReviewListProps) {
   const [sort, setSort] = useState<'latest' | 'hot'>('latest')
 
   useEffect(() => {
+    if (!subjectId) return
     const fetchReviews = async () => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/reviews?targetId=${targetId}&sort=${sort}`)
+        const key = REVIEW_SUBJECT_QUERY_KEY[subjectType]
+        const res = await fetch(`/api/reviews?${key}=${encodeURIComponent(subjectId)}&sort=${sort}`)
         const data = await res.json()
         setReviews(data.reviews || [])
       } catch (error) {
@@ -60,7 +73,7 @@ export function ReviewList({ targetId }: ReviewListProps) {
     }
 
     fetchReviews()
-  }, [targetId, sort])
+  }, [subjectType, subjectId, sort])
 
   const handleLike = async (reviewId: string) => {
     try {

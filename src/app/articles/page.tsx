@@ -14,8 +14,8 @@ import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 export const revalidate = 120
 
 export const metadata: Metadata = buildMetadata({
-  title: 'AI 编码实践文章',
-  description: '阅读开发者分享的 AI Coding 实践经验、工具对比与使用技巧，与社区一起探索 AI 编程的边界',
+  title: '洞笔记',
+  description: '空心树洞里的长文与生长记录——实践、对比与重新选择的笔记',
   path: '/articles',
 })
 
@@ -65,7 +65,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
       <JsonLd
         value={buildBreadcrumbList([
           { name: '首页', path: '/' },
-          { name: '社区文章', path: '/articles' },
+          { name: '洞笔记', path: '/articles' },
         ])}
       />
       <div className="fixed inset-0 pointer-events-none">
@@ -75,17 +75,17 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
 
       <SiteNav
         active="articles"
-        actionLabel={isAdmin ? '文章管理' : undefined}
+        actionLabel={isAdmin ? '笔记管理' : undefined}
         actionHref={isAdmin ? '/articles/manage' : undefined}
       />
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="mb-12">
           <div className="inline-block mb-4 px-4 py-1 border border-[var(--color-danger-border)] rounded-full bg-[var(--color-danger-bg)]">
-            <span className="text-[var(--color-danger-text)] text-sm tracking-widest uppercase">COMMUNITY ARTICLES</span>
+            <span className="text-[var(--color-danger-text)] text-sm tracking-widest uppercase">HOLLOW NOTES</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">社区文章</h1>
-          <p className="text-muted text-lg max-w-2xl">沉淀方法论、使用经验与最佳实践。</p>
+          <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">洞笔记</h1>
+          <p className="text-muted text-lg max-w-2xl">放下执念之后写下的实践、对比与重新生长的记录。</p>
         </div>
 
         {articles.length > 0 && (
