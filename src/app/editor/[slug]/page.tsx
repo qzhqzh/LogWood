@@ -26,9 +26,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!target) return { title: 'Not Found' }
   const description = target.description
     ? target.description.slice(0, 160)
-    : `${target.name} 创作器 Skill 评测与使用体验`
+    : `${target.name} 软件资源的真实使用记录、稳定性与工作流评测`
   return buildMetadata({
-    title: `${target.name} - 创作器 Skill`,
+    title: `${target.name} - 软件资源`,
     description,
     path: `/editor/${target.slug}`,
   })
@@ -82,7 +82,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
   const path = `/editor/${target.slug}`
   const jsonLd = buildSoftwareApplicationJsonLd({
     name: target.name,
-    description: target.description ?? `${target.name} 创作器 Skill`,
+    description: target.description ?? `${target.name} 软件资源`,
     url: path,
     applicationCategory: 'DeveloperApplication',
     sameAs: target.websiteUrl ?? null,
@@ -92,8 +92,8 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '工具收藏', path: '/tools' },
-    { name: '创作器', path: '/tools?category=editor' },
+    { name: '资源收藏', path: '/tools' },
+    { name: '软件与编辑器', path: '/tools?category=editor' },
     { name: target.name, path },
   ]
   const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
@@ -108,8 +108,8 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
       </div>
 
       <SiteNav
-        active="skills"
-        actionLabel={isAdmin ? 'Skill 管理' : undefined}
+        active="inspiration"
+        actionLabel={isAdmin ? '资源管理' : undefined}
         actionHref={isAdmin ? '/targets/manage/editor' : undefined}
         borderClassName="border-cyan-500/20"
       />
@@ -138,6 +138,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
               </div>
             )}
             <div className="flex-1">
+              <p className="text-xs tracking-[0.2em] text-cyan-300 uppercase mb-2">SOFTWARE RESOURCE</p>
               <h1 className="text-3xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] mb-2">{target.name}</h1>
               {target.developer && (
                 <p className="text-gray-500">开发者: {target.developer}</p>
@@ -162,7 +163,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
                   <span className="text-yellow-400">★</span> <span className="text-[var(--color-text-strong)]">{avgRating.toFixed(1)}</span>
                 </div>
               )}
-              <div className="text-gray-500 mt-1">{totalReviews} 条评测</div>
+              <div className="text-gray-500 mt-1">{totalReviews} 条真实记录</div>
             </div>
           </div>
 
@@ -187,7 +188,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
           <div className="lg:col-span-2">
             <div className="cyber-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测列表</h2>
+                <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测与使用记录</h2>
               </div>
               <TargetReviewSection targetId={target.id} canPublishReview={canPublishReview} />
             </div>

@@ -25,9 +25,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!target) return { title: 'Not Found' }
   const description = target.description
     ? target.description.slice(0, 160)
-    : `${target.name} 模型能力 Skill 评测与使用体验`
+    : `${target.name} 模型资源的真实使用记录、能力边界与评测`
   return buildMetadata({
-    title: `${target.name} - 模型能力 Skill`,
+    title: `${target.name} - 模型资源`,
     description,
     path: `/model/${target.slug}`,
   })
@@ -72,7 +72,7 @@ export default async function ModelDetailPage({ params }: TargetPageProps) {
   const path = `/model/${target.slug}`
   const jsonLd = buildSoftwareApplicationJsonLd({
     name: target.name,
-    description: target.description ?? `${target.name} 模型能力 Skill`,
+    description: target.description ?? `${target.name} 模型资源`,
     url: path,
     applicationCategory: 'DeveloperApplication',
     sameAs: target.websiteUrl ?? null,
@@ -82,8 +82,8 @@ export default async function ModelDetailPage({ params }: TargetPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '工具收藏', path: '/tools' },
-    { name: '模型能力', path: '/tools?category=model' },
+    { name: '资源收藏', path: '/tools' },
+    { name: '模型', path: '/tools?category=model' },
     { name: target.name, path },
   ]
   const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
@@ -93,7 +93,7 @@ export default async function ModelDetailPage({ params }: TargetPageProps) {
       <JsonLd value={jsonLd} />
       <JsonLd value={breadcrumbJsonLd} />
       <SiteNav
-        active="skills"
+        active="inspiration"
         borderClassName="border-purple-500/20"
       />
 
@@ -114,6 +114,7 @@ export default async function ModelDetailPage({ params }: TargetPageProps) {
               </div>
             )}
             <div className="flex-1">
+              <p className="text-xs tracking-[0.2em] text-purple-300 uppercase mb-2">MODEL RESOURCE</p>
               <h1 className="text-3xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] mb-2">{target.name}</h1>
               {target.developer && <p className="text-gray-500">开发者: {target.developer}</p>}
               {target.description && <p className="text-gray-400 mt-3">{target.description}</p>}
@@ -121,7 +122,7 @@ export default async function ModelDetailPage({ params }: TargetPageProps) {
             </div>
             <div className="text-right">
               {avgRating && <div className="text-4xl font-bold font-['Orbitron']"><span className="text-yellow-400">★</span> <span className="text-[var(--color-text-strong)]">{avgRating.toFixed(1)}</span></div>}
-              <div className="text-gray-500 mt-1">{totalReviews} 条评测</div>
+              <div className="text-gray-500 mt-1">{totalReviews} 条真实记录</div>
             </div>
           </div>
           {features.length > 0 && (
@@ -138,13 +139,13 @@ export default async function ModelDetailPage({ params }: TargetPageProps) {
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 cyber-card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测列表</h2>
+              <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测与使用记录</h2>
             </div>
             <TargetReviewSection targetId={target.id} canPublishReview={canPublishReview} />
           </div>
           <div className="cyber-card rounded-2xl p-6">
-            <h3 className="text-lg font-semibold font-['Orbitron'] text-[var(--color-text-strong)] mb-4">说明</h3>
-            <p className="text-gray-500 text-sm">该目标的评测列表按时间和热度展示，不再使用分类标签。</p>
+            <h3 className="text-lg font-semibold font-['Orbitron'] text-[var(--color-text-strong)] mb-4">资源说明</h3>
+            <p className="text-gray-500 text-sm">模型本身是被试用和评测的资源；从实践中提炼出的 Prompt、Workflow 或 Skill 将作为独立可复用资产保存。</p>
           </div>
         </div>
       </div>

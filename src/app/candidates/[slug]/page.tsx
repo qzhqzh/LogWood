@@ -23,8 +23,8 @@ export async function generateMetadata({ params }: CandidateDetailProps): Promis
   const candidate = await getCandidateBySlug(slug)
   if (!candidate) return { title: 'Not Found' }
   return buildMetadata({
-    title: `${candidate.title} - 候选评测`,
-    description: candidate.summary || `候选项目：${candidate.title}`,
+    title: `${candidate.title} - 灵感池`,
+    description: candidate.summary || `等待试用与验证的灵感：${candidate.title}`,
     path: `/candidates/${candidate.slug}`,
   })
 }
@@ -41,7 +41,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
       <JsonLd
         value={buildBreadcrumbList([
           { name: '首页', path: '/' },
-          { name: '候选评测', path: '/candidates' },
+          { name: '找灵感', path: '/candidates' },
           { name: candidate.title, path: `/candidates/${candidate.slug}` },
         ])}
       />
@@ -53,7 +53,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
 
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <Link href="/candidates" className="text-sm text-amber-300 hover:text-amber-200">
-          ← 回候选评测
+          ← 回灵感池
         </Link>
 
         <header className="mt-6 mb-8">
@@ -62,7 +62,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
               {candidateStatusLabel(candidate.status)}
             </span>
             {candidate.avgRating != null && (
-              <span className="text-yellow-400 text-sm">★ {candidate.avgRating} · {candidate.reviewCount} 条</span>
+              <span className="text-yellow-400 text-sm">★ {candidate.avgRating} · {candidate.reviewCount} 条真实记录</span>
             )}
           </div>
           <h1 className="text-3xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">
@@ -82,10 +82,10 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
               </a>
             )}
             {candidate.promotedTo === 'tool' && candidate.promotedTargetId && (
-              <span className="text-emerald-300">已晋升到工具收藏</span>
+              <span className="text-emerald-300">已进入资源收藏；历史记录仍保留在本页</span>
             )}
             {candidate.promotedTo === 'gallery' && candidate.promotedAppId && (
-              <Link href="/app" className="text-emerald-300 hover:text-emerald-200">已晋升到画廊 →</Link>
+              <Link href="/app" className="text-emerald-300 hover:text-emerald-200">已进入案例画廊 →</Link>
             )}
           </div>
 
@@ -110,11 +110,18 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
           </div>
         )}
 
+        <section className="cyber-card rounded-2xl p-5 mb-8">
+          <p className="text-xs tracking-[0.25em] text-amber-300 uppercase mb-2">NEXT QUESTION</p>
+          <p className="text-muted">
+            它是否值得留下？请记录实际版本、使用场景、成功点和失败点。有效经验后续可以继续提炼为模板、Prompt、Workflow 或 Skill。
+          </p>
+        </section>
+
         <ReviewPanel
           subjectType="candidate"
           subjectId={candidate.id}
           canPublishReview={candidate.status !== 'promoted' && candidate.status !== 'dropped'}
-          title="写下评测"
+          title="写下试用记录或吐槽"
         />
       </article>
 

@@ -18,8 +18,8 @@ import {
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = buildMetadata({
-  title: '同洞对比',
-  description: '并排比较工具收藏的效果图、评分与近期评测摘要',
+  title: '资源对比',
+  description: '并排比较历史资源收藏的效果图、评分与近期使用记录',
   path: '/compare',
 })
 
@@ -29,7 +29,7 @@ interface ComparePageProps {
 
 function parseIds(raw?: string): string[] {
   if (!raw) return []
-  return raw.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4)
+  return raw.split(',').map((value) => value.trim()).filter(Boolean).slice(0, 4)
 }
 
 export default async function ComparePage({ searchParams }: ComparePageProps) {
@@ -41,7 +41,7 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
     cards = await getTargetsByIds(ids)
   } else if (group?.trim()) {
     const grouped = await listTargetsByCompareGroup(group.trim())
-    cards = await getTargetsByIds(grouped.slice(0, 4).map((t) => t.id))
+    cards = await getTargetsByIds(grouped.slice(0, 4).map((target) => target.id))
   }
 
   return (
@@ -49,30 +49,30 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
       <JsonLd
         value={buildBreadcrumbList([
           { name: '首页', path: '/' },
-          { name: '工具收藏', path: '/tools' },
-          { name: '同洞对比', path: '/compare' },
+          { name: '资源收藏', path: '/tools' },
+          { name: '资源对比', path: '/compare' },
         ])}
       />
-      <SiteNav active="skills" />
+      <SiteNav active="inspiration" />
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="mb-10">
           <div className="inline-block mb-4 px-4 py-1 border border-purple-500/30 rounded-full bg-purple-500/5">
             <span className="text-purple-400 text-sm tracking-widest uppercase">COMPARE</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] mb-4 gradient-text">同洞对比</h1>
+          <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] mb-4 gradient-text">资源对比</h1>
           <p className="text-muted text-lg max-w-2xl">
-            并排看效果图与评测摘要。用法：`/compare?ids=id1,id2` 或 `/compare?group=分组键`。
+            并排查看历史资源的效果图、评分与近期真实记录。用法：`/compare?ids=id1,id2` 或 `/compare?group=分组键`。
           </p>
         </div>
 
         {cards.length < 2 ? (
           <div className="cyber-card rounded-2xl p-10 text-center">
             <p className="text-muted mb-6">
-              至少需要 2 个 Skill。可在 Skill 管理里填写「对比分组键」，或用 ids 参数打开本页。
+              至少需要 2 个资源。可在资源管理中填写「对比分组键」，或用 ids 参数打开本页。
             </p>
             <Link href="/tools" className="cyber-button px-6 py-2 rounded-lg inline-block">
-              回工具收藏
+              回资源收藏
             </Link>
           </div>
         ) : (
@@ -83,7 +83,7 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
                   {card.previewImageUrl ? (
                     <Image src={card.previewImageUrl} alt={card.name} fill className="object-cover" unoptimized />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-soft text-sm">暂无效果图</div>
+                    <div className="absolute inset-0 flex items-center justify-center text-soft text-sm">暂无效果或证据</div>
                   )}
                 </div>
                 <div className="p-6 flex-1 flex flex-col">
@@ -100,7 +100,7 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
                     {card.avgRating != null && (
                       <span className="text-yellow-400 font-semibold">★ {card.avgRating}</span>
                     )}
-                    <span className="text-soft">{card._count?.reviews ?? 0} 条评测</span>
+                    <span className="text-soft">{card._count?.reviews ?? 0} 条真实记录</span>
                   </div>
 
                   {card.sourceUrl && (
@@ -115,9 +115,9 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
                   )}
 
                   <div className="mt-auto border-t border-divider pt-4 space-y-3">
-                    <p className="text-xs tracking-widest text-soft uppercase">近期评测</p>
+                    <p className="text-xs tracking-widest text-soft uppercase">近期记录</p>
                     {card.recentReviews.length === 0 ? (
-                      <p className="text-sm text-soft">还没有评测</p>
+                      <p className="text-sm text-soft">还没有记录</p>
                     ) : (
                       card.recentReviews.map((review) => (
                         <div key={review.id} className="text-sm">

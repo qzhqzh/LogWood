@@ -71,7 +71,6 @@ function SubmitForm() {
 
       setSuccess(true)
       setTimeout(() => {
-        // Force a fresh homepage request to show the just-published review.
         window.location.href = `/?refresh=${Date.now()}`
       }, 2000)
     } catch (err) {
@@ -83,20 +82,20 @@ function SubmitForm() {
 
   const targetGroups = [
     {
-      label: '创作器',
-      options: targets.filter(t => t.type === 'editor').map(t => ({ value: t.id, label: t.name })),
+      label: '软件与编辑器',
+      options: targets.filter((target) => target.type === 'editor').map((target) => ({ value: target.id, label: target.name })),
     },
     {
-      label: '编码助手',
-      options: targets.filter(t => t.type === 'coding').map(t => ({ value: t.id, label: t.name })),
+      label: '编码工具与服务',
+      options: targets.filter((target) => target.type === 'coding').map((target) => ({ value: target.id, label: target.name })),
     },
     {
-      label: '模型能力',
-      options: targets.filter(t => t.type === 'model').map(t => ({ value: t.id, label: t.name })),
+      label: '模型资源',
+      options: targets.filter((target) => target.type === 'model').map((target) => ({ value: target.id, label: target.name })),
     },
     {
-      label: '提示与流程',
-      options: targets.filter(t => t.type === 'prompt').map(t => ({ value: t.id, label: t.name })),
+      label: '历史提示资源',
+      options: targets.filter((target) => target.type === 'prompt').map((target) => ({ value: target.id, label: target.name })),
     },
   ]
 
@@ -104,7 +103,7 @@ function SubmitForm() {
     return (
       <div className="text-center py-12">
         <div className="text-7xl mb-6">🎉</div>
-        <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-4">评测发布成功！</h2>
+        <h2 className="text-3xl font-bold font-['Orbitron'] gradient-text mb-4">使用记录发布成功！</h2>
         <p className="text-gray-400">正在跳转到首页...</p>
       </div>
     )
@@ -120,7 +119,7 @@ function SubmitForm() {
 
       <div>
         <label className="block text-sm font-medium text-cyan-400 mb-3 tracking-wide">
-          选择工具 <span className="text-pink-500">*</span>
+          选择资源 <span className="text-pink-500">*</span>
         </label>
         {loading ? (
           <div className="text-gray-500 cyber-card rounded-xl p-4">加载中...</div>
@@ -129,7 +128,7 @@ function SubmitForm() {
             groups={targetGroups}
             value={formData.targetId}
             onChange={(value) => setFormData({ ...formData, targetId: value })}
-            placeholder="请选择 Skill..."
+            placeholder="请选择资源..."
           />
         )}
       </div>
@@ -149,6 +148,7 @@ function SubmitForm() {
                   ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-[var(--color-text-strong)] shadow-lg shadow-yellow-500/25'
                   : 'cyber-card text-gray-500 hover:text-yellow-400'
               }`}
+              aria-label={`评分 ${rating}`}
             >
               ★
             </button>
@@ -161,12 +161,12 @@ function SubmitForm() {
 
       <div>
         <label className="block text-sm font-medium text-cyan-400 mb-3 tracking-wide">
-          评测内容 <span className="text-pink-500">*</span>
+          使用记录 <span className="text-pink-500">*</span>
         </label>
         <textarea
           value={formData.content}
           onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-          placeholder="请分享你的使用体验（3-2000字）..."
+          placeholder="请说明版本、使用场景、成功点、失败点或想吐槽的真实体验（3-2000 字）..."
           className="w-full px-4 py-4 cyber-input rounded-xl min-h-[200px]"
           minLength={3}
           maxLength={2000}
@@ -194,11 +194,11 @@ function SubmitForm() {
               <span className="animate-spin">⏳</span> 提交中...
             </span>
           ) : (
-            '发布评测'
+            '发布使用记录'
           )}
         </button>
         <Link
-          href="/"
+          href="/tools"
           className="px-8 py-4 cyber-card rounded-xl text-gray-400 hover:text-[var(--color-text-strong)] transition-colors"
         >
           取消
@@ -217,7 +217,7 @@ export default function SubmitPage() {
       </div>
 
       <SiteNav
-        active="skills"
+        active="inspiration"
         borderClassName="border-cyan-500/20"
       />
 
@@ -225,9 +225,10 @@ export default function SubmitPage() {
         <div className="cyber-card rounded-3xl p-8">
           <div className="text-center mb-8">
             <div className="inline-block mb-4 px-4 py-1 border border-pink-500/30 rounded-full bg-pink-500/5">
-              <span className="text-pink-400 text-sm tracking-widest uppercase">SHARE YOUR EXPERIENCE</span>
+              <span className="text-pink-400 text-sm tracking-widest uppercase">SHARE REAL EXPERIENCE</span>
             </div>
-            <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">发布 Skill 评测</h1>
+            <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">发布资源使用记录</h1>
+            <p className="text-sm text-soft mt-3">这是历史 Target 提交入口；Skill、灵感和案例请直接在对应详情页记录。</p>
           </div>
           <Suspense fallback={<div className="text-center py-8 text-gray-500">加载中...</div>}>
             <SubmitForm />

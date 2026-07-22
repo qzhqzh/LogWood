@@ -39,7 +39,7 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: 'Skill 室', path: '/skills' },
+    { name: 'Skill 库', path: '/skills' },
     { name: skillCategoryLabel(skill.category), path: `/skills?category=${encodeURIComponent(skill.category)}` },
     { name: skill.title, path: `/skills/${skill.slug}` },
   ]
@@ -54,10 +54,13 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
       />
 
       <article className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <Link href="/skills" className="text-sm text-cyan-400 hover:text-cyan-300">← 回 Skill 室</Link>
+        <Link href="/skills" className="text-sm text-cyan-400 hover:text-cyan-300">← 回 Skill 库</Link>
 
         <header className="mt-6 mb-10">
-          <p className="skill-eyebrow mb-3">{skillCategoryLabel(skill.category)}</p>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <p className="skill-eyebrow">{skillCategoryLabel(skill.category)}</p>
+            <span className="text-xs px-2 py-0.5 rounded border border-cyan-500/25 text-cyan-300">当前：Prompt 型 Skill</span>
+          </div>
           <h1 className="text-3xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">
             {skill.title}
           </h1>
@@ -71,10 +74,17 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
           </div>
         </header>
 
+        <section className="cyber-card rounded-2xl p-5 mb-8">
+          <p className="text-xs tracking-[0.25em] text-cyan-300 uppercase mb-2">QUICK START · V1</p>
+          <p className="text-muted">
+            复制下方指令，在对应模型或工具中执行，并根据实际结果补充评测。后续版本会逐步加入输入契约、依赖、版本、失败边界和跨环境验证。
+          </p>
+        </section>
+
         <div className="skill-specimen-grid !mt-0">
           <section className="skill-prompt-slab !min-h-[320px]">
             <div className="skill-slab-label">
-              <span>PROMPT</span>
+              <span>INSTRUCTIONS</span>
               <SkillCopyButton text={skill.prompt} />
             </div>
             <pre className="skill-prompt-body !max-h-none">{skill.prompt}</pre>
@@ -82,8 +92,8 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
 
           <section className="skill-effect-slab !min-h-[320px]">
             <div className="skill-slab-label">
-              <span>EFFECT</span>
-              <span className="opacity-50">效果</span>
+              <span>EXAMPLE / EVIDENCE</span>
+              <span className="opacity-50">效果 / 证据</span>
             </div>
             {skill.effectImageUrl ? (
               <div className="skill-effect-frame !min-h-[260px]">
@@ -96,7 +106,7 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
                 />
               </div>
             ) : (
-              <div className="skill-effect-empty !min-h-[260px]">尚无效果图</div>
+              <div className="skill-effect-empty !min-h-[260px]">尚无效果或证据</div>
             )}
             {skill.effectNote && <p className="skill-effect-note">{skill.effectNote}</p>}
           </section>
@@ -111,7 +121,7 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
           </p>
         )}
 
-        <ReviewPanel subjectType="skill" subjectId={skill.id} title="评测这份 Skill" />
+        <ReviewPanel subjectType="skill" subjectId={skill.id} title="验证、评测或吐槽这份 Skill" />
       </article>
 
       <SiteFooter />

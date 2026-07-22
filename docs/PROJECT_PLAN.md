@@ -32,20 +32,21 @@
 
 ## 3. 当前范围（Core Scope）
 
-当前代码已经具备产品升级所需的基础能力，但路由与模型仍处于上一阶段包装和目标模型之间的过渡期。
+当前代码已经完成双线定位的第一阶段运行时收口，但持久化模型仍处于旧结构和目标模型之间的过渡期。
 
-- Skill 室：`/skills`（独立 `Skill` 模型：提示词 × 效果标本；管理 `/skills/manage`）
-- 候选评测：`/candidates`（当前短名单观察、评测与晋升流程；未来收进 Resource 成熟度生命线）
-- 工具收藏：`/tools`（历史 Target / 评测；`/coding`、`/editor` 列表重定向至此）
-- 画廊：`/app`（当前 App / 项目 / 示例站；未来映射为 Resource 或 Skill Example）
-- 造物台：`/forge`（本地模板草稿生成；尚未接入真实模型）
+- 找灵感：`/candidates`（复用现有 Candidate 模型，公共页面已改为灵感池 / 待测清单语义；管理 `/candidates/manage`）
+- Skill 库：`/skills`（独立 `Skill` 模型，当前以 Prompt × Effect 为主；管理 `/skills/manage`）
+- 吐槽室：`/talk`（聚合 Target / Skill / App / Candidate 上的公开自由评测和回复数量）
 - 洞笔记：`/articles`（文章、专栏、评论和点赞）
+- 资源收藏：`/tools`（历史 Target / 评测；`/coding`、`/editor` 列表重定向至此）
+- 案例画廊：`/app`（当前 App / 项目 / 示例站；未来映射为 Resource 或 Skill Example）
+- AI 炼成助手：`/forge`（确定性本地模板；洞笔记草稿写 Article，Skill 草稿写独立 Skill；尚未接入真实模型）
 - 评测闭环：多态 Review，可挂 Target / Skill / App / Candidate
 - 互动能力：点赞、评论、举报
 - 身份能力：登录用户 + 匿名用户
 - 治理能力：限流、内容风险判定、自动隐藏与审核流
 
-目标一级信息架构：找灵感 / Skill 库 / 吐槽室 / 洞笔记。评测和 AI 炼成助手作为贯穿能力，不再制造更多彼此割裂的一级栏目。
+一级导航已收口为：找灵感 / Skill 库 / 吐槽室 / 洞笔记。资源收藏、案例画廊和 AI 炼成助手保留为辅助入口，旧路由均继续可访问。
 
 ## 4. 架构与部署概览
 
@@ -59,8 +60,8 @@
 ## 5. 模块边界（高层）
 
 - `identity`：登录身份、匿名身份解析
-- `skill`：Skill 标本 CRUD、分类层架、效果图
-- `candidate`：当前候选短名单、晋升到工具 / 画廊
+- `skill`：Skill CRUD、分类、效果图和草稿状态
+- `candidate`：当前灵感 / 候选短名单、晋升到工具 / 画廊
 - `target`：历史模型、软件、工具和 Prompt 目录
 - `app`：当前画廊、应用和项目内容
 - `review`：多态评测发布与查询（target / skill / app / candidate）
@@ -69,9 +70,10 @@
 - `moderation`：举报、自动折叠、处理状态流转
 - `rate-limit`：行为限流（用户 / 匿名 / IP 段）
 - `article` / `article-column`：洞笔记、专栏、发布与管理
-- `forge`：当前本地草稿生成
+- `forge`：确定性本地草稿整理；不代表真实模型能力
+- `src/shared/reviews/subject.ts`：把当前四种多态 Review Subject 适配为统一展示形状
 
-迁移方向：先增加统一 Subject / Resource 展示适配层，再评估 Target、Candidate、App 的物理合并；不得为数据模型整洁牺牲历史内容和 URL。
+迁移方向：先通过展示适配层统一 Subject / Resource 语义，再设计成熟度状态和数据迁移；不得为模型整洁牺牲历史内容和 URL。
 
 ## 6. 质量策略（核心）
 
@@ -79,17 +81,19 @@
 - 边界或缺陷修复必须补测试。
 - 数据迁移必须支持 dry-run、统计核对、可重复执行和回滚。
 - 核心生命线需要 API 集成测试和少量端到端测试。
+- Forge 必须测试 Article / Skill 写入目标、Legacy 输入兼容和短输入校验。
+- Sitemap 必须测试公开 Skill 详情和 `/talk`。
 - 目标是守住高风险回归，不追求所有展示层细节测试。
 
 ## 7. 近期关键风险与约束
 
 ### 产品与数据风险
 
-- 当前 Candidate 晋升会创建新的 Target 或 App，候选阶段 Review 仍挂在旧 Candidate 上，可能造成历史割裂。
-- 当前 Review 只有五星和自由文本，无法表达版本、环境、任务、证据、复现步骤和适用边界。
-- 当前 Forge 的“Skill 草稿”实际创建历史 Target，而不是独立 Skill。
-- Target、Skill、App、Candidate 同时作为可评测对象，展示语义尚未统一。
-- 当前造物台只做本地模板生成，公开文案不得暗示已经接入真实 AI 模型。
+- Candidate 晋升仍会创建新的 Target 或 App，候选阶段 Review 仍挂在旧 Candidate 上，历史连续性问题尚未解决。
+- Review 仍只有五星和自由文本；`/talk` 当前是兼容聚合视图，还没有 `Evaluation` / `Quick Take` 的持久化分型。
+- Target、Skill、App、Candidate 仍是四种持久化对象；统一展示适配层已经建立，但统一详情页和 Resource 模型尚未完成。
+- Skill 当前仍以 Prompt、效果图和标签为主，尚未持久化版本、输入契约、依赖、Quick Start、失败边界和验证时间。
+- AI 炼成助手仍只做本地模板整理，公开文案与代码不得暗示已经接入真实模型、自动验证或生成证据。
 - 旧 README、SPEC 和近期包装曾出现不同产品定位；后续以 `PRODUCT_POSITIONING.md` 为唯一准绳。
 
 ### 运行与安全风险
@@ -100,6 +104,18 @@
 - 上传文件仍需继续推进对象存储、病毒扫描和域名白名单收紧。
 
 ## 8. 变更记录
+
+### 2026-07-23（双线生命线运行时 Phase 1）
+
+- 站点副标题、默认 metadata、关键词和 OG 图更新为“**大浪淘沙，找寻灵感**”。
+- 一级导航从 Skill 室 / 候选评测 / 画廊 / 造物台，收口为找灵感 / Skill 库 / 吐槽室 / 洞笔记；旧入口保留在页脚。
+- 首页按双线生命线重构：最近炼成的 Skill、正在淘洗的灵感、真实记录、洞笔记和透明的 AI Beta 入口。
+- `/candidates` 在不改表和路由的前提下重述为灵感池；详情页强调真实试用、验证或淘汰。
+- `/skills` 重述为可复用资产库，并明确当前为 Prompt 型 Skill 的过渡版本。
+- 新增 `/talk`，聚合四种 Review Subject 的公开真实记录；新增统一 Subject 展示适配器与测试。
+- Forge 的 Skill 草稿从错误的 `createTarget()` 改为 `createSkill()`，保留旧 `TargetType` 客户端兼容；增加分类选择和单元测试。
+- Sitemap 新增 `/talk` 和全部 published Skill 详情 URL，并更新测试。
+- 本阶段不修改 Prisma schema、不迁移历史数据、不删除旧路由。
 
 ### 2026-07-23（双线生命线产品定位）
 
@@ -202,26 +218,25 @@ Phase 2（DB 增量）：
 
 ### 9.1 产品与数据（Issue #15）
 
-1. 完成 P0 文档统一，并将旧 SPEC 明确标记为历史执行规格。
-2. 设计统一 Subject / Resource 展示适配层和成熟度状态 ADR。
-3. 修复 Candidate 晋升导致的历史 Review 割裂。
-4. 区分 Evaluation 与 Quick Take，设计版本化评测 schema。
-5. 建立找灵感 / Skill 库 / 吐槽室 / 洞笔记的信息架构迁移方案。
-6. 扩展 Skill 的版本、依赖、示例、Quick Start 和技能包关系。
-7. 在真实模型接入前修正 Forge 的 Skill 创建语义和公开能力描述。
-8. 编写历史数据映射、dry-run、核对和回滚方案。
+1. 设计 Resource / Skill 成熟度状态 ADR 与统一详情页数据契约。
+2. 修复 Candidate 晋升导致的历史 Review 割裂。
+3. 区分 Evaluation 与 Quick Take，设计并迁移版本化评测 schema。
+4. 为吐槽室增加内容类型、关联版本、证据和发布入口。
+5. 扩展 Skill 的版本、依赖、输入输出契约、Quick Start、验证记录和技能包关系。
+6. 编写 Target / Candidate / App / Skill 历史映射、dry-run、核对和回滚方案。
+7. 在上述模型稳定后，接入真实 AI 炼成能力并保留来源、模型、时间和人工确认。
 
 ### 9.2 工程与部署
 
 1. 部署模式切换为稳定的 production build + start，并拆分 dev / prod Compose。
-2. 增补核心 API 集成测试：articles / reviews / comments / skills / candidates。
+2. 增补核心 API 集成测试：articles / reviews / comments / skills / candidates / forge。
 3. 为审核、限流和迁移补充可观测指标。
 4. 增加发布前检查：校验 PROJECT_PLAN 与相关产品文档是否同步更新。
+5. 为首页、灵感池、吐槽室和 Skill 生命周期补少量 E2E。
 
 ### 9.3 SEO 后续项
 
-1. 把公开 Skill 详情页加入 sitemap。
-2. 实现站内搜索后补回 `WebSite.SearchAction`。
-3. 将专栏 / 标签筛选升级为可索引 landing 路径。
-4. 为文章、Resource 和 Skill 详情生成动态 OG 图。
-5. 在 CI 的 `next build` 后增加 robots、sitemap 和 JSON-LD 抓取契约测试。
+1. 实现站内搜索后补回 `WebSite.SearchAction`。
+2. 将专栏 / 标签筛选升级为可索引 landing 路径。
+3. 为文章、Resource 和 Skill 详情生成动态 OG 图。
+4. 在 CI 的 `next build` 后增加 robots、sitemap 和 JSON-LD 抓取契约测试。

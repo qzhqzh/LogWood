@@ -5,34 +5,39 @@ import { SITE_NAME, SITE_TAGLINE } from '@/shared/seo'
 
 const sections = [
   {
-    title: 'Skill 室',
-    href: '/skills',
-    colorClass: 'hover-text-coding',
-  },
-  {
-    title: '候选评测',
+    title: '找灵感',
     href: '/candidates',
     colorClass: 'hover:text-amber-200',
   },
   {
-    title: '画廊',
-    href: '/app',
-    colorClass: 'hover-text-app',
-  },
-  {
-    title: '造物台',
-    href: '/forge',
-    colorClass: 'hover-text-article',
-  },
-  {
-    title: '工具收藏',
-    href: '/tools',
+    title: 'Skill 库',
+    href: '/skills',
     colorClass: 'hover-text-coding',
+  },
+  {
+    title: '吐槽室',
+    href: '/talk',
+    colorClass: 'hover-text-app',
   },
   {
     title: '洞笔记',
     href: '/articles',
     colorClass: 'hover-text-article',
+  },
+  {
+    title: '资源收藏',
+    href: '/tools',
+    colorClass: 'hover-text-coding',
+  },
+  {
+    title: 'AI 炼成助手',
+    href: '/forge',
+    colorClass: 'hover-text-article',
+  },
+  {
+    title: '案例画廊',
+    href: '/app',
+    colorClass: 'hover-text-app',
   },
 ] as const
 
@@ -66,7 +71,7 @@ export function SiteFooter() {
             </a>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-sm min-w-[280px]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm min-w-[280px]">
             {sections.map((item) => (
               <div key={item.title} className="text-center md:text-left">
                 <Link href={item.href} className={`text-muted transition-colors ${item.colorClass}`}>

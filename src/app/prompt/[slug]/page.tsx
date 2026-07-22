@@ -19,17 +19,16 @@ export const revalidate = 300
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const target = await prisma.target.findFirst({
-    where: { slug: params.slug, type: 'prompt' as any },
+    where: { slug: params.slug, type: 'prompt' },
   })
   if (!target) return { title: 'Not Found' }
-  const description = (target as any).description
-    ? (target as any).description.slice(0, 160)
-    : `${(target as any).name} 提示与流程 Skill 评测与使用体验`
-  const name = (target as any).name
+  const description = target.description
+    ? target.description.slice(0, 160)
+    : `${target.name} 提示资源的来源、真实使用记录与评测`
   return buildMetadata({
-    title: `${name} - 提示与流程 Skill`,
+    title: `${target.name} - 提示资源`,
     description,
-    path: `/prompt/${(target as any).slug}`,
+    path: `/prompt/${target.slug}`,
   })
 }
 
@@ -51,28 +50,28 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
   const canPublishReview = Boolean(session?.user?.id)
 
   const target = await prisma.target.findFirst({
-    where: { slug, type: 'prompt' as any },
+    where: { slug, type: 'prompt' },
     include: {
       reviews: {
         where: { status: 'published' },
         select: { rating: true },
       },
     },
-  }) as any
+  })
 
   if (!target) {
     notFound()
   }
 
   const features = parseFeatures(target.features)
-  const ratings = target.reviews.map((r: any) => r.rating)
-  const avgRating = ratings.length > 0 ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length : null
+  const ratings = target.reviews.map((review) => review.rating)
+  const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null
   const totalReviews = target.reviews.length
 
   const path = `/prompt/${target.slug}`
   const jsonLd = buildSoftwareApplicationJsonLd({
     name: target.name,
-    description: target.description ?? `${target.name} 提示与流程 Skill`,
+    description: target.description ?? `${target.name} 提示资源`,
     url: path,
     applicationCategory: 'DeveloperApplication',
     sameAs: target.websiteUrl ?? null,
@@ -82,8 +81,8 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '工具收藏', path: '/tools' },
-    { name: '提示与流程', path: '/tools?category=prompt' },
+    { name: '资源收藏', path: '/tools' },
+    { name: '提示资源', path: '/tools?category=prompt' },
     { name: target.name, path },
   ]
   const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
@@ -93,7 +92,7 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
       <JsonLd value={jsonLd} />
       <JsonLd value={breadcrumbJsonLd} />
       <SiteNav
-        active="skills"
+        active="inspiration"
         borderClassName="border-pink-500/20"
       />
 
@@ -114,6 +113,7 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
               </div>
             )}
             <div className="flex-1">
+              <p className="text-xs tracking-[0.2em] text-pink-300 uppercase mb-2">PROMPT RESOURCE</p>
               <h1 className="text-3xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] mb-2">{target.name}</h1>
               {target.developer && <p className="text-gray-500">作者/团队: {target.developer}</p>}
               {target.description && <p className="text-gray-400 mt-3">{target.description}</p>}
@@ -121,7 +121,7 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
             </div>
             <div className="text-right">
               {avgRating && <div className="text-4xl font-bold font-['Orbitron']"><span className="text-yellow-400">★</span> <span className="text-[var(--color-text-strong)]">{avgRating.toFixed(1)}</span></div>}
-              <div className="text-gray-500 mt-1">{totalReviews} 条评测</div>
+              <div className="text-gray-500 mt-1">{totalReviews} 条真实记录</div>
             </div>
           </div>
           {features.length > 0 && (
@@ -138,13 +138,13 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 cyber-card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测列表</h2>
+              <h2 className="text-xl font-semibold font-['Orbitron'] gradient-text">评测与使用记录</h2>
             </div>
             <TargetReviewSection targetId={target.id} canPublishReview={canPublishReview} />
           </div>
           <div className="cyber-card rounded-2xl p-6">
-            <h3 className="text-lg font-semibold font-['Orbitron'] text-[var(--color-text-strong)] mb-4">说明</h3>
-            <p className="text-gray-500 text-sm">该目标的评测列表按时间和热度展示，不再使用分类标签。</p>
+            <h3 className="text-lg font-semibold font-['Orbitron'] text-[var(--color-text-strong)] mb-4">迁移说明</h3>
+            <p className="text-gray-500 text-sm">历史 Prompt 先作为待判断的提示资源保留。验证后可以人工提炼或迁移为带版本、输入、示例和边界的独立 Skill。</p>
           </div>
         </div>
       </div>
