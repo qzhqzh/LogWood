@@ -2,6 +2,48 @@
 
 > 本文件作为 [`SEO_STRATEGY.md`](./SEO_STRATEGY.md) 的增量变更记录。SEO 的长期原则、builder 约束、JSON-LD 和 canonical 规则仍以主策略文档为准。
 
+## 2026-07-23：Evaluation v2 正式评测
+
+### 背景
+
+新增独立于自由 Review 的正式评测层。Evaluation v2 以版本、环境、任务、证据、复现级别、维度评分、限制和结论为核心，公开页面具有更高的长期引用价值。
+
+### 公开路由
+
+新增：
+
+- `/evaluations`：正式评测聚合页，daily，priority 0.9。
+- `/evaluations/[id]`：仅输出 `published` Evaluation，monthly，priority 0.8。
+
+管理端：
+
+- `/evaluations/manage` 使用路由级 `noindex, nofollow`。
+- `robots.ts` 显式 disallow `/evaluations/manage/`。
+
+### Sitemap
+
+- sitemap 仅查询 `status=published` 的 Evaluation。
+- 详情 URL 使用稳定 Evaluation ID，不依赖标题变化。
+- `lastModified` 使用 `Evaluation.updatedAt`。
+- 历史 Review 不生成独立详情 sitemap 条目；其发现入口仍是 `/talk` 与对象详情。
+
+### Metadata 与语义
+
+- `/evaluations` 使用“正式评测”语义，明确与吐槽室 / 自由记录的差异。
+- `/evaluations/[id]` 使用评测标题和总体结论生成 metadata。
+- Target、Skill、App、Candidate 详情中先展示正式评测，再展示自由记录。
+- 本阶段未新增自定义 Evaluation JSON-LD 类型；仍使用 WebPage metadata 与 BreadcrumbList。待协议和对象版本关系稳定后再评估 Review / ClaimReview 等结构化数据，避免错误声明。
+
+### 验证清单
+
+- `sitemap.test.ts` 覆盖 `/evaluations` 与 published Evaluation 详情。
+- 检查草稿和归档评测不进入公开查询和 sitemap。
+- 检查 `/evaluations/manage` 不被索引。
+- 检查 Evaluation 详情 canonical 使用 `/evaluations/[id]`。
+- 后续 CI 应在真实数据库 schema 更新后运行 `next build` 与 sitemap 抓取测试。
+
+---
+
 ## 2026-07-23：双线生命线运行时 Phase 1
 
 ### 背景
