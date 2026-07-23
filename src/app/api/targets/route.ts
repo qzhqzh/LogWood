@@ -1,27 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { listTargets, getTargetBySlug, getFeatures } from '@/modules/target'
 import { TargetType } from '@prisma/client'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
-import { createTarget, updateTarget, deleteTarget } from '@/modules/target'
 import { isAdminSession } from '@/lib/authz'
 import { recordAdminAction } from '@/modules/audit'
+import { assertNoEvaluationsForSubject } from '@/modules/evaluation'
+import {
+  createTarget,
+  deleteTarget,
+  getFeatures,
+  getTargetBySlug,
+  listTargets,
+  updateTarget,
+} from '@/modules/target'
 
 export const dynamic = 'force-dynamic'
 
 const optionalHttpUrl = z.preprocess((value) => {
   if (typeof value !== 'string') return value
-
   const trimmed = value.trim()
   if (!trimmed) return undefined
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed
-  }
-
-  // 管理端常见输入是 "example.com"，这里自动补全协议。
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
   return `https://${trimmed}`
 }, z.string().url().optional())
 
@@ -31,17 +32,15 @@ const optionalAssetUrl = z.preprocess((value) => {
   if (!trimmed) return undefined
   return trimmed
 }, z.string().refine(
-  (v) => /^https?:\/\//i.test(v) || v.startsWith('/'),
+  (value) => /^https?:\/\//i.test(value) || value.startsWith('/'),
   { message: '必须是 http(s) URL 或 / 开头的路径' },
 ).optional())
 
 const optionalDescription = z.preprocess((value) => {
   if (value === null || value === undefined) return undefined
   if (typeof value !== 'string') return value
-
   const trimmed = value.trim()
-  if (!trimmed) return undefined
-  return trimmed
+  return trimmed || undefined
 }, z.string().max(2000).optional())
 
 const createTargetSchema = z.object({
@@ -57,13 +56,16 @@ const createTargetSchema = z.object({
   compareGroup: z.string().max(80).optional(),
 })
 
-const updateTargetSchema = createTargetSchema.extend({
-  id: z.string().min(1),
-})
+const updateTargetSchema = createTargetSchema.extend({ id: z.string().min(1) })
+const deleteTargetSchema = z.object({ id: z.string().min(1) })
 
-const deleteTargetSchema = z.object({
-  id: z.string().min(1),
-})
+function revalidateTargetLists() {
+  revalidatePath('/editor')
+  revalidatePath('/skills')
+  revalidatePath('/coding')
+  revalidatePath('/tools')
+  revalidatePath('/')
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,38 +76,27 @@ export async function GET(request: NextRequest) {
     const features = searchParams.get('features') === 'true'
 
     if (features) {
-      const featureList = await getFeatures()
-      return NextResponse.json({ features: featureList })
+      return NextResponse.json({ features: await getFeatures() })
     }
 
     if (type && slug) {
       const target = await getTargetBySlug(type, slug)
       if (!target) {
-        return NextResponse.json(
-          { error: 'ERR_TARGET_NOT_FOUND' },
-          { status: 404 }
-        )
+        return NextResponse.json({ error: 'ERR_TARGET_NOT_FOUND' }, { status: 404 })
       }
       return NextResponse.json({ target })
     }
 
     const filter: { type?: TargetType; feature?: string } = {}
-    if (type && (type === 'editor' || type === 'coding' || type === 'model' || type === 'prompt')) {
-      filter.type = type
-    }
-    if (feature) {
-      filter.feature = feature
-    }
+    if (type && Object.values(TargetType).includes(type)) filter.type = type
+    if (feature) filter.feature = feature
 
-    const targets = await listTargets(Object.keys(filter).length > 0 ? filter : undefined)
-
-    return NextResponse.json({ targets })
+    return NextResponse.json({
+      targets: await listTargets(Object.keys(filter).length > 0 ? filter : undefined),
+    })
   } catch (error) {
     console.error('GET /api/targets error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -119,29 +110,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
     }
 
-    const body = await request.json()
-    const validated = createTargetSchema.parse(body)
+    const validated = createTargetSchema.parse(await request.json())
     const result = await createTarget(validated)
-
-    revalidatePath('/editor')
-    revalidatePath('/skills')
-    revalidatePath('/coding')
-    revalidatePath('/')
-    revalidatePath('/')
+    revalidateTargetLists()
     return NextResponse.json(result, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'ERR_TARGET_VALIDATION', details: error.errors },
-        { status: 400 }
+        { status: 400 },
       )
     }
-
     console.error('POST /api/targets error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -155,8 +136,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
     }
 
-    const body = await request.json()
-    const validated = updateTargetSchema.parse(body)
+    const validated = updateTargetSchema.parse(await request.json())
     const result = await updateTarget(validated)
 
     await recordAdminAction({
@@ -167,30 +147,21 @@ export async function PATCH(request: NextRequest) {
       metadata: { name: validated.name, type: validated.type },
     })
 
-    revalidatePath('/editor')
-    revalidatePath('/skills')
-    revalidatePath('/coding')
-    revalidatePath('/')
+    revalidateTargetLists()
     revalidatePath(`/${validated.type}/${result.slug}`)
-    revalidatePath('/')
     return NextResponse.json(result)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'ERR_TARGET_VALIDATION', details: error.errors },
-        { status: 400 }
+        { status: 400 },
       )
     }
-
     if (error instanceof Error && error.message === 'ERR_TARGET_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
-
     console.error('PATCH /api/targets error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -204,8 +175,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
     }
 
-    const body = await request.json()
-    const validated = deleteTargetSchema.parse(body)
+    const validated = deleteTargetSchema.parse(await request.json())
+    await assertNoEvaluationsForSubject('target', validated.id)
     const result = await deleteTarget(validated.id)
 
     await recordAdminAction({
@@ -215,28 +186,22 @@ export async function DELETE(request: NextRequest) {
       targetId: validated.id,
     })
 
-    revalidatePath('/editor')
-    revalidatePath('/skills')
-    revalidatePath('/coding')
-    revalidatePath('/')
-    revalidatePath('/')
+    revalidateTargetLists()
     return NextResponse.json(result)
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'ERR_TARGET_VALIDATION', details: error.errors },
-        { status: 400 }
+        { status: 400 },
       )
     }
-
     if (error instanceof Error && error.message === 'ERR_TARGET_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
-
+    if (error instanceof Error && error.message === 'ERR_SUBJECT_HAS_EVALUATIONS') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     console.error('DELETE /api/targets error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
