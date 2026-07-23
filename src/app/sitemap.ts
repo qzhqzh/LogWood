@@ -11,7 +11,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: canonicalFor('/'), lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: canonicalFor('/candidates'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: canonicalFor('/skills'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
-    { url: canonicalFor('/talk'), lastModified: now, changeFrequency: 'daily', priority: 0.85 },
+    { url: canonicalFor('/evaluations'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { url: canonicalFor('/talk'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
     { url: canonicalFor('/articles'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
     { url: canonicalFor('/tools'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: canonicalFor('/app'), lastModified: now, changeFrequency: 'weekly', priority: 0.65 },
@@ -19,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: canonicalFor('/compare'), lastModified: now, changeFrequency: 'weekly', priority: 0.6 },
   ]
 
-  const [targets, articles, apps, candidates, skills] = await Promise.all([
+  const [targets, articles, apps, candidates, skills, evaluations] = await Promise.all([
     prisma.target.findMany({
       select: { slug: true, type: true, updatedAt: true },
     }),
@@ -37,6 +38,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
     prisma.skill.findMany({
       select: { slug: true, updatedAt: true },
+      where: { status: 'published' },
+    }),
+    prisma.evaluation.findMany({
+      select: { id: true, updatedAt: true },
       where: { status: 'published' },
     }),
   ])
@@ -76,8 +81,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }))
 
+  const evaluationRoutes: MetadataRoute.Sitemap = evaluations.map((evaluation) => ({
+    url: canonicalFor(`/evaluations/${evaluation.id}`),
+    lastModified: evaluation.updatedAt,
+    changeFrequency: 'monthly',
+    priority: 0.8,
+  }))
+
   return [
     ...staticRoutes,
+    ...evaluationRoutes,
     ...skillRoutes,
     ...candidateRoutes,
     ...targetRoutes,
