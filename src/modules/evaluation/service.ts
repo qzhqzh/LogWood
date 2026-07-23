@@ -71,11 +71,7 @@ export interface EvaluationQuery {
 }
 
 interface ResolvedSubject {
-  subjectType: EvaluationSubjectType
-  subjectId: string
   protocol: EvaluationProtocol
-  title: string
-  href: string
 }
 
 function cleanOptionalText(value?: string): string | null {
@@ -115,60 +111,36 @@ async function resolveSubject(
   if (subjectType === 'skill') {
     const subject = await prisma.skill.findUnique({
       where: { id: subjectId },
-      select: { id: true, title: true, slug: true },
+      select: { id: true },
     })
     if (!subject) throw new Error('ERR_SKILL_NOT_FOUND')
-    return {
-      subjectType,
-      subjectId,
-      protocol: EvaluationProtocol.skill,
-      title: subject.title,
-      href: `/skills/${subject.slug}`,
-    }
+    return { protocol: EvaluationProtocol.skill }
   }
 
   if (subjectType === 'target') {
     const subject = await prisma.target.findUnique({
       where: { id: subjectId },
-      select: { id: true, name: true, slug: true, type: true },
+      select: { id: true, type: true },
     })
     if (!subject) throw new Error('ERR_TARGET_NOT_FOUND')
-    return {
-      subjectType,
-      subjectId,
-      protocol: protocolForTarget(subject.type),
-      title: subject.name,
-      href: `/${subject.type}/${subject.slug}`,
-    }
+    return { protocol: protocolForTarget(subject.type) }
   }
 
   if (subjectType === 'app') {
     const subject = await prisma.app.findUnique({
       where: { id: subjectId },
-      select: { id: true, title: true, slug: true },
+      select: { id: true },
     })
     if (!subject) throw new Error('ERR_APP_NOT_FOUND')
-    return {
-      subjectType,
-      subjectId,
-      protocol: EvaluationProtocol.resource,
-      title: subject.title,
-      href: `/app/${subject.slug}`,
-    }
+    return { protocol: EvaluationProtocol.resource }
   }
 
   const subject = await prisma.candidate.findUnique({
     where: { id: subjectId },
-    select: { id: true, title: true, slug: true },
+    select: { id: true },
   })
   if (!subject) throw new Error('ERR_CANDIDATE_NOT_FOUND')
-  return {
-    subjectType,
-    subjectId,
-    protocol: EvaluationProtocol.resource,
-    title: subject.title,
-    href: `/candidates/${subject.slug}`,
-  }
+  return { protocol: EvaluationProtocol.resource }
 }
 
 function subjectCreateData(subjectType: EvaluationSubjectType, subjectId: string) {
@@ -178,6 +150,13 @@ function subjectCreateData(subjectType: EvaluationSubjectType, subjectId: string
     appId: subjectType === 'app' ? subjectId : null,
     candidateId: subjectType === 'candidate' ? subjectId : null,
   }
+}
+
+function subjectWhere(subjectType: EvaluationSubjectType, subjectId: string): Prisma.EvaluationWhereInput {
+  if (subjectType === 'target') return { targetId: subjectId }
+  if (subjectType === 'skill') return { skillId: subjectId }
+  if (subjectType === 'app') return { appId: subjectId }
+  return { candidateId: subjectId }
 }
 
 function validateScores(
@@ -268,7 +247,7 @@ export async function createEvaluation(input: EvaluationInput, authorUserId: str
       reproducibility: input.reproducibility ?? EvaluationReproducibility.untested,
       subjectVersion: cleanOptionalText(input.subjectVersion),
       task: input.task.trim(),
-      environment: environment as Prisma.InputJsonValue | undefined,
+      environment: environment ? environment as Prisma.InputJsonValue : undefined,
       input: cleanOptionalText(input.input),
       procedure: cleanOptionalText(input.procedure),
       output: cleanOptionalText(input.output),
@@ -292,9 +271,9 @@ export async function updateEvaluation(input: UpdateEvaluationInput) {
   const subject = await resolveSubject(input.subjectType, input.subjectId)
   const protocol = input.protocol ?? subject.protocol
   if (protocol !== subject.protocol) throw new Error('ERR_EVALUATION_PROTOCOL_MISMATCH')
-  validatePublication(input, protocol)
-
   const status = input.status ?? existing.status
+  validatePublication({ ...input, status }, protocol)
+
   const evidence = cleanEvidence(input.evidence)
   const environment = cleanEnvironment(input.environment)
 
@@ -341,21 +320,20 @@ export async function listEvaluations(query: EvaluationQuery = {}) {
     includeDrafts = false,
   } = query
 
-  const where: Prisma.EvaluationWhereInput = {}
-  if (!includeDrafts) where.status = EvaluationStatus.published
-  else if (status) where.status = status
-  if (protocol) where.protocol = protocol
-  if (subjectType && subjectId) {
-    where[`${subjectType}Id` as 'targetId' | 'skillId' | 'appId' | 'candidateId'] = subjectId
+  const where: Prisma.EvaluationWhereInput = {
+    ...(!includeDrafts ? { status: EvaluationStatus.published } : status ? { status } : {}),
+    ...(protocol ? { protocol } : {}),
+    ...(subjectType && subjectId ? subjectWhere(subjectType, subjectId) : {}),
   }
+  const safePageSize = Math.max(1, Math.min(pageSize, 100))
 
   const [evaluations, total] = await Promise.all([
     prisma.evaluation.findMany({
       where,
       include: evaluationInclude(),
       orderBy: [{ testedAt: 'desc' }, { updatedAt: 'desc' }],
-      skip: (Math.max(page, 1) - 1) * pageSize,
-      take: pageSize,
+      skip: (Math.max(page, 1) - 1) * safePageSize,
+      take: safePageSize,
     }),
     prisma.evaluation.count({ where }),
   ])
@@ -378,15 +356,14 @@ export async function listPublishedEvaluationsForSubject(
   subjectId: string,
   take = 4,
 ) {
-  const where: Prisma.EvaluationWhereInput = {
-    status: EvaluationStatus.published,
-    [`${subjectType}Id`]: subjectId,
-  }
   return prisma.evaluation.findMany({
-    where,
+    where: {
+      status: EvaluationStatus.published,
+      ...subjectWhere(subjectType, subjectId),
+    },
     include: evaluationInclude(),
     orderBy: [{ testedAt: 'desc' }, { updatedAt: 'desc' }],
-    take,
+    take: Math.max(1, Math.min(take, 20)),
   })
 }
 
