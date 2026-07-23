@@ -17,6 +17,7 @@ export type AuditTargetType =
   | 'article_comment'
   | 'comment'
   | 'review'
+  | 'evaluation'
   | 'target'
   | 'app'
   | 'tag'
