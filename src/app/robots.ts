@@ -11,6 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         '/app/manage/',
         '/articles/manage/',
         '/comments/manage/',
+        '/evaluations/manage/',
         '/targets/manage/',
         '/auth/',
         '/submit',
