@@ -13,15 +13,36 @@ export function evaluationScores(value: Prisma.JsonValue | null | undefined): Re
 
 export function evaluationEvidence(value: Prisma.JsonValue | null | undefined): EvaluationEvidence[] {
   if (!Array.isArray(value)) return []
-  return value.filter((item): item is EvaluationEvidence => {
-    if (!item || Array.isArray(item) || typeof item !== 'object') return false
-    return typeof item.type === 'string' && typeof item.label === 'string'
+  const allowedTypes = new Set<EvaluationEvidence['type']>(['url', 'image', 'log', 'code', 'file', 'note'])
+
+  return value.flatMap((item) => {
+    if (!item || Array.isArray(item) || typeof item !== 'object') return []
+    const raw = item as Prisma.JsonObject
+    if (typeof raw.type !== 'string' || !allowedTypes.has(raw.type as EvaluationEvidence['type'])) return []
+    if (typeof raw.label !== 'string') return []
+
+    return [{
+      type: raw.type as EvaluationEvidence['type'],
+      label: raw.label,
+      url: typeof raw.url === 'string' ? raw.url : undefined,
+      note: typeof raw.note === 'string' ? raw.note : undefined,
+    }]
   })
 }
 
 export function evaluationEnvironment(value: Prisma.JsonValue | null | undefined): EvaluationEnvironment {
   if (!value || Array.isArray(value) || typeof value !== 'object') return {}
-  return value as EvaluationEnvironment
+  const raw = value as Prisma.JsonObject
+  const stringValue = (key: string) => typeof raw[key] === 'string' ? raw[key] as string : undefined
+  return {
+    model: stringValue('model'),
+    modelVersion: stringValue('modelVersion'),
+    software: stringValue('software'),
+    softwareVersion: stringValue('softwareVersion'),
+    operatingSystem: stringValue('operatingSystem'),
+    hardware: stringValue('hardware'),
+    notes: stringValue('notes'),
+  }
 }
 
 export function averageEvaluationScore(scores: Record<string, number>): number | null {
