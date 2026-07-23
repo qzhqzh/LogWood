@@ -45,6 +45,33 @@ enum ReviewStatus {
   deleted
 }
 
+enum EvaluationStatus {
+  draft
+  published
+  archived
+}
+
+enum EvaluationProtocol {
+  skill
+  model
+  software
+  resource
+}
+
+enum EvaluationVerdict {
+  verified
+  conditional
+  failed
+  inconclusive
+}
+
+enum EvaluationReproducibility {
+  untested
+  single_run
+  repeated
+  reproduced
+}
+
 enum CommentStatus {
   published
   pending
@@ -98,6 +125,7 @@ model User {
   updatedAt     DateTime @updatedAt
 
   reviews       Review[]
+  evaluations   Evaluation[]
   comments      Comment[]
   reviewLikes   ReviewLike[]
   commentLikes  CommentLike[]
@@ -155,6 +183,7 @@ model Target {
   updatedAt        DateTime     @default(now()) @updatedAt
 
   reviews          Review[]
+  evaluations      Evaluation[]
 
   @@index([compareGroup])
   @@map("targets")
@@ -197,6 +226,55 @@ model Review {
   @@index([status])
   @@index([createdAt])
   @@map("reviews")
+}
+
+/// Evaluation v2 is the formal, evidence-backed assessment layer.
+/// Exactly one subject relation must be populated; the application service
+/// enforces this invariant and validates protocol-specific publication gates.
+model Evaluation {
+  id                String                     @id @default(cuid())
+  authorUserId      String?
+  targetId          String?
+  skillId           String?
+  appId             String?
+  candidateId       String?
+  title             String
+  protocol          EvaluationProtocol
+  protocolVersion   Int                        @default(2)
+  status            EvaluationStatus           @default(draft)
+  verdict           EvaluationVerdict          @default(inconclusive)
+  reproducibility   EvaluationReproducibility  @default(untested)
+  subjectVersion    String?
+  task              String
+  environment       Json?
+  input              String?
+  procedure          String?
+  output             String?
+  evidence           Json?
+  scores             Json?
+  strengths          String?
+  limitations        String?
+  conclusion         String
+  repeatCount        Int                        @default(1)
+  testedAt           DateTime                   @default(now())
+  publishedAt        DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  author             User?                      @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  target             Target?                    @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  skill              Skill?                     @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  app                App?                       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  candidate          Candidate?                 @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([targetId])
+  @@index([skillId])
+  @@index([appId])
+  @@index([candidateId])
+  @@index([authorUserId])
+  @@index([status, testedAt])
+  @@index([protocol, status])
+  @@map("evaluations")
 }
 
 model ReviewLike {
@@ -346,6 +424,7 @@ model Skill {
 
   author         User?       @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
   reviews        Review[]
+  evaluations    Evaluation[]
 
   @@index([status, category, sortOrder])
   @@index([status, updatedAt])
@@ -373,6 +452,7 @@ model Candidate {
 
   author            User?                @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
   reviews           Review[]
+  evaluations       Evaluation[]
 
   @@index([status, sortOrder])
   @@index([status, updatedAt])
@@ -396,11 +476,11 @@ model App {
 
   author          User?     @relation(fields: [authorUserId], references: [id])
   reviews         Review[]
+  evaluations     Evaluation[]
 
   @@index([status, createdAt])
   @@map("apps")
 }
-
 
 model ArticleComment {
   id               String          @id @default(cuid())
