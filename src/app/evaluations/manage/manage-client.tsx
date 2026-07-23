@@ -261,11 +261,14 @@ export default function ManageEvaluationsPage() {
 
   const subjectOptions = subjects[subjectType]
   const dimensions = PROTOCOLS[protocol].dimensions
+  const publicationBasicsComplete =
+    title.trim().length >= 4 &&
+    task.trim().length >= 10 &&
+    conclusion.trim().length >= 10
   const canSubmit = Boolean(
     title.trim().length >= 2 &&
     subjectId &&
-    task.trim().length >= 3 &&
-    conclusion.trim().length >= 3,
+    (status !== 'published' || publicationBasicsComplete),
   )
 
   function resetForm() {
@@ -382,7 +385,9 @@ export default function ManageEvaluationsPage() {
   async function submitEvaluation(event: React.FormEvent) {
     event.preventDefault()
     if (!canSubmit) {
-      setError('请至少填写评测对象、标题、任务和结论。')
+      setError(status === 'published'
+        ? '发布前标题至少 4 字，测试任务和总体结论至少 10 字。'
+        : '草稿至少需要评测对象和标题。')
       return
     }
 
@@ -617,7 +622,12 @@ export default function ManageEvaluationsPage() {
             </label>
           </div>
 
-          <TextAreaField label="测试任务" value={task} onChange={setTask} required />
+          <TextAreaField
+            label="测试任务"
+            value={task}
+            onChange={setTask}
+            required={status === 'published'}
+          />
 
           <section>
             <h3 className="font-semibold text-[var(--color-text-strong)] mb-3">测试环境</h3>
@@ -681,7 +691,13 @@ export default function ManageEvaluationsPage() {
             <TextAreaField label="成功点" value={strengths} onChange={setStrengths} />
             <TextAreaField label="失败、限制与边界" value={limitations} onChange={setLimitations} />
           </div>
-          <TextAreaField label="总体结论" value={conclusion} onChange={setConclusion} rows={5} required />
+          <TextAreaField
+            label="总体结论"
+            value={conclusion}
+            onChange={setConclusion}
+            rows={5}
+            required={status === 'published'}
+          />
 
           <button
             type="submit"
