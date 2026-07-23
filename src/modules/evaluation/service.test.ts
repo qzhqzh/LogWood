@@ -66,7 +66,7 @@ function publishedSkillInput() {
 describe('evaluation/service createEvaluation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    prismaMock.skill.findUnique.mockResolvedValue({ id: 's1', title: '代码审查 Skill', slug: 'code-review' })
+    prismaMock.skill.findUnique.mockResolvedValue({ id: 's1' })
     prismaMock.evaluation.create.mockResolvedValue({ id: 'e1' })
   })
 
@@ -84,23 +84,37 @@ describe('evaluation/service createEvaluation', () => {
           status: EvaluationStatus.published,
           repeatCount: 2,
           publishedAt: expect.any(Date),
+          evidence: [{
+            type: 'url',
+            label: '测试提交',
+            url: 'https://example.com/commit',
+          }],
         }),
       }),
     )
   })
 
-  it('allows incomplete protocol fields while the evaluation is a draft', async () => {
+  it('allows task, conclusion and partial scores to remain incomplete in a draft', async () => {
     await createEvaluation({
       subjectType: 'skill',
       subjectId: 's1',
       title: '待补充评测',
-      task: '记录第一次测试。',
-      conclusion: '尚未形成结论。',
+      task: '',
+      conclusion: '',
       status: EvaluationStatus.draft,
       scores: { output_quality: 8 },
     }, 'u1')
 
-    expect(prismaMock.evaluation.create).toHaveBeenCalled()
+    expect(prismaMock.evaluation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          task: '',
+          conclusion: '',
+          status: EvaluationStatus.draft,
+          scores: { output_quality: 8 },
+        }),
+      }),
+    )
   })
 
   it('rejects a published evaluation with incomplete dimension scores', async () => {
@@ -121,8 +135,6 @@ describe('evaluation/service createEvaluation', () => {
   it('rejects a protocol that does not match the subject type', async () => {
     prismaMock.target.findUnique.mockResolvedValue({
       id: 't1',
-      name: 'Claude',
-      slug: 'claude',
       type: TargetType.model,
     })
 
