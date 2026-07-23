@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
+import { EvaluationPanel } from '@/components/evaluation-panel'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
@@ -121,7 +122,8 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
           </p>
         )}
 
-        <ReviewPanel subjectType="skill" subjectId={skill.id} title="验证、评测或吐槽这份 Skill" />
+        <EvaluationPanel subjectType="skill" subjectId={skill.id} />
+        <ReviewPanel subjectType="skill" subjectId={skill.id} title="自由记录、提问或吐槽" />
       </article>
 
       <SiteFooter />
