@@ -231,6 +231,8 @@ model Review {
 /// Evaluation v2 is the formal, evidence-backed assessment layer.
 /// Exactly one subject relation must be populated; the application service
 /// enforces this invariant and validates protocol-specific publication gates.
+/// Subject deletion is restricted so formal evidence cannot disappear through
+/// a cascading delete; archive/migrate the Evaluation explicitly first.
 model Evaluation {
   id                String                     @id @default(cuid())
   authorUserId      String?
@@ -262,10 +264,10 @@ model Evaluation {
   updatedAt          DateTime                   @updatedAt
 
   author             User?                      @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
-  target             Target?                    @relation(fields: [targetId], references: [id], onDelete: Cascade)
-  skill              Skill?                     @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  app                App?                       @relation(fields: [appId], references: [id], onDelete: Cascade)
-  candidate          Candidate?                 @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  target             Target?                    @relation(fields: [targetId], references: [id], onDelete: Restrict)
+  skill              Skill?                     @relation(fields: [skillId], references: [id], onDelete: Restrict)
+  app                App?                       @relation(fields: [appId], references: [id], onDelete: Restrict)
+  candidate          Candidate?                 @relation(fields: [candidateId], references: [id], onDelete: Restrict)
 
   @@index([targetId])
   @@index([skillId])
@@ -559,8 +561,8 @@ model RateLimit {
 model AdminAuditLog {
   id          String   @id @default(cuid())
   actorUserId String
-  action      String   // e.g. 'article.delete', 'comment.hide', 'target.delete'
-  targetType  String   // 'article' | 'comment' | 'review' | 'target' | 'app' | 'tag' | 'emoji'
+  action      String   // e.g. 'article.delete', 'comment.hide', 'target.delete', 'evaluation.update'
+  targetType  String   // 'article' | 'comment' | 'review' | 'evaluation' | 'target' | 'app' | 'tag' | 'emoji'
   targetId    String
   metadata    String?  // JSON-encoded extra context
   createdAt   DateTime @default(now())
