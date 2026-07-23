@@ -23,6 +23,7 @@ describe('app/robots', () => {
       '/app/manage/',
       '/articles/manage/',
       '/comments/manage/',
+      '/evaluations/manage/',
       '/targets/manage/',
       '/auth/',
       '/submit',

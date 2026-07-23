@@ -6,6 +6,7 @@ import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
 import { Breadcrumbs } from '@/components/breadcrumbs'
+import { EvaluationPanel } from '@/components/evaluation-panel'
 import { ReviewPanel } from '@/components/review-panel'
 import {
   buildBreadcrumbList,
@@ -49,7 +50,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '画廊', path: '/app' },
+    { name: '案例画廊', path: '/app' },
     { name: app.title, path },
   ]
   const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
@@ -83,7 +84,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
               </div>
             )}
             <a href={app.appUrl} target="_blank" rel="noopener noreferrer" className="cyber-button px-5 py-2 rounded-lg inline-block mt-8">
-              访问应用
+              访问项目
             </a>
           </div>
 
@@ -98,9 +99,8 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
           </div>
         </div>
 
-        <div className="mt-10">
-          <ReviewPanel subjectType="app" subjectId={app.id} title="评测这件作品" />
-        </div>
+        <EvaluationPanel subjectType="app" subjectId={app.id} />
+        <ReviewPanel subjectType="app" subjectId={app.id} title="自由记录、提问或吐槽" />
       </section>
       <SiteFooter />
     </main>

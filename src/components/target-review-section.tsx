@@ -1,5 +1,4 @@
-'use client'
-
+import { EvaluationPanel } from '@/components/evaluation-panel'
 import { ReviewPanel } from '@/components/review-panel'
 
 interface TargetReviewSectionProps {
@@ -9,10 +8,14 @@ interface TargetReviewSectionProps {
 
 export function TargetReviewSection({ targetId, canPublishReview }: TargetReviewSectionProps) {
   return (
-    <ReviewPanel
-      subjectType="target"
-      subjectId={targetId}
-      canPublishReview={canPublishReview}
-    />
+    <>
+      <EvaluationPanel subjectType="target" subjectId={targetId} />
+      <ReviewPanel
+        subjectType="target"
+        subjectId={targetId}
+        canPublishReview={canPublishReview}
+        title="自由记录、提问或吐槽"
+      />
+    </>
   )
 }

@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
+import { EvaluationPanel } from '@/components/evaluation-panel'
 import { ReviewPanel } from '@/components/review-panel'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
@@ -117,11 +118,12 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
           </p>
         </section>
 
+        <EvaluationPanel subjectType="candidate" subjectId={candidate.id} />
         <ReviewPanel
           subjectType="candidate"
           subjectId={candidate.id}
           canPublishReview={candidate.status !== 'promoted' && candidate.status !== 'dropped'}
-          title="写下试用记录或吐槽"
+          title="自由试用记录、提问或吐槽"
         />
       </article>
 

@@ -7,6 +7,7 @@ vi.mock('@/lib/prisma', () => ({
     app: { findMany: vi.fn() },
     candidate: { findMany: vi.fn() },
     skill: { findMany: vi.fn() },
+    evaluation: { findMany: vi.fn() },
   },
 }))
 
@@ -19,6 +20,7 @@ const prismaMock = prisma as unknown as {
   app: { findMany: ReturnType<typeof vi.fn> }
   candidate: { findMany: ReturnType<typeof vi.fn> }
   skill: { findMany: ReturnType<typeof vi.fn> }
+  evaluation: { findMany: ReturnType<typeof vi.fn> }
 }
 
 const ORIGINAL_SITE_URL = process.env.SITE_URL
@@ -29,6 +31,7 @@ function mockEmptyCollections() {
   prismaMock.app.findMany.mockResolvedValue([])
   prismaMock.candidate.findMany.mockResolvedValue([])
   prismaMock.skill.findMany.mockResolvedValue([])
+  prismaMock.evaluation.findMany.mockResolvedValue([])
 }
 
 describe('app/sitemap', () => {
@@ -43,13 +46,14 @@ describe('app/sitemap', () => {
     else process.env.SITE_URL = ORIGINAL_SITE_URL
   })
 
-  it('includes the public dual-lifeline routes and excludes low-value legacy entries', async () => {
+  it('includes public lifecycle routes and excludes low-value legacy entries', async () => {
     const result = await sitemap()
     const urls = result.map((entry) => entry.url)
 
     expect(urls).toContain('https://logwood.test')
     expect(urls).toContain('https://logwood.test/candidates')
     expect(urls).toContain('https://logwood.test/skills')
+    expect(urls).toContain('https://logwood.test/evaluations')
     expect(urls).toContain('https://logwood.test/talk')
     expect(urls).toContain('https://logwood.test/articles')
     expect(urls).toContain('https://logwood.test/forge')
@@ -72,7 +76,7 @@ describe('app/sitemap', () => {
     expect(cursorEntry?.lastModified).toEqual(updatedAt)
   })
 
-  it('queries Target and Skill freshness without loading Review relations', async () => {
+  it('queries public content freshness without loading Review relations', async () => {
     await sitemap()
 
     expect(prismaMock.target.findMany).toHaveBeenCalledWith({
@@ -82,9 +86,16 @@ describe('app/sitemap', () => {
       select: { slug: true, updatedAt: true },
       where: { status: 'published' },
     })
+    expect(prismaMock.evaluation.findMany).toHaveBeenCalledWith({
+      select: { id: true, updatedAt: true },
+      where: { status: 'published' },
+    })
   })
 
-  it('includes published Skill, article, app and candidate details with absolute URLs', async () => {
+  it('includes published Evaluation, Skill, article, app and candidate details', async () => {
+    prismaMock.evaluation.findMany.mockResolvedValue([
+      { id: 'evaluation-1', updatedAt: new Date('2026-03-05T00:00:00Z') },
+    ])
     prismaMock.skill.findMany.mockResolvedValue([
       { slug: 'review-skill', updatedAt: new Date('2026-03-03T00:00:00Z') },
     ])
@@ -101,6 +112,7 @@ describe('app/sitemap', () => {
     const result = await sitemap()
     const urls = result.map((entry) => entry.url)
 
+    expect(urls).toContain('https://logwood.test/evaluations/evaluation-1')
     expect(urls).toContain('https://logwood.test/skills/review-skill')
     expect(urls).toContain('https://logwood.test/articles/hello-world')
     expect(urls).toContain('https://logwood.test/app/taskbox')

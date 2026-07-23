@@ -15,6 +15,11 @@ const sections = [
     colorClass: 'hover-text-coding',
   },
   {
+    title: '正式评测',
+    href: '/evaluations',
+    colorClass: 'hover:text-emerald-200',
+  },
+  {
     title: '吐槽室',
     href: '/talk',
     colorClass: 'hover-text-app',

@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { assertNoEvaluationsForSubject } from '@/modules/evaluation'
 import {
   createCandidate,
   deleteCandidate,
@@ -127,6 +128,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const validated = deleteSchema.parse(await request.json())
+    await assertNoEvaluationsForSubject('candidate', validated.id)
     const result = await deleteCandidate(validated.id)
     revalidatePath('/candidates')
     return NextResponse.json(result)
@@ -136,6 +138,9 @@ export async function DELETE(request: NextRequest) {
     }
     if (error instanceof Error && error.message === 'ERR_CANDIDATE_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
+    }
+    if (error instanceof Error && error.message === 'ERR_SUBJECT_HAS_EVALUATIONS') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
     }
     console.error('DELETE /api/candidates error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
