@@ -50,7 +50,7 @@ const evaluationBodySchema = z.object({
   verdict: z.nativeEnum(EvaluationVerdict).optional(),
   reproducibility: z.nativeEnum(EvaluationReproducibility).optional(),
   subjectVersion: z.string().max(120).optional(),
-  task: z.string().min(3).max(10000),
+  task: z.string().max(10000),
   environment: environmentSchema,
   input: z.string().max(50000).optional(),
   procedure: z.string().max(50000).optional(),
@@ -59,7 +59,7 @@ const evaluationBodySchema = z.object({
   scores: z.record(z.number().min(0).max(10)).optional(),
   strengths: z.string().max(10000).optional(),
   limitations: z.string().max(10000).optional(),
-  conclusion: z.string().min(3).max(20000),
+  conclusion: z.string().max(20000),
   repeatCount: z.number().int().min(1).max(999).optional(),
   testedAt: z.coerce.date().optional(),
 })
