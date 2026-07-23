@@ -89,12 +89,17 @@ function cleanEnvironment(environment?: EvaluationEnvironment): EvaluationEnviro
 
 function cleanEvidence(evidence?: EvaluationEvidence[]): EvaluationEvidence[] {
   return (evidence || [])
-    .map((item) => ({
-      type: item.type,
-      label: item.label.trim(),
-      url: cleanOptionalText(item.url) || undefined,
-      note: cleanOptionalText(item.note) || undefined,
-    }))
+    .map((item) => {
+      const cleaned: EvaluationEvidence = {
+        type: item.type,
+        label: item.label.trim(),
+      }
+      const url = cleanOptionalText(item.url)
+      const note = cleanOptionalText(item.note)
+      if (url) cleaned.url = url
+      if (note) cleaned.note = note
+      return cleaned
+    })
     .filter((item) => item.label.length > 0)
 }
 
