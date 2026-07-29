@@ -50,7 +50,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '案例画廊', path: '/app' },
+    { name: '画廊', path: '/app' },
     { name: app.title, path },
   ]
   const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)

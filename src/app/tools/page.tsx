@@ -19,8 +19,8 @@ import {
 export const revalidate = 300
 
 export const metadata: Metadata = buildMetadata({
-  title: '工具收藏',
-  description: '历史 AI 工具与评测收藏——创作器、编码助手、模型与流程',
+  title: '收藏室 · 历史工具',
+  description: '收藏室中的历史 AI 工具、模型、提示词和流程数据。',
   path: '/tools',
 })
 
@@ -91,7 +91,7 @@ export default async function SkillsPage({ searchParams }: SkillsPageProps) {
       <JsonLd
         value={buildBreadcrumbList([
           { name: '首页', path: '/' },
-          { name: '工具收藏', path: '/tools' },
+          { name: '收藏室', path: '/tools' },
         ])}
       />
       <div className="fixed inset-0 pointer-events-none">
@@ -101,21 +101,21 @@ export default async function SkillsPage({ searchParams }: SkillsPageProps) {
 
       <SiteNav
         active="coding"
-        actionLabel={isAdmin ? '工具管理' : undefined}
+        actionLabel={isAdmin ? '历史收藏管理' : undefined}
         actionHref={isAdmin ? `/targets/manage/${selectedCategory}` : undefined}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
         <div className="mb-12">
           <div className="inline-block mb-4 px-4 py-1 border border-purple-500/30 rounded-full bg-purple-500/5">
-            <span className="text-purple-400 text-sm tracking-widest uppercase">TOOL SHELF</span>
+            <span className="text-purple-400 text-sm tracking-widest uppercase">LEGACY COLLECTION</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] mb-4">
-            <span className="gradient-text">工具收藏</span>
+            <span className="gradient-text">收藏室 · 历史工具</span>
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl">
-            历史 AI 工具与评测仍保留在这里。真正的提示词 × 效果标本请去{' '}
-            <Link href="/skills" className="text-cyan-400 hover:text-cyan-300">Skill 室</Link>。
+            这里保留旧 Target 模型中的工具与评测；新的通用提示词、流程和 Skill 统一进入{' '}
+            <Link href="/skills" className="text-cyan-400 hover:text-cyan-300">收藏室主入口</Link>。
           </p>
         </div>
 

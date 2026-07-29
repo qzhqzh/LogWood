@@ -92,7 +92,7 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '资源收藏', path: '/tools' },
+    { name: '收藏室', path: '/tools' },
     { name: '编码工具', path: '/tools?category=coding' },
     { name: target.name, path },
   ]

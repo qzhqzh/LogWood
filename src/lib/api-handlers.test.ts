@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { z } from 'zod'
+import * as z from 'zod'
 import { withApiError } from './api-handlers'
 
 // Suppress logger output during tests; the wrapper logs unhandled errors.

@@ -24,10 +24,12 @@
 - 功能定位：**AI 灵感炼成与实践沉淀社区**
 - 核心目标：将随手灵感和外部资源，经由试用、评测、修订和打包，逐步炼成可复用、可验证、可快速上手的模板、提示词、工作流和技能包；同时保存沿途的吐槽、失败、讨论、技术小结和深度反思。
 
-产品采用“一条生命线、两条轨道”：
+当前整理主线收口为：**灵感 → 收藏**。
 
-1. 资产进化线：灵感 / 资源 → 观察 → 试用 → 正式评测 → 可复用 Skill → 技能包 → 维护或归档。
-2. 经验沉淀线：自由记录 / 吐槽 → 讨论 / 求证 → 实验与失败样本 → 正式评测 / 技术小结 → 复盘反思。
+1. 灵感是低成本记录的碎片，通过未处理、好灵感、不合适三个池子和 Tags 淘洗。
+2. 收藏室统一承载工具、提示词、模板、流程和 Skill；`/skills` 为主入口，`/tools` 保留历史 Target 数据。
+3. 画廊是图片优先的收藏室，由 App 模型和 `/app` 路由承载。
+4. 产品 / 服务可以由多个 Skill 组合形成，但当前没有独立页面或数据模型。
 
 整体升级由 GitHub Issue #15 跟踪。
 
@@ -38,8 +40,11 @@
 ### 3.1 公开能力
 
 - 找灵感：`/candidates`
-  - 复用现有 Candidate 模型，作为灵感池和待测清单。
-- Skill 库：`/skills`
+  - 复用现有 Candidate 模型，作为灵感池。
+  - `watching / evaluating / dropped / promoted` 分别展示为未处理 / 好灵感 / 不合适 / 已转化。
+  - 登录用户可通过 `New` 提交文本或图片；文本由 DeepSeek 保守提炼，图片直接保存。
+  - 灵感作者或管理员可随时归类、增删 Tags，并按标题、备注和 Tags 搜索。
+- 收藏室：`/skills`
   - 独立 Skill 模型；当前主要为 Prompt × Effect 型资产。
 - 正式评测：`/evaluations`
   - Evaluation v2 聚合与协议筛选。
@@ -47,9 +52,10 @@
 - 吐槽室：`/talk`
   - 聚合历史 Review 自由记录、提问和吐槽。
 - 洞笔记：`/articles`
-- 资源收藏：`/tools`
-  - 保留历史 Target、Editor、Coding、Model、Prompt 数据和详情 URL。
-- 案例画廊：`/app`
+- 收藏室历史数据：`/tools`
+  - 保留历史 Target、Editor、Coding、Model、Prompt 数据和详情 URL，后续并入收藏室统一模型。
+- 画廊：`/app`
+  - 图片优先的收藏室，继续复用 App 模型和历史 URL。
 - AI 炼成助手：`/forge`
   - 确定性本地模板；尚未接入真实模型。
 
@@ -78,7 +84,7 @@ Target、Skill、App、Candidate 详情现在同时展示：
 
 - 技术栈：Next.js 14 + TypeScript + Tailwind + Prisma + PostgreSQL + NextAuth
 - 架构风格：模块化单体（`src/modules`）
-- 部署：Docker Compose；生产建议 build + start
+- 部署：Docker Compose；默认 `NODE_ENV=production`，由 entrypoint 执行 build + start。仅本地实时开发显式使用 `NODE_ENV=development`。
 - 数据库更新：当前仓库启动链路使用 `prisma db push`；正式环境应在执行前审阅 schema diff 和备份策略。
 
 Evaluation v2 上线要求：
@@ -96,6 +102,7 @@ bun run build
 - `identity`：登录和匿名身份
 - `skill`：Skill CRUD、分类、效果图和草稿
 - `candidate`：灵感 / 候选及现有晋升流程
+  - 快速创建采用 Route Handler → Candidate AI Service → Candidate Service；API key 仅由服务端环境变量读取。
 - `target`：历史模型、软件、工具和 Prompt 资源
 - `app`：案例、应用和项目
 - `review`：自由记录，多态关联 Target / Skill / App / Candidate
@@ -153,6 +160,7 @@ Evaluation 只有满足以下条件才能发布：
 本阶段新增测试：
 
 - `src/modules/evaluation/service.test.ts`
+- `src/modules/candidate/idea.test.ts`
 - `src/app/sitemap.test.ts` 的 Evaluation 覆盖
 
 仍需补充：
@@ -176,11 +184,29 @@ Evaluation 只有满足以下条件才能发布：
 ### 运行与安全
 
 - 生产环境必须正确配置 `NEXTAUTH_URL`、`NEXTAUTH_SECRET` 和 `DATABASE_URL`。
+- 快速灵感功能必须配置服务端 `DEEPSEEK_API_KEY`。
 - Schema 更新前必须备份数据库并审阅新增表、枚举和索引。
 - 上传仍需对象存储、病毒扫描和更严格域名白名单。
 - 当前缺少可执行的 GitHub Actions 门禁；合并前依赖人工静态审查，部署环境必须补跑测试和构建。
 
 ## 9. 变更记录
+
+### 2026-07-29：灵感与收藏主线
+
+- 灵感池默认展示未处理内容，并拆分好灵感、不合适、已转化池。
+- 新增标题、备注和 Tags 搜索。
+- 灵感详情支持作者或管理员即时归类和增删 Tags。
+- 工具收藏与 Skill 收口为“收藏室”；`/skills` 为主入口，`/tools` 保留历史数据兼容。
+- App 层保持“画廊”，定义为图片优先的收藏室。
+- 灵感可以收入收藏室或画廊；产品 / 服务保留为未来由多个 Skill 组合形成的结果。
+
+### 2026-07-23：Qwen 快速灵感
+
+- `/candidates` 新增 `New` 快速输入弹窗，支持一句话、关键词、GitHub 仓库和文档链接。
+- 新增登录校验、每日每用户 10 次限流、重复候选复用和服务端 DeepSeek 提炼。
+- 模型只允许保留用户输入中实际出现的 URL；提示词禁止声称访问链接或编造热度、功能和效果。
+- 新增 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL` 和 `DEEPSEEK_IDEA_MODEL` 服务端配置。
+- New 弹窗增加“文本 / 图片”两个独立入口；图片入口不调用 AI，直接保存标题、图片、Tags 和可选备注。
 
 ### 2026-07-23：Evaluation v2 + 评测协议
 
@@ -198,7 +224,7 @@ Evaluation 只有满足以下条件才能发布：
 ### 2026-07-23：双线生命线运行时 Phase 1
 
 - 副标题、SEO 和首页更新为“**大浪淘沙，找寻灵感**”。
-- 一级导航收口为找灵感 / Skill 库 / 吐槽室 / 洞笔记。
+- 一级导航收口为找灵感 / 收藏室 / 吐槽室 / 洞笔记。
 - Candidate 公共页面改为灵感池语义。
 - 新增 `/talk` 和多态 Subject 展示适配器。
 - Forge Skill 草稿从 `createTarget()` 修复为 `createSkill()`。

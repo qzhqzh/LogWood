@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = buildMetadata({
   title: '资源对比',
-  description: '并排比较历史资源收藏的效果图、评分与近期使用记录',
+  description: '并排比较收藏室历史条目的效果图、评分与近期使用记录',
   path: '/compare',
 })
 
@@ -49,7 +49,7 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
       <JsonLd
         value={buildBreadcrumbList([
           { name: '首页', path: '/' },
-          { name: '资源收藏', path: '/tools' },
+          { name: '收藏室', path: '/tools' },
           { name: '资源对比', path: '/compare' },
         ])}
       />
@@ -72,7 +72,7 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
               至少需要 2 个资源。可在资源管理中填写「对比分组键」，或用 ids 参数打开本页。
             </p>
             <Link href="/tools" className="cyber-button px-6 py-2 rounded-lg inline-block">
-              回资源收藏
+              回收藏室
             </Link>
           </div>
         ) : (

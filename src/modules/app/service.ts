@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
 export const APP_STATUSES = ['draft', 'published', 'archived'] as const
 
@@ -44,12 +45,17 @@ function slugify(input: string): string {
     .replace(/-+/g, '-') || `app-${Date.now()}`
 }
 
-async function ensureUniqueSlug(baseSlug: string, appIdToIgnore?: string): Promise<string> {
+async function ensureUniqueSlug(
+  baseSlug: string,
+  appIdToIgnore?: string,
+  db: typeof prisma | Prisma.TransactionClient = prisma,
+): Promise<string> {
+  const model = (db as typeof prisma).app
   let slug = baseSlug
   let index = 1
 
   while (true) {
-    const existing = await appModel.findUnique({ where: { slug } })
+    const existing = await model.findUnique({ where: { slug } })
     if (!existing || existing.id === appIdToIgnore) return slug
     index += 1
     slug = `${baseSlug}-${index}`
@@ -156,11 +162,16 @@ export async function getAppBySlug(slug: string) {
   }
 }
 
-export async function createApp(input: CreateAppInput, authorUserId?: string) {
+export async function createApp(
+  input: CreateAppInput,
+  authorUserId?: string,
+  db: typeof prisma | Prisma.TransactionClient = prisma,
+) {
+  const model = (db as typeof prisma).app
   const baseSlug = slugify(input.name)
-  const slug = await ensureUniqueSlug(baseSlug)
+  const slug = await ensureUniqueSlug(baseSlug, undefined, db)
 
-  const app = await appModel.create({
+  const app = await model.create({
     data: {
       name: input.name,
       slug,

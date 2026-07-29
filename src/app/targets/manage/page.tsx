@@ -70,7 +70,7 @@ function ManageTargetsPageContent() {
   const scopedType = parseScopedType(searchParams.get('type'))
   const managePath = scopedType ? `/targets/manage?type=${scopedType}` : '/targets/manage'
   const activeTypeItem = scopedType ? TARGET_TYPE_ITEMS.find((item) => item.key === scopedType) : null
-  const titleText = activeTypeItem ? `${activeTypeItem.label}管理` : '工具收藏管理'
+  const titleText = activeTypeItem ? `${activeTypeItem.label}管理` : '收藏室历史数据管理'
   const backHref = activeTypeItem?.backHref || '/tools'
   const { data: session, status: sessionStatus } = useSession()
   const [editingId, setEditingId] = useState<string | null>(null)

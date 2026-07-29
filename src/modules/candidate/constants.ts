@@ -1,10 +1,10 @@
 export const CANDIDATE_STATUSES = ['watching', 'evaluating', 'promoted', 'dropped'] as const
 
 export const CANDIDATE_STATUS_LABELS: Record<string, string> = {
-  watching: '观察中',
-  evaluating: '评测中',
-  promoted: '已晋升',
-  dropped: '已放弃',
+  watching: '未处理',
+  evaluating: '好灵感',
+  promoted: '已转化',
+  dropped: '不合适',
 }
 
 export function candidateStatusLabel(status: string): string {

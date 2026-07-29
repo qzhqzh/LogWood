@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ReviewStatus } from '@prisma/client'
+import { ActorType, ReviewStatus } from '@prisma/client'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
@@ -54,7 +54,7 @@ describe('review/service createReview', () => {
           rating: 6,
           content: 'a'.repeat(80),
         },
-        { userId: 'u1' }
+        { actorType: ActorType.user, actorKey: 'user:u1', userId: 'u1' }
       )
     ).rejects.toThrow('ERR_REVIEW_VALIDATION')
   })
@@ -69,7 +69,7 @@ describe('review/service createReview', () => {
           rating: 4,
           content: 'a'.repeat(80),
         },
-        { userId: 'u1' }
+        { actorType: ActorType.user, actorKey: 'user:u1', userId: 'u1' }
       )
     ).rejects.toThrow('ERR_TARGET_NOT_FOUND')
   })
@@ -89,7 +89,11 @@ describe('review/service createReview', () => {
         rating: 4,
         content: 'a'.repeat(80),
       },
-      { anonymousUserId: 'au1' }
+      {
+        actorType: ActorType.anonymous,
+        actorKey: 'anonymous:au1',
+        anonymousUserId: 'au1',
+      }
     )
 
     expect(prismaMock.review.create).toHaveBeenCalledWith(

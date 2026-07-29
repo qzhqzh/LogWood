@@ -40,7 +40,7 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: 'Skill 库', path: '/skills' },
+    { name: '收藏室', path: '/skills' },
     { name: skillCategoryLabel(skill.category), path: `/skills?category=${encodeURIComponent(skill.category)}` },
     { name: skill.title, path: `/skills/${skill.slug}` },
   ]
@@ -55,7 +55,7 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
       />
 
       <article className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <Link href="/skills" className="text-sm text-cyan-400 hover:text-cyan-300">← 回 Skill 库</Link>
+        <Link href="/skills" className="text-sm text-cyan-400 hover:text-cyan-300">← 回收藏室</Link>
 
         <header className="mt-6 mb-10">
           <div className="flex flex-wrap items-center gap-2 mb-3">

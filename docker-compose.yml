@@ -29,13 +29,16 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/logwood?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://logwood.qzhqzh.com}
       SITE_URL: ${SITE_URL:-https://www.qzhqzh.com}
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required - generate with openssl rand -base64 32}"
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
+      DEEPSEEK_IDEA_MODEL: ${DEEPSEEK_IDEA_MODEL:-deepseek-v4-pro}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
@@ -45,8 +48,8 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       NPM_CONFIG_REGISTRY: ${NPM_REGISTRY:-https://repo.huaweicloud.com/repository/npm/}
       PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
-    ports:
-      - "10001:3000"
+    expose:
+      - "3000"
     volumes:
       - .:/app
       - node_modules:/app/node_modules

@@ -11,3 +11,4 @@ package-lock.json
 bun.lockb
 bun.lock
 data
+public/uploads/candidates

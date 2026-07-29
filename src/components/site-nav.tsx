@@ -75,8 +75,8 @@ function defaultNavItems(active: NormalizedNavSection): SiteNavItem[] {
     },
     {
       href: '/skills',
-      label: 'Skill 库',
-      shortLabel: 'Skill',
+      label: '收藏室',
+      shortLabel: '收藏',
       className: navLinkClass('skills', active),
     },
     {

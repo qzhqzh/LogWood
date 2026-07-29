@@ -4,7 +4,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     rateLimit: {
       findUnique: vi.fn(),
-      update: vi.fn(),
+      updateMany: vi.fn(),
       create: vi.fn(),
     },
   },
@@ -16,7 +16,7 @@ import { checkAndConsume, checkIpSegmentLimit, getRemainingQuota } from './servi
 const prismaMock = prisma as unknown as {
   rateLimit: {
     findUnique: ReturnType<typeof vi.fn>
-    update: ReturnType<typeof vi.fn>
+    updateMany: ReturnType<typeof vi.fn>
     create: ReturnType<typeof vi.fn>
   }
 }
@@ -52,7 +52,7 @@ describe('rate-limit/service', () => {
 
   it('updates existing counter and returns remaining quota', async () => {
     prismaMock.rateLimit.findUnique.mockResolvedValue({ id: 'x2', count: 3 })
-    prismaMock.rateLimit.update.mockResolvedValue({ id: 'x2', count: 4 })
+    prismaMock.rateLimit.updateMany.mockResolvedValue({ count: 1 })
 
     const result = await checkAndConsume(
       'comment_create',
@@ -62,6 +62,37 @@ describe('rate-limit/service', () => {
 
     expect(result.allowed).toBe(true)
     expect(result.remaining).toBe(16)
+  })
+
+  it('rejects when a concurrent update consumes the remaining quota', async () => {
+    prismaMock.rateLimit.findUnique.mockResolvedValue({ id: 'x2', count: 9 })
+    prismaMock.rateLimit.updateMany.mockResolvedValue({ count: 0 })
+
+    const result = await checkAndConsume(
+      'review_create',
+      { actorType: 'user', actorKey: 'user:u1', userId: 'u1' },
+      1
+    )
+
+    expect(result.allowed).toBe(false)
+    expect(result.remaining).toBe(0)
+  })
+
+  it('retries when another request creates the counter first', async () => {
+    prismaMock.rateLimit.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'x3', count: 1 })
+    prismaMock.rateLimit.create.mockRejectedValueOnce({ code: 'P2002' })
+    prismaMock.rateLimit.updateMany.mockResolvedValue({ count: 1 })
+
+    const result = await checkAndConsume(
+      'review_create',
+      { actorType: 'user', actorKey: 'user:u1', userId: 'u1' },
+      1
+    )
+
+    expect(result.allowed).toBe(true)
+    expect(result.remaining).toBe(8)
   })
 
   it('getRemainingQuota returns full quota when no record exists', async () => {

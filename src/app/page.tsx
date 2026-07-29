@@ -145,13 +145,13 @@ export default async function HomePage() {
               <p className="text-soft">已经整理成可直接复用、可以继续验证的能力资产</p>
             </div>
             <Link href="/skills" className="text-coding hover-text-coding transition-colors flex items-center gap-2 whitespace-nowrap">
-              浏览 Skill 库 <span>→</span>
+              浏览收藏室 <span>→</span>
             </Link>
           </div>
 
           {featuredSkills.length === 0 ? (
             <div className="cyber-card rounded-2xl p-10 text-center text-soft">
-              Skill 库还空着。先从一条真实验证过的经验开始整理。
+              收藏室还空着。先从一条真实验证过的经验开始整理。
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

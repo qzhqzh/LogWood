@@ -15,6 +15,7 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
   'like_create:anonymous': { maxCount: 30 },
   'report_create:user': { maxCount: 20 },
   'report_create:anonymous': { maxCount: 10 },
+  'candidate_idea_create:user': { maxCount: 10 },
   'like_create:ip_segment': { maxCount: 200 },
   // Brute-force defence: 10 admin login attempts per IP per UTC+8 day.
   'admin_login_attempt:ip_segment': { maxCount: 10 },
@@ -55,49 +56,68 @@ export async function checkAndConsume(
 
   const actorKey = getActorKeyForLimit(actor, actor.actorType as ActorType)
 
-  const existing = await prisma.rateLimit.findUnique({
-    where: {
-      action_actorType_actorKey_windowDate: {
-        action,
-        actorType: actor.actorType as ActorType,
-        actorKey,
-        windowDate,
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const existing = await prisma.rateLimit.findUnique({
+      where: {
+        action_actorType_actorKey_windowDate: {
+          action,
+          actorType: actor.actorType as ActorType,
+          actorKey,
+          windowDate,
+        },
       },
-    },
-  })
-
-  if (existing) {
-    if (existing.count + amount > config.maxCount) {
-      return { allowed: false, remaining: 0, resetAt }
-    }
-
-    const updated = await prisma.rateLimit.update({
-      where: { id: existing.id },
-      data: { count: { increment: amount } },
     })
 
-    return {
-      allowed: true,
-      remaining: config.maxCount - updated.count,
-      resetAt,
+    if (existing) {
+      if (existing.count + amount > config.maxCount) {
+        return { allowed: false, remaining: 0, resetAt }
+      }
+
+      const updated = await prisma.rateLimit.updateMany({
+        where: {
+          id: existing.id,
+          count: { lte: config.maxCount - amount },
+        },
+        data: { count: { increment: amount } },
+      })
+
+      if (updated.count === 0) {
+        return { allowed: false, remaining: 0, resetAt }
+      }
+
+      return {
+        allowed: true,
+        remaining: config.maxCount - existing.count - amount,
+        resetAt,
+      }
+    }
+
+    try {
+      await prisma.rateLimit.create({
+        data: {
+          action,
+          actorType: actor.actorType as ActorType,
+          actorKey,
+          windowDate,
+          count: amount,
+        },
+      })
+
+      return {
+        allowed: true,
+        remaining: config.maxCount - amount,
+        resetAt,
+      }
+    } catch (error) {
+      const isUniqueConflict = typeof error === 'object'
+        && error !== null
+        && 'code' in error
+        && error.code === 'P2002'
+      if (!isUniqueConflict) throw error
     }
   }
 
-  await prisma.rateLimit.create({
-    data: {
-      action,
-      actorType: actor.actorType as ActorType,
-      actorKey,
-      windowDate,
-      count: amount,
-    },
-  })
-
-  return {
-    allowed: true,
-    remaining: config.maxCount - amount,
-    resetAt,
-  }
+  return { allowed: false, remaining: 0, resetAt }
 }
 
 export async function getRemainingQuota(

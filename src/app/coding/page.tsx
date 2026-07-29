@@ -4,7 +4,7 @@ interface CodingRedirectProps {
   searchParams: Promise<{ category?: string }>
 }
 
-/** Legacy /coding → 工具收藏 */
+/** Legacy /coding → 收藏室历史工具 */
 export default async function CodingRedirectPage({ searchParams }: CodingRedirectProps) {
   const { category } = await searchParams
   if (category) {

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { SkillStatus } from '@prisma/client'
+import { Prisma, SkillStatus } from '@prisma/client'
 import {
   SKILL_CATEGORY_ORDER,
   skillCategoryLabel,
@@ -40,11 +40,15 @@ function slugify(input: string): string {
   )
 }
 
-async function ensureUniqueSlug(baseSlug: string, ignoreId?: string): Promise<string> {
+async function ensureUniqueSlug(
+  baseSlug: string,
+  ignoreId?: string,
+  db: typeof prisma | Prisma.TransactionClient = prisma,
+): Promise<string> {
   let slug = baseSlug
   let i = 1
   while (true) {
-    const existing = await prisma.skill.findUnique({ where: { slug } })
+    const existing = await db.skill.findUnique({ where: { slug } })
     if (!existing || existing.id === ignoreId) return slug
     i += 1
     slug = `${baseSlug}-${i}`
@@ -117,11 +121,15 @@ export async function getSkillBySlug(slug: string, opts?: { includeDraft?: boole
   return mapSkill(skill)
 }
 
-export async function createSkill(input: CreateSkillInput, authorUserId?: string) {
-  const slug = await ensureUniqueSlug(slugify(input.title))
+export async function createSkill(
+  input: CreateSkillInput,
+  authorUserId?: string,
+  db: typeof prisma | Prisma.TransactionClient = prisma,
+) {
+  const slug = await ensureUniqueSlug(slugify(input.title), undefined, db)
   const category = input.category.trim() || 'other'
 
-  return prisma.skill.create({
+  return db.skill.create({
     data: {
       title: input.title.trim(),
       slug,

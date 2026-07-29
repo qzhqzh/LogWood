@@ -81,7 +81,7 @@ export default async function PromptDetailPage({ params }: TargetPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '资源收藏', path: '/tools' },
+    { name: '收藏室', path: '/tools' },
     { name: '提示资源', path: '/tools?category=prompt' },
     { name: target.name, path },
   ]

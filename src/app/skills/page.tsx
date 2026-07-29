@@ -14,8 +14,8 @@ import { listSkillsGrouped, skillCategoryLabel } from '@/modules/skill'
 export const revalidate = 60
 
 export const metadata: Metadata = buildMetadata({
-  title: 'Skill 库',
-  description: '浏览经过整理、可直接复用并继续验证的 Prompt、模板、工作流与 Skill。当前版本以提示词和效果标本为主。',
+  title: '收藏室',
+  description: '收藏经过整理、可继续复用的工具、Prompt、模板、工作流与 Skill。',
   path: '/skills',
 })
 
@@ -35,7 +35,7 @@ export default async function SkillsGalleryPage({ searchParams }: SkillsPageProp
       <JsonLd
         value={buildBreadcrumbList([
           { name: '首页', path: '/' },
-          { name: 'Skill 库', path: '/skills' },
+          { name: '收藏室', path: '/skills' },
         ])}
       />
 
@@ -48,10 +48,10 @@ export default async function SkillsGalleryPage({ searchParams }: SkillsPageProp
       <header className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-10">
         <p className="skill-eyebrow mb-4">REUSABLE ASSETS · PROMPT × EFFECT</p>
         <h1 className="text-4xl md:text-6xl font-bold font-['Orbitron'] gradient-text mb-4 leading-tight">
-          Skill 库
+          收藏室
         </h1>
         <p className="text-lg text-muted max-w-3xl leading-relaxed">
-          这里陈列已经被整理、可以直接复用并继续验证的能力资产。当前条目以
+          这里收藏已经被整理、可以继续复用的工具和能力资产。当前条目以
           <strong className="text-[var(--color-text-strong)] font-medium"> Prompt × Effect </strong>
           为主；后续逐步补齐目标、输入、依赖、Quick Start、版本、失败边界与验证记录。
         </p>
@@ -92,7 +92,7 @@ export default async function SkillsGalleryPage({ searchParams }: SkillsPageProp
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 space-y-16">
         {groups.length === 0 ? (
           <section className="skill-empty cyber-card rounded-2xl p-12 text-center">
-            <p className="text-2xl font-['Orbitron'] text-[var(--color-text-strong)] mb-3">Skill 库还空着</p>
+            <p className="text-2xl font-['Orbitron'] text-[var(--color-text-strong)] mb-3">收藏室还空着</p>
             <p className="text-muted mb-8">把一条已验证的提示、模板或工作流整理成第一份可复用资产。</p>
             {isAdmin && (
               <Link href="/skills/manage" className="cyber-button px-6 py-3 rounded-lg inline-block">

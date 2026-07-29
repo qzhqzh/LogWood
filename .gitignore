@@ -50,6 +50,8 @@ public/uploads/apps/*
 !public/uploads/apps/.gitkeep
 public/uploads/skills/*
 !public/uploads/skills/.gitkeep
+public/uploads/candidates/*
+!public/uploads/candidates/.gitkeep
 
 # IDE
 .idea

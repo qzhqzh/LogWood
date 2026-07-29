@@ -19,7 +19,6 @@
  */
 import crypto from 'node:crypto'
 
-const TRUST_PROXY = process.env.LOGWOOD_TRUST_PROXY === 'true'
 const HMAC_SECRET = process.env.LOGWOOD_IP_HASH_SECRET || ''
 
 let warnedNoSecret = false
@@ -29,7 +28,7 @@ let warnedNoSecret = false
  * deployment has explicitly opted in to trusting proxy headers.
  */
 export function getClientIp(headersList: Headers): string {
-  if (TRUST_PROXY) {
+  if (process.env.LOGWOOD_TRUST_PROXY === 'true') {
     const forwarded = headersList.get('x-forwarded-for')
     if (forwarded) {
       const first = forwarded.split(',')[0]?.trim()

@@ -148,9 +148,9 @@ export default function ManageCandidatesPage() {
     }
   }
 
-  async function promote(item: CandidateItem, to: 'tool' | 'gallery') {
-    const label = to === 'tool' ? '工具收藏' : '画廊'
-    if (!window.confirm(`将「${item.title}」晋升到${label}？`)) return
+  async function promoteCandidate(item: CandidateItem, to: 'skill' | 'gallery') {
+    const destination = to === 'skill' ? '收藏室' : '画廊'
+    if (!window.confirm(`将「${item.title}」收入${destination}？`)) return
     try {
       setPromotingId(item.id)
       setError(null)
@@ -159,7 +159,6 @@ export default function ManageCandidatesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to,
-          targetType: to === 'tool' ? 'coding' : undefined,
         }),
       })
       const data = await res.json()
@@ -278,19 +277,21 @@ export default function ManageCandidatesPage() {
                         <button
                           type="button"
                           disabled={promotingId === item.id}
-                          onClick={() => promote(item, 'tool')}
-                          className="text-amber-300 hover:text-amber-200 disabled:opacity-50"
+                          onClick={() => promoteCandidate(item, 'skill')}
+                          className="text-cyan-300 hover:text-cyan-200 disabled:opacity-50"
                         >
-                          晋升工具
+                          收进收藏室
                         </button>
-                        <button
-                          type="button"
-                          disabled={promotingId === item.id}
-                          onClick={() => promote(item, 'gallery')}
-                          className="text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
-                        >
-                          晋升画廊
-                        </button>
+                        {(item.previewImageUrl || item.logoUrl) && (
+                          <button
+                            type="button"
+                            disabled={promotingId === item.id}
+                            onClick={() => promoteCandidate(item, 'gallery')}
+                            className="text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
+                          >
+                            收进画廊
+                          </button>
+                        )}
                       </>
                     )}
                     <button type="button" onClick={() => removeCandidate(item)} className="text-red-400 hover:text-red-300">删除</button>

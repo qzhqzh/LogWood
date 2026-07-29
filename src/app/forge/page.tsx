@@ -53,7 +53,7 @@ export default function ForgePage() {
             href="/skills"
             className="px-6 py-3 rounded-lg font-semibold border border-cyan-500/30 text-cyan-300 hover:border-cyan-400/60 transition-colors"
           >
-            Skill 库
+            收藏室
           </Link>
           <Link
             href="/articles"

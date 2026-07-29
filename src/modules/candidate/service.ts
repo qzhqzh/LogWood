@@ -1,11 +1,12 @@
+import { createHash } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import {
   CandidatePromoteTo,
   CandidateStatus,
-  TargetType,
+  Prisma,
 } from '@prisma/client'
-import { createTarget } from '@/modules/target'
 import { createApp } from '@/modules/app'
+import { createSkill } from '@/modules/skill'
 import { candidateStatusLabel } from './constants'
 
 export {
@@ -17,6 +18,7 @@ export {
 
 export interface CreateCandidateInput {
   title: string
+  ideaKey?: string
   summary?: string
   websiteUrl?: string
   sourceUrl?: string
@@ -33,9 +35,7 @@ export interface UpdateCandidateInput extends CreateCandidateInput {
 
 export interface PromoteCandidateInput {
   id: string
-  to: 'tool' | 'gallery'
-  /** Required when promoting to tool */
-  targetType?: TargetType
+  to: 'skill' | 'gallery'
 }
 
 function slugify(input: string): string {
@@ -68,19 +68,33 @@ function parseTags(tags: string): string[] {
   }
 }
 
-function mapCandidate<T extends { tags: string }>(candidate: T) {
+function mapCandidate<T extends { tags: string }>(
+  candidate: T,
+): Omit<T, 'tags'> & { tags: string[] } {
   return {
     ...candidate,
     tags: parseTags(candidate.tags),
   }
 }
 
-export async function listCandidates(opts?: { status?: CandidateStatus; includePromoted?: boolean }) {
-  const where: { status?: CandidateStatus | { in: CandidateStatus[] } } = {}
+export async function listCandidates(opts?: {
+  status?: CandidateStatus
+  includePromoted?: boolean
+  search?: string
+}) {
+  const where: Prisma.CandidateWhereInput = {}
   if (opts?.status) {
     where.status = opts.status
   } else if (!opts?.includePromoted) {
     where.status = { in: [CandidateStatus.watching, CandidateStatus.evaluating] }
+  }
+  const search = opts?.search?.trim()
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { summary: { contains: search, mode: 'insensitive' } },
+      { tags: { contains: search, mode: 'insensitive' } },
+    ]
   }
 
   const candidates = await prisma.candidate.findMany({
@@ -154,8 +168,61 @@ export async function getCandidateById(id: string) {
   return candidate ? mapCandidate(candidate) : null
 }
 
+export async function organizeCandidate(input: {
+  id: string
+  tags?: string[]
+  status?: CandidateStatus
+}) {
+  const existing = await prisma.candidate.findUnique({ where: { id: input.id } })
+  if (!existing) throw new Error('ERR_CANDIDATE_NOT_FOUND')
+  if (existing.status === CandidateStatus.promoted && input.status) {
+    throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
+  }
+
+  return prisma.candidate
+    .update({
+      where: { id: input.id },
+      data: {
+        ...(input.tags ? { tags: JSON.stringify(input.tags) } : {}),
+        ...(input.status ? { status: input.status } : {}),
+      },
+    })
+    .then(mapCandidate)
+}
+
+export async function findCandidateDuplicate(input: {
+  ideaKey: string
+  title: string
+  sourceUrl?: string
+  authorUserId: string
+}) {
+  const conditions: Prisma.CandidateWhereInput[] = [
+    { slug: buildCandidateIdeaSlug(input.ideaKey, input.authorUserId) },
+  ]
+  if (input.sourceUrl) {
+    conditions.push({ sourceUrl: input.sourceUrl.trim() })
+  } else {
+    conditions.push({ title: { equals: input.title.trim(), mode: 'insensitive' } })
+  }
+
+  const candidate = await prisma.candidate.findFirst({
+    where: {
+      authorUserId: input.authorUserId,
+      OR: conditions,
+    },
+  })
+  return candidate ? mapCandidate(candidate) : null
+}
+
+function buildCandidateIdeaSlug(ideaKey: string, authorUserId: string): string {
+  const identity = `${authorUserId}:${ideaKey}`
+  return `idea-${createHash('sha256').update(identity).digest('hex').slice(0, 24)}`
+}
+
 export async function createCandidate(input: CreateCandidateInput, authorUserId?: string) {
-  const slug = await ensureUniqueSlug(slugify(input.title))
+  const slug = input.ideaKey
+    ? buildCandidateIdeaSlug(input.ideaKey, authorUserId || 'system')
+    : await ensureUniqueSlug(slugify(input.title))
   return prisma.candidate
     .create({
       data: {
@@ -180,7 +247,7 @@ export async function updateCandidate(input: UpdateCandidateInput) {
   if (!existing) throw new Error('ERR_CANDIDATE_NOT_FOUND')
 
   let slug = existing.slug
-  if (input.title.trim() !== existing.title) {
+  if (input.title.trim() !== existing.title && !existing.slug.startsWith('idea-')) {
     slug = await ensureUniqueSlug(slugify(input.title), existing.id)
   }
 
@@ -216,59 +283,87 @@ export async function promoteCandidate(input: PromoteCandidateInput) {
     throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
   }
 
-  if (input.to === 'tool') {
-    const targetType = input.targetType || TargetType.coding
-    const target = await createTarget({
-      name: candidate.title,
-      type: targetType,
-      logoUrl: candidate.logoUrl || undefined,
-      description: candidate.summary || undefined,
-      websiteUrl: candidate.websiteUrl || undefined,
-      previewImageUrl: candidate.previewImageUrl || undefined,
-      sourceUrl: candidate.sourceUrl || undefined,
-      features: parseTags(candidate.tags),
-    })
+  if (input.to === 'skill') {
+    const sourceUrl = candidate.sourceUrl || candidate.websiteUrl
+    return prisma.$transaction(async (tx) => {
+      const skill = await createSkill({
+        title: candidate.title,
+        category: 'other',
+        summary: candidate.summary || candidate.title,
+        prompt: [
+          `待复用内容：${candidate.summary || candidate.title}`,
+          sourceUrl ? `来源：${sourceUrl}` : null,
+        ].filter(Boolean).join('\n\n'),
+        effectImageUrl: candidate.previewImageUrl || candidate.logoUrl || undefined,
+        sourceUrl: sourceUrl || undefined,
+        tags: parseTags(candidate.tags),
+        status: 'published',
+      }, candidate.authorUserId || undefined, tx)
 
-    return prisma.candidate
-      .update({
-        where: { id: candidate.id },
-        data: {
-          status: CandidateStatus.promoted,
-          promotedTo: CandidatePromoteTo.tool,
-          promotedTargetId: target.id,
-        },
+      const updatedCandidate = await markCandidatePromoted(tx, candidate, {
+        promotedTo: CandidatePromoteTo.skill,
+        promotedSkillId: skill.id,
       })
-      .then((c) => ({
-        candidate: mapCandidate(c),
-        promoted: { type: 'tool' as const, id: target.id, slug: target.slug },
-      }))
+      return {
+        candidate: updatedCandidate,
+        promoted: { type: 'skill' as const, id: skill.id, slug: skill.slug },
+      }
+    })
   }
 
-  const appUrl = candidate.websiteUrl || candidate.sourceUrl || 'https://example.com'
-  const app = await createApp({
-    name: candidate.title,
-    appUrl,
-    title: candidate.title,
-    summary: candidate.summary || candidate.title,
-    description: candidate.summary || candidate.title,
-    previewImageUrl: candidate.previewImageUrl || undefined,
-    tags: parseTags(candidate.tags),
-    status: 'published',
-  })
+  const previewImageUrl = candidate.previewImageUrl || candidate.logoUrl
+  if (!previewImageUrl) {
+    throw new Error('ERR_CANDIDATE_IMAGE_REQUIRED')
+  }
 
-  return prisma.candidate
-    .update({
-      where: { id: candidate.id },
-      data: {
-        status: CandidateStatus.promoted,
+  const appUrl = candidate.websiteUrl
+    || candidate.sourceUrl
+    || `/candidates/${candidate.slug}`
+  return prisma.$transaction(async (tx) => {
+    const app = await createApp({
+      name: candidate.title,
+      appUrl,
+      title: candidate.title,
+      summary: candidate.summary || candidate.title,
+      description: candidate.summary || candidate.title,
+      previewImageUrl,
+      tags: parseTags(candidate.tags),
+      status: 'published',
+    }, candidate.authorUserId || undefined, tx)
+
+    const updatedCandidate = await markCandidatePromoted(tx, candidate, {
         promotedTo: CandidatePromoteTo.gallery,
         promotedAppId: app.id,
-      },
     })
-    .then((c) => ({
-      candidate: mapCandidate(c),
+    return {
+      candidate: updatedCandidate,
       promoted: { type: 'gallery' as const, id: app.id, slug: app.slug },
-    }))
+    }
+  })
+}
+
+async function markCandidatePromoted(
+  tx: Prisma.TransactionClient,
+  candidate: { id: string; status: CandidateStatus },
+  data: Pick<Prisma.CandidateUpdateManyMutationInput, 'promotedTo' | 'promotedSkillId' | 'promotedAppId'>,
+) {
+  const result = await tx.candidate.updateMany({
+    where: {
+      id: candidate.id,
+      status: candidate.status,
+    },
+    data: {
+      status: CandidateStatus.promoted,
+      ...data,
+    },
+  })
+  if (result.count !== 1) {
+    throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
+  }
+
+  const updatedCandidate = await tx.candidate.findUnique({ where: { id: candidate.id } })
+  if (!updatedCandidate) throw new Error('ERR_CANDIDATE_NOT_FOUND')
+  return mapCandidate(updatedCandidate)
 }
 
 export async function countActiveCandidates() {

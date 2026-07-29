@@ -10,7 +10,7 @@ const sections = [
     colorClass: 'hover:text-amber-200',
   },
   {
-    title: 'Skill 库',
+    title: '收藏室',
     href: '/skills',
     colorClass: 'hover-text-coding',
   },
@@ -30,17 +30,12 @@ const sections = [
     colorClass: 'hover-text-article',
   },
   {
-    title: '资源收藏',
-    href: '/tools',
-    colorClass: 'hover-text-coding',
-  },
-  {
     title: 'AI 炼成助手',
     href: '/forge',
     colorClass: 'hover-text-article',
   },
   {
-    title: '案例画廊',
+    title: '画廊',
     href: '/app',
     colorClass: 'hover-text-app',
   },

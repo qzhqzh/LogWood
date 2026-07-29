@@ -3,9 +3,11 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { CandidateStatus } from '@prisma/client'
+import { Search } from 'lucide-react'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
+import { QuickIdeaDialog } from '@/components/quick-idea-dialog'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
@@ -20,27 +22,29 @@ export const metadata: Metadata = buildMetadata({
 })
 
 interface CandidatesPageProps {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ status?: string; q?: string }>
 }
 
 const STATUS_FILTERS: Array<{ key: string; label: string; status?: CandidateStatus }> = [
-  { key: 'active', label: '正在淘洗' },
-  { key: 'watching', label: '观察中', status: CandidateStatus.watching },
-  { key: 'evaluating', label: '试用评测中', status: CandidateStatus.evaluating },
+  { key: 'inbox', label: '未处理', status: CandidateStatus.watching },
+  { key: 'good', label: '好灵感', status: CandidateStatus.evaluating },
+  { key: 'bad', label: '不合适', status: CandidateStatus.dropped },
+  { key: 'converted', label: '已转化', status: CandidateStatus.promoted },
   { key: 'all', label: '全部历史' },
 ]
 
 export default async function CandidatesPage({ searchParams }: CandidatesPageProps) {
   const session = await getServerSession(authOptions)
   const isAdmin = isAdminSession(session)
-  const { status: statusRaw } = await searchParams
+  const { status: statusRaw, q: searchRaw } = await searchParams
+  const search = searchRaw?.trim() || ''
   const filter = STATUS_FILTERS.find((f) => f.key === statusRaw) || STATUS_FILTERS[0]
 
   const candidates = await listCandidates(
     filter.key === 'all'
-      ? { includePromoted: true }
+      ? { includePromoted: true, search }
       : filter.status
-        ? { status: filter.status }
+        ? { status: filter.status, search }
         : undefined,
   )
 
@@ -60,25 +64,51 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
 
       <header className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
         <p className="text-xs tracking-[0.28em] text-amber-300/90 uppercase mb-3">INSPIRATION POOL · TRY · VERIFY</p>
-        <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">找灵感</h1>
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] gradient-text">找灵感</h1>
+          <QuickIdeaDialog isAuthenticated={Boolean(session?.user?.id)} />
+        </div>
         <p className="text-lg text-muted max-w-3xl leading-relaxed">
-          先收住一个念头、一条链接，或一个值得观察的模型、软件、仓库和项目。它不必一开始就完整；接下来通过真实试用、评测和讨论，决定淘汰、继续验证，还是提炼成可复用的 Skill。
+          先收住碎片，再用 Tags 和归类快速整理。文字、工具和流程进入收藏室，视觉风格和图片案例进入画廊。
         </p>
         <div className="mt-5 flex flex-wrap gap-3 text-sm text-soft">
-          <span className="px-3 py-1 rounded-full border border-amber-500/25 bg-amber-500/5">发现</span>
+          <span className="px-3 py-1 rounded-full border border-amber-500/25 bg-amber-500/5">灵感</span>
           <span>→</span>
-          <span className="px-3 py-1 rounded-full border border-amber-500/25 bg-amber-500/5">试用</span>
-          <span>→</span>
-          <span className="px-3 py-1 rounded-full border border-amber-500/25 bg-amber-500/5">验证或淘汰</span>
-          <span>→</span>
-          <span className="px-3 py-1 rounded-full border border-cyan-500/25 bg-cyan-500/5">炼成 Skill</span>
+          <span className="px-3 py-1 rounded-full border border-amber-500/25 bg-amber-500/5">收藏室</span>
+          <span className="text-soft">/</span>
+          <span className="px-3 py-1 rounded-full border border-cyan-500/25 bg-cyan-500/5">画廊</span>
         </div>
 
-        <div className="mt-7 flex flex-wrap gap-2">
+        <form className="relative mt-7 max-w-xl" action="/candidates">
+          {filter.key !== 'inbox' && <input type="hidden" name="status" value={filter.key} />}
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-soft"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            name="q"
+            defaultValue={search}
+            placeholder="搜索标题、备注或 Tag"
+            className="h-11 w-full rounded-lg border border-divider bg-black/20 pl-10 pr-24 text-sm text-[var(--color-text-strong)] outline-none placeholder:text-soft focus:border-amber-400/60"
+          />
+          <button
+            type="submit"
+            className="absolute right-1 top-1 h-9 rounded-md px-4 text-sm text-amber-200 hover:bg-amber-400/10"
+          >
+            搜索
+          </button>
+        </form>
+
+        <div className="mt-4 flex flex-wrap gap-2">
           {STATUS_FILTERS.map((item) => (
             <Link
               key={item.key}
-              href={item.key === 'active' ? '/candidates' : `/candidates?status=${item.key}`}
+              href={`${item.key === 'inbox' ? '/candidates' : `/candidates?status=${item.key}`}${
+                search
+                  ? `${item.key === 'inbox' ? '?' : '&'}q=${encodeURIComponent(search)}`
+                  : ''
+              }`}
               className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
                 filter.key === item.key
                   ? 'border-amber-400/50 bg-amber-500/10 text-amber-200'
@@ -136,6 +166,15 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-muted line-clamp-2">{item.summary || '暂时只有一颗种子，等待补充为什么值得观察。'}</p>
+                    {item.tags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {item.tags.slice(0, 4).map((tag) => (
+                          <span key={tag} className="rounded border border-divider px-1.5 py-0.5 text-xs text-soft">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="mt-3 flex items-center gap-3 text-sm text-soft">
                       {item.avgRating != null ? (
                         <span className="text-yellow-400">★ {item.avgRating}</span>

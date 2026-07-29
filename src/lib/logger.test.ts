@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { logger } from './logger'
 
 const ORIGINAL_LEVEL = process.env.LOG_LEVEL
-const ORIGINAL_NODE_ENV = process.env.NODE_ENV
 
 const originalLog = console.log
 const originalErr = console.error
@@ -23,8 +22,6 @@ afterEach(() => {
   console.error = originalErr
   if (ORIGINAL_LEVEL === undefined) delete process.env.LOG_LEVEL
   else process.env.LOG_LEVEL = ORIGINAL_LEVEL
-  if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV
-  else process.env.NODE_ENV = ORIGINAL_NODE_ENV
 })
 
 function lastJson(spy: ReturnType<typeof vi.fn>): Record<string, unknown> {

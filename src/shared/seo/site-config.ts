@@ -20,7 +20,7 @@ export const SITE_DESCRIPTION =
 export const SITE_KEYWORDS: string[] = [
   '空心树洞',
   'AI Skill',
-  'Skill 库',
+  '收藏室',
   '提示词',
   'Prompt',
   'AI 工作流',

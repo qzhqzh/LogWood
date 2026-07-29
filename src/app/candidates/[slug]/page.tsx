@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
+import { CandidateOrganizer } from '@/components/candidate-organizer'
 import { EvaluationPanel } from '@/components/evaluation-panel'
 import { ReviewPanel } from '@/components/review-panel'
 import { authOptions } from '@/lib/auth'
@@ -36,6 +37,10 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
   const isAdmin = isAdminSession(session)
   const candidate = await getCandidateBySlug(slug)
   if (!candidate) notFound()
+  const canOrganize = Boolean(
+    session?.user?.id
+    && (isAdmin || candidate.authorUserId === session.user.id),
+  )
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
@@ -83,33 +88,37 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
               </a>
             )}
             {candidate.promotedTo === 'tool' && candidate.promotedTargetId && (
-              <span className="text-emerald-300">已进入资源收藏；历史记录仍保留在本页</span>
+              <Link href="/tools" className="text-emerald-300 hover:text-emerald-200">已收入收藏室 →</Link>
+            )}
+            {candidate.promotedTo === 'skill' && candidate.promotedSkillId && (
+              <Link href="/skills" className="text-emerald-300 hover:text-emerald-200">已收入收藏室 →</Link>
             )}
             {candidate.promotedTo === 'gallery' && candidate.promotedAppId && (
-              <Link href="/app" className="text-emerald-300 hover:text-emerald-200">已进入案例画廊 →</Link>
+              <Link href="/app" className="text-emerald-300 hover:text-emerald-200">已收入画廊 →</Link>
             )}
           </div>
 
-          {candidate.tags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {candidate.tags.map((tag) => (
-                <span key={tag} className="text-xs px-2 py-0.5 rounded border border-divider text-soft">{tag}</span>
-              ))}
-            </div>
-          )}
         </header>
 
         {(candidate.previewImageUrl || candidate.logoUrl) && (
-          <div className="relative w-full h-56 md:h-72 rounded-2xl overflow-hidden border border-divider mb-8">
+          <div className="relative flex min-h-64 w-full items-center justify-center overflow-hidden rounded-lg border border-divider bg-black/30 mb-8">
             <Image
               src={candidate.previewImageUrl || candidate.logoUrl || ''}
               alt={candidate.title}
-              fill
+              width={1600}
+              height={1200}
               unoptimized
-              className="object-cover"
+              className="h-auto max-h-[75vh] w-auto max-w-full object-contain"
             />
           </div>
         )}
+
+        <CandidateOrganizer
+          candidateId={candidate.id}
+          initialStatus={candidate.status}
+          initialTags={candidate.tags}
+          canEdit={canOrganize}
+        />
 
         <section className="cyber-card rounded-2xl p-5 mb-8">
           <p className="text-xs tracking-[0.25em] text-amber-300 uppercase mb-2">NEXT QUESTION</p>

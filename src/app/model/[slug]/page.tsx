@@ -82,7 +82,7 @@ export default async function ModelDetailPage({ params }: TargetPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '资源收藏', path: '/tools' },
+    { name: '收藏室', path: '/tools' },
     { name: '模型', path: '/tools?category=model' },
     { name: target.name, path },
   ]

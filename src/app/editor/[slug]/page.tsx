@@ -92,7 +92,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
 
   const breadcrumbItems = [
     { name: '首页', path: '/' },
-    { name: '资源收藏', path: '/tools' },
+    { name: '收藏室', path: '/tools' },
     { name: '软件与编辑器', path: '/tools?category=editor' },
     { name: target.name, path },
   ]

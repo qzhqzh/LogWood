@@ -83,7 +83,7 @@ export default function OpengraphImage() {
             display: 'flex',
           }}
         >
-          找灵感 · Skill 库 · 吐槽室 · 洞笔记
+          找灵感 · 收藏室 · 吐槽室 · 洞笔记
         </div>
       </div>
     ),

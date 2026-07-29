@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { TargetType } from '@prisma/client'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
@@ -10,8 +9,7 @@ import { promoteCandidate } from '@/modules/candidate'
 export const dynamic = 'force-dynamic'
 
 const promoteSchema = z.object({
-  to: z.enum(['tool', 'gallery']),
-  targetType: z.nativeEnum(TargetType).optional(),
+  to: z.enum(['skill', 'gallery']),
 })
 
 export async function POST(
@@ -32,11 +30,11 @@ export async function POST(
     const result = await promoteCandidate({
       id,
       to: body.to,
-      targetType: body.targetType,
     })
 
     revalidatePath('/candidates')
     revalidatePath('/tools')
+    revalidatePath('/skills')
     revalidatePath('/app')
     revalidatePath(`/candidates/${result.candidate.slug}`)
 
@@ -48,9 +46,13 @@ export async function POST(
     if (error instanceof Error) {
       if (
         error.message === 'ERR_CANDIDATE_NOT_FOUND' ||
-        error.message === 'ERR_CANDIDATE_ALREADY_PROMOTED'
+        error.message === 'ERR_CANDIDATE_ALREADY_PROMOTED' ||
+        error.message === 'ERR_CANDIDATE_IMAGE_REQUIRED'
       ) {
-        return NextResponse.json({ error: error.message }, { status: error.message === 'ERR_CANDIDATE_NOT_FOUND' ? 404 : 409 })
+        return NextResponse.json(
+          { error: error.message },
+          { status: error.message === 'ERR_CANDIDATE_NOT_FOUND' ? 404 : 409 },
+        )
       }
     }
     console.error('POST /api/candidates/[id]/promote error:', error)
