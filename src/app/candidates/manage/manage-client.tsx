@@ -72,7 +72,7 @@ export default function ManageCandidatesPage() {
     setLogoUrl(item.logoUrl || '')
     setPreviewImageUrl(item.previewImageUrl || '')
     setTagsText(item.tags.join(', '))
-    setStatus(item.status === 'promoted' ? 'evaluating' : item.status)
+    setStatus(item.status)
     setError(null)
   }
 
@@ -227,7 +227,15 @@ export default function ManageCandidatesPage() {
             </div>
             <div>
               <label className="block text-sm mb-2 text-gray-300">状态</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value as CandidateStatus)} className="cyber-input w-full rounded-lg px-3 py-2">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as CandidateStatus)}
+                disabled={status === 'promoted'}
+                className="cyber-input w-full rounded-lg px-3 py-2 disabled:opacity-60"
+              >
+                {status === 'promoted' && (
+                  <option value="promoted">{CANDIDATE_STATUS_LABELS.promoted}</option>
+                )}
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{CANDIDATE_STATUS_LABELS[s]}</option>
                 ))}

@@ -10,7 +10,9 @@ import {
   ignoreReplyTask,
   planReplyTask,
   recordReplyTaskFailure,
+  renewReplyTaskLease,
 } from '../src/modules/agent-reply'
+import { ensureMcpOwnerUser } from '../src/modules/mcp/auth'
 import {
   TotemoraClient,
   toAiAttribution,
@@ -98,6 +100,12 @@ async function finalizeSafeReply(input: {
   replyAgentId: string
   reply: TotemoraMemberReply
 }) {
+  await renewReplyTaskLease({
+    taskId: input.taskId,
+    ownerUserId: input.ownerUserId,
+    coordinatorAgentId: COORDINATOR_AGENT_ID,
+    leaseOwner: WORKER_LEASE_OWNER,
+  })
   const content = boundedReply(input.reply.content)
   const assessment = assessGeneratedReply(content)
   if (!assessment.safe) {
@@ -187,6 +195,12 @@ async function processClaimedTask(input: {
       : [])
     if (candidates.length === 0) throw new Error('ERR_REPLY_COUNCIL_FAILED')
 
+    await renewReplyTaskLease({
+      taskId: task.id,
+      ownerUserId: input.ownerUserId,
+      coordinatorAgentId: COORDINATOR_AGENT_ID,
+      leaseOwner: WORKER_LEASE_OWNER,
+    })
     const synthesis = await input.client.chat(
       DEFAULT_DEEPSEEK_MEMBER,
       councilSynthesisPrompt(content, candidates, sourceContext),
@@ -229,13 +243,7 @@ async function processClaimedTask(input: {
 }
 
 export async function runReplyWorkerOnce(options: WorkerOptions = {}) {
-  const ownerEmail = process.env.LOGWOOD_MCP_USER_EMAIL?.trim().toLowerCase()
-  if (!ownerEmail) throw new Error('ERR_MCP_USER_EMAIL_REQUIRED')
-  const owner = await prisma.user.findUnique({
-    where: { email: ownerEmail },
-    select: { id: true },
-  })
-  if (!owner) throw new Error('ERR_MCP_USER_NOT_FOUND')
+  const owner = await ensureMcpOwnerUser()
 
   const batchSize = boundedWorkerInteger(
     options.batchSize ?? process.env.LOGWOOD_REPLY_BATCH_SIZE,

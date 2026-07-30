@@ -21,7 +21,7 @@ vi.mock('@/modules/app', () => ({ createApp: createAppMock }))
 vi.mock('@/modules/skill', () => ({ createSkill: createSkillMock }))
 vi.mock('@/modules/target', () => ({ createTarget: createTargetMock }))
 
-import { organizeCandidate, promoteCandidate } from './service'
+import { organizeCandidate, promoteCandidate, updateCandidate } from './service'
 
 describe('candidate/service', () => {
   beforeEach(() => {
@@ -106,6 +106,23 @@ describe('candidate/service', () => {
       status: 'promoted',
       tags: ['移动端', '排版'],
     })
+  })
+
+  it('does not downgrade a promoted idea through the admin editor', async () => {
+    prismaMock.candidate.findUnique.mockResolvedValue({
+      id: 'candidate-1',
+      title: '已收入收藏室',
+      slug: 'promoted-candidate',
+      status: 'promoted',
+      tags: '[]',
+    })
+
+    await expect(updateCandidate({
+      id: 'candidate-1',
+      title: '已收入收藏室',
+      status: 'evaluating',
+    })).rejects.toThrow('ERR_CANDIDATE_ALREADY_PROMOTED')
+    expect(prismaMock.candidate.update).not.toHaveBeenCalled()
   })
 
   it('does not promote a text-only idea to the gallery', async () => {

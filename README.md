@@ -179,16 +179,20 @@ docker compose up --build
 NODE_ENV=development docker compose up --build
 ```
 
-### 3. Evaluation v2 schema 更新
+### 3. 数据库 schema 更新
 
-本次新增 Evaluation 表和枚举。更新代码后至少执行：
+Compose 会先运行一次性 `schema-sync`，再由 `db-bootstrap` 创建或刷新非超级用户
+应用角色；Web 和回复 Worker 只有在两步都成功后才启动。`.env` 中必须提供两个不同的
+URL-safe 随机密码：
 
 ```bash
-docker compose exec web bunx prisma generate
-docker compose exec web bunx prisma db push
+openssl rand -hex 32
+docker compose up -d --build
 ```
 
-正式生产数据库应先备份并审阅 schema diff；长期建议切换到版本化 Prisma migration。
+数据库管理员凭据只用于 schema 同步，Web 和 Worker 使用 `POSTGRES_APP_USER`。
+PostgreSQL 为 host-network Worker 保留回环端口，但不再使用仓库默认口令。正式生产
+数据库应先备份并审阅 schema diff；长期建议切换到版本化 Prisma migration。
 
 启用 AI 内容回复 Worker：
 

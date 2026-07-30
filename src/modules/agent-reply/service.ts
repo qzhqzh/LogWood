@@ -248,6 +248,32 @@ export async function planReplyTask(input: {
   return getReplyTask(task.id, input.ownerUserId)
 }
 
+export async function renewReplyTaskLease(input: {
+  taskId: string
+  ownerUserId: string
+  coordinatorAgentId: string
+  leaseOwner?: string
+  leaseSeconds?: number
+}) {
+  const coordinatorAgentId = normalizeAgentId(input.coordinatorAgentId)
+  const leaseOwner = normalizeAgentId(input.leaseOwner ?? coordinatorAgentId)
+  const leaseSeconds = Math.min(
+    Math.max(input.leaseSeconds ?? COLLECTING_LEASE_SECONDS, 60),
+    MAX_LEASE_SECONDS,
+  )
+  const leaseUntil = new Date(Date.now() + leaseSeconds * 1000)
+  const result = await prisma.agentReplyTask.updateMany({
+    where: {
+      ...activeTaskWhere(input.ownerUserId, input.taskId),
+      coordinatorAgentId,
+      leaseOwner,
+    },
+    data: { leaseUntil },
+  })
+  if (result.count !== 1) throw new Error('ERR_REPLY_TASK_LEASED')
+  return { taskId: input.taskId, leaseUntil }
+}
+
 export async function contributeToReplyTask(input: {
   taskId: string
   ownerUserId: string

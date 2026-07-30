@@ -4,18 +4,55 @@ services:
     container_name: logwood-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: logwood
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:-postgres}
+      POSTGRES_PASSWORD: "${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}"
+      POSTGRES_DB: ${POSTGRES_DB:-logwood}
     ports:
       - "127.0.0.1:${POSTGRES_HOST_PORT:-15432}:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_ADMIN_USER:-postgres} -d ${POSTGRES_DB:-logwood}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  schema-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DEBIAN_MIRROR: ${DEBIAN_MIRROR:-http://mirrors.tuna.tsinghua.edu.cn}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://repo.huaweicloud.com/repository/npm/}
+        PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_ADMIN_USER:-postgres}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-logwood}?schema=public"
+      PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
+    command: sh -c "bunx prisma generate && bunx prisma db push"
+
+  db-bootstrap:
+    image: postgres:16-alpine
+    restart: "no"
+    depends_on:
+      schema-sync:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_ADMIN_USER: ${POSTGRES_ADMIN_USER:-postgres}
+      POSTGRES_ADMIN_PASSWORD: "${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}"
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:-logwood_app}
+      POSTGRES_APP_PASSWORD: "${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD is required}"
+      POSTGRES_DB: ${POSTGRES_DB:-logwood}
+    volumes:
+      - ./scripts/bootstrap-db.sh:/usr/local/bin/bootstrap-db.sh:ro
+    command: sh /usr/local/bin/bootstrap-db.sh
 
   web:
     build:
@@ -28,11 +65,11 @@ services:
     container_name: logwood-web
     restart: unless-stopped
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-bootstrap:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/logwood?schema=public
+      DATABASE_URL: "postgresql://${POSTGRES_APP_USER:-logwood_app}:${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-logwood}?schema=public"
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://logwood.qzhqzh.com}
       SITE_URL: ${SITE_URL:-https://www.qzhqzh.com}
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required - generate with openssl rand -base64 32}"
@@ -72,11 +109,11 @@ services:
     restart: unless-stopped
     network_mode: host
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-bootstrap:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:${POSTGRES_HOST_PORT:-15432}/logwood?schema=public
+      DATABASE_URL: "postgresql://${POSTGRES_APP_USER:-logwood_app}:${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD is required}@127.0.0.1:${POSTGRES_HOST_PORT:-15432}/${POSTGRES_DB:-logwood}?schema=public"
       LOGWOOD_MCP_USER_EMAIL: ${LOGWOOD_MCP_USER_EMAIL:-}
       TOTEMORA_GATEWAY_URL: ${TOTEMORA_GATEWAY_URL:-http://127.0.0.1:4310}
       TOTEMORA_OPERATOR_TOKEN: ${TOTEMORA_OPERATOR_TOKEN:-}

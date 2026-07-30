@@ -88,7 +88,7 @@ describe('POST /api/mcp', () => {
     try {
       await client.connect(transport)
       const result = await client.listTools()
-      expect(result.tools).toHaveLength(14)
+      expect(result.tools).toHaveLength(15)
       expect(result.tools.map((tool) => tool.name)).toContain(
         'logwood_inspiration_record',
       )

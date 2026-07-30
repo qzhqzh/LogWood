@@ -34,6 +34,21 @@ describe('agent-reply/enqueue', () => {
 
     expect(result?.status).toBe(AgentReplyTaskStatus.pending)
     expect(tx.$queryRaw).toHaveBeenCalledTimes(1)
+    expect(tx.agentReplyTask.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        OR: expect.arrayContaining([
+          expect.objectContaining({
+            status: expect.objectContaining({
+              in: expect.arrayContaining([AgentReplyTaskStatus.failed]),
+            }),
+          }),
+          {
+            status: AgentReplyTaskStatus.ignored,
+            attempts: { gt: 0 },
+          },
+        ]),
+      }),
+    })
     expect(tx.agentReplyTask.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         reviewCommentId: 'comment-1',
@@ -67,6 +82,16 @@ describe('agent-reply/enqueue', () => {
       commentUserId: 'owner-1',
       content: '作者自己的补充',
       threadKey: 'comment-1',
+      sourceType: AgentReplySourceType.review,
+      isDirectReply: true,
+      parentIsOwnedAiReply: false,
+    })).resolves.toBeNull()
+    await expect(enqueueAgentReplyTask(tx as never, {
+      ownerUserId: 'owner-1',
+      commentId: 'comment-2',
+      commentUserId: null,
+      content: '匿名评论不触发付费回复',
+      threadKey: 'comment-2',
       sourceType: AgentReplySourceType.review,
       isDirectReply: true,
       parentIsOwnedAiReply: false,

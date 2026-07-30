@@ -20,6 +20,7 @@ import {
   finalizeReplyTask,
   planReplyTask,
   recordReplyTaskFailure,
+  renewReplyTaskLease,
 } from './service'
 
 describe('agent-reply/service leases', () => {
@@ -103,6 +104,29 @@ describe('agent-reply/service leases', () => {
         }),
       }),
     )
+  })
+
+  it('renews only the current unexpired lease', async () => {
+    prismaMock.agentReplyTask.updateMany.mockResolvedValue({ count: 1 })
+
+    await expect(renewReplyTaskLease({
+      taskId: 'task-1',
+      ownerUserId: 'owner-1',
+      coordinatorAgentId: 'totemora-coordinator',
+      leaseOwner: 'worker:a1',
+    })).resolves.toMatchObject({
+      taskId: 'task-1',
+      leaseUntil: expect.any(Date),
+    })
+    expect(prismaMock.agentReplyTask.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        ownerUserId: 'owner-1',
+        coordinatorAgentId: 'totemora-coordinator',
+        leaseOwner: 'worker:a1',
+        leaseUntil: { gt: expect.any(Date) },
+      }),
+      data: { leaseUntil: expect.any(Date) },
+    })
   })
 
   it('rejects unsafe final content before starting a transaction', async () => {

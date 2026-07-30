@@ -39,7 +39,13 @@ describe('agent-reply/policy', () => {
   it('blocks unsafe, identifying, or linked model output before publication', () => {
     expect(assessGeneratedReply('你这个观点根本就是傻逼逻辑').safe).toBe(false)
     expect(assessGeneratedReply('联系 13800138000 继续聊').reason).toBe('MODEL_OUTPUT_PII')
+    expect(assessGeneratedReply('I will kill you.').reason).toBe('MODEL_OUTPUT_UNSAFE')
+    expect(assessGeneratedReply('联系 138 0013-8000 继续聊').reason).toBe('MODEL_OUTPUT_PII')
     expect(assessGeneratedReply('证据在 https://example.com')).toEqual({
+      safe: false,
+      reason: 'MODEL_OUTPUT_LINK',
+    })
+    expect(assessGeneratedReply('证据在 example . com')).toEqual({
       safe: false,
       reason: 'MODEL_OUTPUT_LINK',
     })

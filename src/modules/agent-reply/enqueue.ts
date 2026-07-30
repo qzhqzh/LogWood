@@ -24,7 +24,8 @@ export async function enqueueAgentReplyTask(
   input: EnqueueInput,
 ) {
   if (
-    input.commentUserId === input.ownerUserId
+    !input.commentUserId
+    || input.commentUserId === input.ownerUserId
     || (!input.isDirectReply && !input.parentIsOwnedAiReply)
   ) {
     return null
@@ -39,14 +40,23 @@ export async function enqueueAgentReplyTask(
       where: {
         ownerUserId: input.ownerUserId,
         threadKey: input.threadKey,
-        status: {
-          in: [
-            AgentReplyTaskStatus.pending,
-            AgentReplyTaskStatus.claimed,
-            AgentReplyTaskStatus.collecting,
-            AgentReplyTaskStatus.replied,
-          ],
-        },
+        OR: [
+          {
+            status: {
+              in: [
+                AgentReplyTaskStatus.pending,
+                AgentReplyTaskStatus.claimed,
+                AgentReplyTaskStatus.collecting,
+                AgentReplyTaskStatus.replied,
+                AgentReplyTaskStatus.failed,
+              ],
+            },
+          },
+          {
+            status: AgentReplyTaskStatus.ignored,
+            attempts: { gt: 0 },
+          },
+        ],
       },
     })
     exceededRoundLimit = scheduledRounds >= MAX_AUTOMATED_ROUNDS

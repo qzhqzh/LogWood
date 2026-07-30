@@ -284,6 +284,13 @@ export async function updateCandidate(input: UpdateCandidateInput) {
   ) {
     throw new Error('ERR_CANDIDATE_PROMOTION_REQUIRED')
   }
+  if (
+    existing.status === CandidateStatus.promoted
+    && input.status !== undefined
+    && input.status !== CandidateStatus.promoted
+  ) {
+    throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
+  }
 
   let slug = existing.slug
   if (input.title.trim() !== existing.title && !existing.slug.startsWith('idea-')) {

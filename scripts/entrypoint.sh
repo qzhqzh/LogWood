@@ -16,9 +16,6 @@ fi
 echo "[entrypoint] Generating Prisma client..."
 bunx prisma generate
 
-echo "[entrypoint] Syncing schema with database..."
-bunx prisma db push
-
 if [ "${FORCE_DB_SEED:-0}" = "1" ]; then
   echo "[entrypoint] FORCE_DB_SEED=1, running seed..."
   bun run db:seed

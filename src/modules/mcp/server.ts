@@ -13,6 +13,7 @@ import {
   promoteMcpInspirationToApp,
   promoteMcpInspirationToSkill,
   recordMcpInspiration,
+  renewMcpReplyTask,
   updateMcpInspiration,
 } from '@/modules/mcp/actions'
 import {
@@ -28,6 +29,7 @@ import {
   replyInboxClaimSchema,
   replyTaskGetSchema,
   replyTaskPlanSchema,
+  replyTaskRenewSchema,
   updateInspirationShape,
 } from '@/modules/mcp/schemas'
 
@@ -209,6 +211,21 @@ export function createLogWoodMcpServer(
       idempotentHint: true,
     },
   }, (input) => runTool(() => contributeMcpReplyTask(
+    input,
+    authorUserId,
+    authenticatedAgentId,
+  )))
+
+  server.registerTool('logwood_reply_renew', {
+    title: '续期回复任务',
+    description: '长时间生成或协调前，由持有 leaseToken 的协调者延长当前未过期租约。',
+    inputSchema: replyTaskRenewSchema.shape,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+    },
+  }, (input) => runTool(() => renewMcpReplyTask(
     input,
     authorUserId,
     authenticatedAgentId,

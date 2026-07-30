@@ -126,6 +126,12 @@ export const replyTaskPlanSchema = z.object({
   attitude: z.nativeEnum(AgentReplyAttitude).optional(),
 })
 
+export const replyTaskRenewSchema = z.object({
+  taskId: z.string().min(1),
+  leaseToken: leaseTokenSchema,
+  leaseSeconds: z.number().int().min(60).max(900).optional(),
+})
+
 export const replyContributeSchema = z.object({
   taskId: z.string().min(1),
   content: z.string().trim().min(1).max(4000),

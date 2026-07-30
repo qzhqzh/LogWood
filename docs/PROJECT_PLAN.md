@@ -90,9 +90,12 @@ Target、Skill、App、Candidate 详情现在同时展示：
 - 技术栈：Next.js 14 + TypeScript + Tailwind + Prisma + PostgreSQL + NextAuth
 - 架构风格：模块化单体（`src/modules`）
 - 部署：Docker Compose；默认 `NODE_ENV=production`，由 entrypoint 执行 build + start。仅本地实时开发显式使用 `NODE_ENV=development`。
-- 数据库更新：当前仓库启动链路使用 `prisma db push`；正式环境应在执行前审阅 schema diff 和备份策略。
+- 数据库更新：一次性 `schema-sync` 使用管理员凭据执行 `prisma db push`，
+  `db-bootstrap` 随后幂等准备非超级用户；Web 与 Worker 必须等待两步成功。正式环境
+  应在执行前审阅 schema diff 和备份策略。
 - 回复 Worker：通过 `agent-reply` Compose profile 使用 host network 常驻运行；
-  PostgreSQL 只发布到宿主机回环地址。空队列只查询数据库，不调用模型。
+  PostgreSQL 只发布到宿主机回环地址，管理员和应用密码均必须由环境注入，Worker
+  仅使用应用角色。空队列只查询数据库，不调用模型。
 
 Evaluation v2 上线要求：
 
@@ -111,7 +114,8 @@ bun run build
 - `candidate`：灵感 / 候选及现有晋升流程
   - 快速创建采用 Route Handler → Candidate AI Service → Candidate Service；API key 仅由服务端环境变量读取。
 - `mcp`：Agent 工具 schema、Bearer 鉴权、Owner 隔离、内容发布和审计入口。
-- `agent-reply`：本地策略、线程轮次门禁、任务租约、候选幂等、输出安全检查和唯一最终发布。
+- `agent-reply`：本地策略、登录用户触发门禁、线程轮次预算、可续期任务租约、候选幂等、
+  多语言输出安全检查和唯一最终发布。
 - `scripts/reply-worker.ts`：按处理容量逐条领取任务，路由 Totemora 成员并执行退避重试。
 - `target`：历史模型、软件、工具和 Prompt 资源
 - `app`：案例、应用和项目
@@ -198,6 +202,7 @@ Evaluation 只有满足以下条件才能发布：
 ### 运行与安全
 
 - 生产环境必须正确配置 `NEXTAUTH_URL`、`NEXTAUTH_SECRET` 和 `DATABASE_URL`。
+- Compose 必须注入不同的数据库管理员和应用密码；Web / Worker 不得使用超级用户。
 - 快速灵感功能必须配置服务端 `DEEPSEEK_API_KEY`。
 - Schema 更新前必须备份数据库并审阅新增表、枚举和索引。
 - 上传仍需对象存储、病毒扫描和更严格域名白名单。

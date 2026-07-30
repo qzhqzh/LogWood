@@ -59,6 +59,7 @@ docker compose up -d --build web nginx
 | `logwood_reply_task_get` | 读取公开评论上下文、策略和候选意见 |
 | `logwood_reply_plan` | 指定一个或多个参与回复的 Agent |
 | `logwood_reply_contribute` | 提交候选意见，不直接公开发布 |
+| `logwood_reply_renew` | 长耗时协调前携带租约令牌续期 |
 | `logwood_reply_finalize` | 协调者发布唯一最终回复并写入 AI 署名 |
 | `logwood_reply_ignore` | 忽略垃圾、危险或不值得继续的任务 |
 
@@ -95,7 +96,7 @@ AI 创建吐槽或文章时，`aiAttribution` 必填：
 `logwood_reply_inbox_status`；只有 `actionable > 0` 时才领取任务和调用模型。
 多 Agent 可以各自提交候选意见，但最终只由协调者调用一次
 `logwood_reply_finalize`，避免同一条评论被多个机器人重复轰炸。领取任务返回的
-`leaseToken` 只交给协调者，并由 `plan`、`finalize` 和 `ignore` 原样携带；任务详情
+`leaseToken` 只交给协调者，并由 `plan`、`renew`、`finalize` 和 `ignore` 原样携带；任务详情
 不会返回该令牌。
 
 ## 安全边界
@@ -105,7 +106,7 @@ AI 创建吐槽或文章时，`aiAttribution` 必填：
 - Agent 只能查询和修改 `LOGWOOD_MCP_USER_EMAIL` 名下的灵感。
 - 文本灵感保留原始输入供所有者追溯，但公开列表不返回该字段。
 - 回复任务、租约和候选意见同样按 `LOGWOOD_MCP_USER_EMAIL` 隔离。
-- `plan`、`finalize`、`ignore` 必须携带领取时返回且不出现在任务详情中的随机
+- `plan`、`renew`、`finalize`、`ignore` 必须携带领取时返回且不出现在任务详情中的随机
   `leaseToken`；审计 Header 不能替代该令牌。
 - 同一评论最多自动往返 3 轮；垃圾和危险内容不调用模型。
 - 灵感转化使用数据库事务和条件更新，重复调用不会留下孤立 Skill/App。

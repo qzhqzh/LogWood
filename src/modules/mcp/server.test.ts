@@ -61,6 +61,7 @@ describe('mcp/server', () => {
       'logwood_reply_task_get',
       'logwood_reply_plan',
       'logwood_reply_contribute',
+      'logwood_reply_renew',
       'logwood_reply_finalize',
       'logwood_reply_ignore',
     ])

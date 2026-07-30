@@ -29,6 +29,7 @@ import {
   getReplyTask,
   ignoreReplyTask,
   planReplyTask,
+  renewReplyTaskLease,
 } from '@/modules/agent-reply'
 
 export interface RecordMcpInspirationInput {
@@ -117,6 +118,12 @@ export interface McpReplyContributionInput {
   idempotencyKey: string
   inputTokens?: number
   outputTokens?: number
+}
+
+export interface McpReplyRenewInput {
+  taskId: string
+  leaseToken: string
+  leaseSeconds?: number
 }
 
 export interface McpReplyFinalizeInput {
@@ -481,6 +488,20 @@ export async function contributeMcpReplyTask(
     ...input,
     ownerUserId: authorUserId,
     agentId,
+  })
+}
+
+export async function renewMcpReplyTask(
+  input: McpReplyRenewInput,
+  authorUserId: string,
+  agentId: string,
+) {
+  return renewReplyTaskLease({
+    taskId: input.taskId,
+    ownerUserId: authorUserId,
+    coordinatorAgentId: agentId,
+    leaseOwner: input.leaseToken,
+    leaseSeconds: input.leaseSeconds,
   })
 }
 

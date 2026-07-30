@@ -3,6 +3,7 @@ import {
   publishReviewSchema,
   recordInspirationSchema,
   replyTaskPlanSchema,
+  replyTaskRenewSchema,
   updateInspirationSchema,
 } from './schemas'
 
@@ -40,6 +41,11 @@ describe('mcp/schemas', () => {
       taskId: 'task-1',
       leaseToken: 'lease-token-123456',
     })
+
+    expect(() => replyTaskRenewSchema.parse({
+      taskId: 'task-1',
+      leaseSeconds: 600,
+    })).toThrow()
   })
 
   it('rejects non-http links and protocol-relative asset URLs', () => {

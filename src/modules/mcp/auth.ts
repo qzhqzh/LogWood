@@ -28,11 +28,7 @@ export function verifyMcpBearerToken(
   return timingSafeEqual(hashSecret(match[1]), hashSecret(configuredKey))
 }
 
-export async function authenticateMcpRequest(request: Request) {
-  if (!verifyMcpBearerToken(request.headers.get('authorization'))) {
-    throw new McpAuthError('ERR_MCP_UNAUTHORIZED', 401)
-  }
-
+export async function ensureMcpOwnerUser() {
   const email = process.env.LOGWOOD_MCP_USER_EMAIL?.trim().toLowerCase()
   if (!email || !email.includes('@')) {
     throw new McpAuthError('ERR_MCP_NOT_CONFIGURED', 503)
@@ -51,6 +47,15 @@ export async function authenticateMcpRequest(request: Request) {
       name: true,
     },
   })
+  return user
+}
+
+export async function authenticateMcpRequest(request: Request) {
+  if (!verifyMcpBearerToken(request.headers.get('authorization'))) {
+    throw new McpAuthError('ERR_MCP_UNAUTHORIZED', 401)
+  }
+
+  const user = await ensureMcpOwnerUser()
   const requestedAgentId = request.headers.get('x-logwood-agent-id')
     ?.trim()
     .toLowerCase() || 'codex'
