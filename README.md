@@ -205,9 +205,20 @@ docker compose up -d --build
 ```
 
 该脚本通过现有容器的本地 Unix socket 轮换管理员口令、创建非超级用户并补齐权限，
-不会重建数据目录。随后 `schema-sync` 和 `db-bootstrap` 会再次验证新凭据。若新栈
-启动失败，保持数据库容器和数据目录不动，用同一脚本把管理员口令恢复为升级前的值，
-再恢复旧版 Compose；不要删除 `./data/postgres`。
+不会重建数据目录。随后 `schema-sync` 和 `db-bootstrap` 会再次验证新凭据。
+
+若新栈启动失败且必须恢复旧版，保持数据库容器和数据目录不动。旧版管理员口令可能
+不满足新强度要求，因此只能对这次本地 socket 回滚显式开启兼容开关：
+
+```bash
+export LOGWOOD_ALLOW_LEGACY_DB_ROLLBACK=1
+export POSTGRES_ADMIN_PASSWORD="<升级前的管理员口令>"
+./scripts/upgrade-db-credentials.sh
+unset LOGWOOD_ALLOW_LEGACY_DB_ROLLBACK
+```
+
+确认脚本成功后再恢复旧版代码和 Compose。该开关不会传入 `schema-sync` 或
+`db-bootstrap`，正常启动仍会拒绝弱口令；不要删除 `./data/postgres`。
 
 启用 AI 内容回复 Worker：
 

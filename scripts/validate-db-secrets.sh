@@ -19,7 +19,11 @@ validate_secret() {
   esac
 }
 
-validate_secret "POSTGRES_ADMIN_PASSWORD" "$POSTGRES_ADMIN_PASSWORD"
+if [ "${LOGWOOD_ALLOW_LEGACY_DB_ROLLBACK:-0}" = "1" ]; then
+  echo "[db-secrets] Explicit legacy rollback mode enabled for the administrator password"
+else
+  validate_secret "POSTGRES_ADMIN_PASSWORD" "$POSTGRES_ADMIN_PASSWORD"
+fi
 validate_secret "POSTGRES_APP_PASSWORD" "$POSTGRES_APP_PASSWORD"
 
 if [ "$POSTGRES_ADMIN_PASSWORD" = "$POSTGRES_APP_PASSWORD" ]; then
