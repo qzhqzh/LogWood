@@ -30,16 +30,18 @@ describe('candidate/service', () => {
   })
 
   it('updates the pool and searchable tags together', async () => {
-    prismaMock.candidate.findUnique.mockResolvedValue({
-      id: 'candidate-1',
-      status: 'watching',
-      tags: '[]',
-    })
-    prismaMock.candidate.update.mockResolvedValue({
-      id: 'candidate-1',
-      status: 'evaluating',
-      tags: '["移动端","排版"]',
-    })
+    prismaMock.candidate.findUnique
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        status: 'watching',
+        tags: '[]',
+      })
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        status: 'evaluating',
+        tags: '["移动端","排版"]',
+      })
+    prismaMock.candidate.updateMany.mockResolvedValue({ count: 1 })
 
     await expect(organizeCandidate({
       id: 'candidate-1',
@@ -50,8 +52,8 @@ describe('candidate/service', () => {
       tags: ['移动端', '排版'],
     })
 
-    expect(prismaMock.candidate.update).toHaveBeenCalledWith({
-      where: { id: 'candidate-1' },
+    expect(prismaMock.candidate.updateMany).toHaveBeenCalledWith({
+      where: { id: 'candidate-1', status: 'watching' },
       data: {
         status: 'evaluating',
         tags: '["移动端","排版"]',
@@ -88,16 +90,18 @@ describe('candidate/service', () => {
   })
 
   it('allows tags to be updated after an idea is promoted', async () => {
-    prismaMock.candidate.findUnique.mockResolvedValue({
-      id: 'candidate-1',
-      status: 'promoted',
-      tags: '["旧标签"]',
-    })
-    prismaMock.candidate.update.mockResolvedValue({
-      id: 'candidate-1',
-      status: 'promoted',
-      tags: '["移动端","排版"]',
-    })
+    prismaMock.candidate.findUnique
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        status: 'promoted',
+        tags: '["旧标签"]',
+      })
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        status: 'promoted',
+        tags: '["移动端","排版"]',
+      })
+    prismaMock.candidate.updateMany.mockResolvedValue({ count: 1 })
 
     await expect(organizeCandidate({
       id: 'candidate-1',
@@ -123,6 +127,53 @@ describe('candidate/service', () => {
       status: 'evaluating',
     })).rejects.toThrow('ERR_CANDIDATE_ALREADY_PROMOTED')
     expect(prismaMock.candidate.update).not.toHaveBeenCalled()
+  })
+
+  it('does not overwrite a promotion that races with a pool update', async () => {
+    prismaMock.candidate.findUnique
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        status: 'watching',
+        tags: '[]',
+      })
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        status: 'promoted',
+        tags: '[]',
+      })
+    prismaMock.candidate.updateMany.mockResolvedValue({ count: 0 })
+
+    await expect(organizeCandidate({
+      id: 'candidate-1',
+      status: 'evaluating',
+    })).rejects.toThrow('ERR_CANDIDATE_ALREADY_PROMOTED')
+  })
+
+  it('does not overwrite a promotion that races with an admin edit', async () => {
+    prismaMock.candidate.findUnique
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        title: '待整理灵感',
+        slug: 'candidate-1',
+        status: 'watching',
+        tags: '[]',
+        rawContent: null,
+        sortOrder: 0,
+      })
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        title: '待整理灵感',
+        slug: 'candidate-1',
+        status: 'promoted',
+        tags: '[]',
+      })
+    prismaMock.candidate.updateMany.mockResolvedValue({ count: 0 })
+
+    await expect(updateCandidate({
+      id: 'candidate-1',
+      title: '修改后的标题',
+      status: 'evaluating',
+    })).rejects.toThrow('ERR_CANDIDATE_ALREADY_PROMOTED')
   })
 
   it('does not promote a text-only idea to the gallery', async () => {

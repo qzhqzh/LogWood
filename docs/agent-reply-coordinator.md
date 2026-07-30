@@ -66,7 +66,10 @@ LOGWOOD_REPLY_BATCH_SIZE="3"
 
 `docker compose up` 会先用管理员执行 Prisma schema 同步，再幂等创建或刷新应用角色并
 授予现有表、序列和默认对象权限。Web 与 Worker 都等待这两步成功，不能绕过 schema
-前置条件。两个密码都不提供默认值，推荐分别使用 `openssl rand -hex 32` 生成。
+前置条件。两个密码都不提供默认值，启动前会强制检查互不相同、至少 32 位且仅包含
+字母数字；推荐分别使用 `openssl rand -hex 32` 生成。
+已有数据卷不会因环境变量变化自动轮换 PostgreSQL 内部口令；首次升级必须先备份并
+执行 `scripts/upgrade-db-credentials.sh`，完整步骤和回滚方式见 `README.md`。
 
 每个 Worker 进程启动时会生成独立的租约 ID，避免旧进程在租约过期后覆盖新进程的处理
 结果。需要跨重启固定标识时可设置 `LOGWOOD_REPLY_WORKER_ID`；多个并行进程不得共用该值。

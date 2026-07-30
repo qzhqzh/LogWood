@@ -125,7 +125,11 @@ export async function PATCH(request: NextRequest) {
     }
     if (
       error instanceof Error
-      && ['ERR_CANDIDATE_PROMOTION_REQUIRED', 'ERR_CANDIDATE_ALREADY_PROMOTED'].includes(error.message)
+      && [
+        'ERR_CANDIDATE_PROMOTION_REQUIRED',
+        'ERR_CANDIDATE_ALREADY_PROMOTED',
+        'ERR_CANDIDATE_STATE_CONFLICT',
+      ].includes(error.message)
     ) {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }

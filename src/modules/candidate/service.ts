@@ -194,6 +194,27 @@ export async function getCandidateById(id: string) {
   return candidate ? mapCandidate(candidate) : null
 }
 
+async function updateCandidateFromObservedState(
+  id: string,
+  observedStatus: CandidateStatus,
+  data: Prisma.CandidateUpdateManyMutationInput,
+) {
+  const result = await prisma.candidate.updateMany({
+    where: { id, status: observedStatus },
+    data,
+  })
+  const latest = await prisma.candidate.findUnique({ where: { id } })
+  if (result.count !== 1) {
+    if (!latest) throw new Error('ERR_CANDIDATE_NOT_FOUND')
+    if (latest.status === CandidateStatus.promoted) {
+      throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
+    }
+    throw new Error('ERR_CANDIDATE_STATE_CONFLICT')
+  }
+  if (!latest) throw new Error('ERR_CANDIDATE_NOT_FOUND')
+  return mapCandidate(latest)
+}
+
 export async function organizeCandidate(input: {
   id: string
   tags?: string[]
@@ -208,15 +229,10 @@ export async function organizeCandidate(input: {
     throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
   }
 
-  return prisma.candidate
-    .update({
-      where: { id: input.id },
-      data: {
-        ...(input.tags ? { tags: JSON.stringify(input.tags) } : {}),
-        ...(input.status ? { status: input.status } : {}),
-      },
-    })
-    .then(mapCandidate)
+  return updateCandidateFromObservedState(input.id, existing.status, {
+    ...(input.tags ? { tags: JSON.stringify(input.tags) } : {}),
+    ...(input.status ? { status: input.status } : {}),
+  })
 }
 
 export async function findCandidateDuplicate(input: {
@@ -297,24 +313,19 @@ export async function updateCandidate(input: UpdateCandidateInput) {
     slug = await ensureUniqueSlug(slugify(input.title), existing.id)
   }
 
-  return prisma.candidate
-    .update({
-      where: { id: input.id },
-      data: {
-        title: input.title.trim(),
-        slug,
-        summary: input.summary?.trim() || null,
-        rawContent: input.rawContent?.trim() || existing.rawContent,
-        websiteUrl: safeCandidateLink(input.websiteUrl),
-        sourceUrl: safeCandidateLink(input.sourceUrl),
-        logoUrl: safeCandidateLink(input.logoUrl),
-        previewImageUrl: safeCandidateLink(input.previewImageUrl),
-        tags: JSON.stringify(input.tags || []),
-        status: input.status ?? existing.status,
-        sortOrder: input.sortOrder ?? existing.sortOrder,
-      },
-    })
-    .then(mapCandidate)
+  return updateCandidateFromObservedState(input.id, existing.status, {
+    title: input.title.trim(),
+    slug,
+    summary: input.summary?.trim() || null,
+    rawContent: input.rawContent?.trim() || existing.rawContent,
+    websiteUrl: safeCandidateLink(input.websiteUrl),
+    sourceUrl: safeCandidateLink(input.sourceUrl),
+    logoUrl: safeCandidateLink(input.logoUrl),
+    previewImageUrl: safeCandidateLink(input.previewImageUrl),
+    tags: JSON.stringify(input.tags || []),
+    status: input.status ?? existing.status,
+    sortOrder: input.sortOrder ?? existing.sortOrder,
+  })
 }
 
 export async function deleteCandidate(id: string) {

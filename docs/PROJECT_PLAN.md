@@ -92,7 +92,8 @@ Target、Skill、App、Candidate 详情现在同时展示：
 - 部署：Docker Compose；默认 `NODE_ENV=production`，由 entrypoint 执行 build + start。仅本地实时开发显式使用 `NODE_ENV=development`。
 - 数据库更新：一次性 `schema-sync` 使用管理员凭据执行 `prisma db push`，
   `db-bootstrap` 随后幂等准备非超级用户；Web 与 Worker 必须等待两步成功。正式环境
-  应在执行前审阅 schema diff 和备份策略。
+  应在执行前审阅 schema diff 和备份策略；旧数据卷先通过本地 Unix socket 执行
+  `scripts/upgrade-db-credentials.sh` 轮换内部凭据，不能只修改环境变量。
 - 回复 Worker：通过 `agent-reply` Compose profile 使用 host network 常驻运行；
   PostgreSQL 只发布到宿主机回环地址，管理员和应用密码均必须由环境注入，Worker
   仅使用应用角色。空队列只查询数据库，不调用模型。

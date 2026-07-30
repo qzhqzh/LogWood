@@ -66,6 +66,7 @@ export async function PATCH(
       && (
         error.message === 'ERR_CANDIDATE_NOT_FOUND'
         || error.message === 'ERR_CANDIDATE_ALREADY_PROMOTED'
+        || error.message === 'ERR_CANDIDATE_STATE_CONFLICT'
       )
     ) {
       return NextResponse.json(

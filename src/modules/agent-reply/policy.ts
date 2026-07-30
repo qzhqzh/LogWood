@@ -12,7 +12,7 @@ export interface ReplyRoute {
 }
 
 const SPAM_PATTERN = /(https?:\/\/\S+.*){3,}|(.)\2{8,}|加微|刷单|返利|代开发票/i
-const UNSAFE_PATTERN = /人肉|开盒|住址|身份证|弄死|杀了|自杀|炸掉|\b(?:doxx?|kill|murder|bomb|suicide|hurt)\b/i
+const UNSAFE_PATTERN = /人肉|开盒|住址|身份证|弄死|杀了|自杀|炸掉|\b(?:doxx?|kill|murder|bomb|suicide|hurt|shoot)\b|\b(?:hope|wish|want)\s+(?:you|they|he|she)\s+(?:would\s+)?die\b|\bgo\s+die\b/i
 const ABUSIVE_PATTERN = /傻逼|蠢货|脑残|废物|垃圾玩意|狗屁|弱智|\b(?:idiot|moron|stupid|retard)\b|fuck\s+you|piece\s+of\s+shit/i
 const HOSTILE_PATTERN = /胡说|扯淡|放屁|可笑|烂透|什么玩意|根本不懂|别装|洗地|打脸/i
 const TECHNICAL_PATTERN = /api|sdk|bug|代码|架构|性能|安全|漏洞|数据库|协议|模型|token|提示词|部署|仓库|github|测试|版本|延迟|成本/i
@@ -23,7 +23,13 @@ const ID_CARD_PATTERN = /\d{17}[\dXx]/
 const LINK_PATTERN = /(?:https?:\/\/|www\.)\S+|\b(?:[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.)+(?:com|net|org|io|dev|ai|cn|xyz|top|app|co|me|info|site|tech|cloud)\b(?:\/\S*)?/i
 
 function normalizeSafetyText(content: string): string {
-  return content.normalize('NFKC').trim()
+  return content
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\b(?:[a-z][\s._-]+){2,}[a-z]\b/gi, (value) => (
+      value.replace(/[\s._-]+/g, '')
+    ))
+    .trim()
 }
 
 export function assessGeneratedReply(content: string): {
@@ -46,7 +52,10 @@ export function assessGeneratedReply(content: string): {
   ) {
     return { safe: false, reason: 'MODEL_OUTPUT_PII' }
   }
-  const normalizedDomain = normalized.replace(/\s*[.。．]\s*/g, '.')
+  const normalizedDomain = normalized
+    .replace(/[\[(]\s*(?:\.|dot)\s*[\])]/gi, '.')
+    .replace(/\s+dot\s+/gi, '.')
+    .replace(/\s*[.。．]\s*/g, '.')
   if (LINK_PATTERN.test(normalizedDomain)) {
     return { safe: false, reason: 'MODEL_OUTPUT_LINK' }
   }

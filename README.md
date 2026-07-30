@@ -182,8 +182,8 @@ NODE_ENV=development docker compose up --build
 ### 3. 数据库 schema 更新
 
 Compose 会先运行一次性 `schema-sync`，再由 `db-bootstrap` 创建或刷新非超级用户
-应用角色；Web 和回复 Worker 只有在两步都成功后才启动。`.env` 中必须提供两个不同的
-URL-safe 随机密码：
+应用角色；Web 和回复 Worker 只有在两步都成功后才启动。`.env` 中必须提供两个不同、
+至少 32 位且仅包含字母数字的随机密码：
 
 ```bash
 openssl rand -hex 32
@@ -193,6 +193,21 @@ docker compose up -d --build
 数据库管理员凭据只用于 schema 同步，Web 和 Worker 使用 `POSTGRES_APP_USER`。
 PostgreSQL 为 host-network Worker 保留回环端口，但不再使用仓库默认口令。正式生产
 数据库应先备份并审阅 schema diff；长期建议切换到版本化 Prisma migration。
+
+从旧版固定数据库口令升级且保留 `./data/postgres` 时，不能只修改 `.env`。先保持旧
+PostgreSQL 容器运行，备份数据，再把两个新密码导出到当前 shell 并执行一次性升级：
+
+```bash
+export POSTGRES_ADMIN_PASSWORD="$(openssl rand -hex 32)"
+export POSTGRES_APP_PASSWORD="$(openssl rand -hex 32)"
+./scripts/upgrade-db-credentials.sh
+docker compose up -d --build
+```
+
+该脚本通过现有容器的本地 Unix socket 轮换管理员口令、创建非超级用户并补齐权限，
+不会重建数据目录。随后 `schema-sync` 和 `db-bootstrap` 会再次验证新凭据。若新栈
+启动失败，保持数据库容器和数据目录不动，用同一脚本把管理员口令恢复为升级前的值，
+再恢复旧版 Compose；不要删除 `./data/postgres`。
 
 启用 AI 内容回复 Worker：
 

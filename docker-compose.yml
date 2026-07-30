@@ -35,8 +35,10 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_ADMIN_USER:-postgres}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-logwood}?schema=public"
+      POSTGRES_ADMIN_PASSWORD: "${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}"
+      POSTGRES_APP_PASSWORD: "${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD is required}"
       PRISMA_ENGINES_MIRROR: ${PRISMA_ENGINES_MIRROR:-}
-    command: sh -c "bunx prisma generate && bunx prisma db push"
+    command: sh -c "sh scripts/validate-db-secrets.sh && bunx prisma generate && bunx prisma db push"
 
   db-bootstrap:
     image: postgres:16-alpine
@@ -50,9 +52,11 @@ services:
       POSTGRES_APP_USER: ${POSTGRES_APP_USER:-logwood_app}
       POSTGRES_APP_PASSWORD: "${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD is required}"
       POSTGRES_DB: ${POSTGRES_DB:-logwood}
+      POSTGRES_PORT: "5432"
     volumes:
       - ./scripts/bootstrap-db.sh:/usr/local/bin/bootstrap-db.sh:ro
-    command: sh /usr/local/bin/bootstrap-db.sh
+      - ./scripts/validate-db-secrets.sh:/usr/local/bin/validate-db-secrets.sh:ro
+    command: sh -c "sh /usr/local/bin/validate-db-secrets.sh && sh /usr/local/bin/bootstrap-db.sh"
 
   web:
     build:
