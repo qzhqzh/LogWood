@@ -7,6 +7,7 @@ import { encodeArticleSlug, listArticles } from '@/modules/article'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
+import { AiAttribution } from '@/components/ai-attribution'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
@@ -148,6 +149,13 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
                     >
                       <h3 className="text-2xl font-semibold text-[var(--color-text-strong)] mb-3">{article.title}</h3>
                       {article.excerpt && <p className="text-muted mb-4 line-clamp-5">{article.excerpt}</p>}
+                      <AiAttribution
+                        provider={article.aiProvider}
+                        model={article.aiModel}
+                        modelVersion={article.aiModelVersion}
+                        generatedAt={article.aiGeneratedAt}
+                        className="mb-3"
+                      />
                       <div className="flex items-center justify-between text-sm text-soft">
                         <span>
                           {formatDistanceToNow(new Date(article.publishedAt || article.createdAt), {

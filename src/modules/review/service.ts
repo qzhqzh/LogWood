@@ -3,6 +3,10 @@ import { ReviewStatus } from '@prisma/client'
 import { ActorContext } from '@/modules/identity'
 import { checkAndConsume, checkIpSegmentLimit } from '@/modules/rate-limit'
 import { assessContent } from '@/modules/like'
+import {
+  AiAttributionInput,
+  normalizeAiAttribution,
+} from '@/modules/ai-attribution'
 import type { ReviewSubjectType } from './constants'
 
 export type { ReviewSubjectType } from './constants'
@@ -17,6 +21,7 @@ export interface CreateReviewInput {
   rating: number
   content: string
   language?: string
+  aiAttribution?: AiAttributionInput
 }
 
 export interface ReviewQuery {
@@ -43,6 +48,10 @@ export interface ReviewWithAuthor {
   status: ReviewStatus
   likesCount: number
   reportsCount: number
+  aiProvider: string | null
+  aiModel: string | null
+  aiModelVersion: string | null
+  aiGeneratedAt: Date | null
   createdAt: Date
   updatedAt: Date
   author: {
@@ -134,6 +143,7 @@ export async function createReview(
 
   const moderationResult = assessContent(input.content)
   const status = moderationResult.flagged ? ReviewStatus.pending : ReviewStatus.published
+  const aiAttribution = normalizeAiAttribution(input.aiAttribution)
 
   const review = await prisma.review.create({
     data: {
@@ -144,6 +154,7 @@ export async function createReview(
       rating: input.rating,
       language: input.language || 'zh',
       status,
+      ...aiAttribution,
     },
   })
 
@@ -248,6 +259,10 @@ export async function getReviews(
       status: review.status,
       likesCount: review.likesCount,
       reportsCount: review.reportsCount,
+      aiProvider: review.aiProvider,
+      aiModel: review.aiModel,
+      aiModelVersion: review.aiModelVersion,
+      aiGeneratedAt: review.aiGeneratedAt,
       createdAt: review.createdAt,
       updatedAt: review.updatedAt,
       author: review.user
@@ -313,6 +328,10 @@ export async function getReviewById(
     status: review.status,
     likesCount: review.likesCount,
     reportsCount: review.reportsCount,
+    aiProvider: review.aiProvider,
+    aiModel: review.aiModel,
+    aiModelVersion: review.aiModelVersion,
+    aiGeneratedAt: review.aiGeneratedAt,
     createdAt: review.createdAt,
     updatedAt: review.updatedAt,
     author: review.user

@@ -1,15 +1,29 @@
 import { prisma } from '@/lib/prisma'
-import { CommentStatus } from '@prisma/client'
+import {
+  AgentReplySourceType,
+  CommentStatus,
+} from '@prisma/client'
 import { ActorContext } from '@/modules/identity'
 import { checkAndConsume, checkIpSegmentLimit } from '@/modules/rate-limit'
 import { assessContent } from '@/modules/like'
+import {
+  enqueueAgentReplyTask,
+  shouldQueuePublishedComment,
+} from '@/modules/agent-reply/enqueue'
 
 export interface ArticleCommentWithAuthor {
   id: string
   articleId: string
+  parentId: string | null
+  threadRootId: string | null
   content: string
   language: string
   status: CommentStatus
+  aiProvider: string | null
+  aiModel: string | null
+  aiModelVersion: string | null
+  aiGeneratedAt: Date | null
+  aiAgentId: string | null
   likesCount: number
   reportsCount: number
   createdAt: Date
@@ -110,7 +124,12 @@ export async function getArticleEngagement(articleId: string, actor?: ActorConte
 }
 
 export async function createArticleComment(
-  input: { articleId: string; content: string; language?: string },
+  input: {
+    articleId: string
+    parentId?: string
+    content: string
+    language?: string
+  },
   actor: ActorContext
 ): Promise<{ id: string; status: CommentStatus; createdAt: Date }> {
   if (input.content.length < ARTICLE_COMMENT_MIN_LENGTH || input.content.length > ARTICLE_COMMENT_MAX_LENGTH) {
@@ -119,11 +138,35 @@ export async function createArticleComment(
 
   const article = await prisma.article.findUnique({
     where: { id: input.articleId },
-    select: { id: true, status: true },
+    select: {
+      id: true,
+      status: true,
+      authorUserId: true,
+      aiModel: true,
+    },
   })
 
   if (!article || article.status !== 'published') {
     throw new Error('ERR_ARTICLE_NOT_FOUND')
+  }
+
+  const parent = input.parentId
+    ? await prisma.articleComment.findFirst({
+      where: {
+        id: input.parentId,
+        articleId: input.articleId,
+        status: CommentStatus.published,
+      },
+      select: {
+        id: true,
+        userId: true,
+        aiModel: true,
+        threadRootId: true,
+      },
+    })
+    : null
+  if (input.parentId && !parent) {
+    throw new Error('ERR_ARTICLE_COMMENT_PARENT_NOT_FOUND')
   }
 
   const rateLimitResult = await checkAndConsume('comment_create', actor)
@@ -139,15 +182,38 @@ export async function createArticleComment(
   const moderationResult = assessContent(input.content)
   const status = moderationResult.flagged ? CommentStatus.pending : CommentStatus.published
 
-  const comment = await prisma.articleComment.create({
-    data: {
-      articleId: input.articleId,
-      userId: actor.userId,
-      anonymousUserId: actor.anonymousUserId,
-      content: input.content,
-      language: input.language || 'zh',
+  const comment = await prisma.$transaction(async (tx) => {
+    const created = await tx.articleComment.create({
+      data: {
+        articleId: input.articleId,
+        parentId: parent?.id,
+        threadRootId: parent?.threadRootId ?? parent?.id,
+        userId: actor.userId,
+        anonymousUserId: actor.anonymousUserId,
+        content: input.content,
+        language: input.language || 'zh',
+        status,
+      },
+    })
+
+    if (shouldQueuePublishedComment(
       status,
-    },
+      Boolean(article.authorUserId && article.aiModel),
+    )) {
+      await enqueueAgentReplyTask(tx, {
+        ownerUserId: article.authorUserId!,
+        commentId: created.id,
+        commentUserId: actor.userId,
+        content: input.content,
+        threadKey: parent?.threadRootId ?? parent?.id ?? created.id,
+        sourceType: AgentReplySourceType.article,
+        isDirectReply: !parent,
+        parentIsOwnedAiReply: Boolean(
+          parent?.userId === article.authorUserId && parent?.aiModel,
+        ),
+      })
+    }
+    return created
   })
 
   return {
@@ -185,9 +251,16 @@ export async function getArticleComments(
     comments: comments.map((comment) => ({
       id: comment.id,
       articleId: comment.articleId,
+      parentId: comment.parentId,
+      threadRootId: comment.threadRootId,
       content: comment.content,
       language: comment.language,
       status: comment.status,
+      aiProvider: comment.aiProvider,
+      aiModel: comment.aiModel,
+      aiModelVersion: comment.aiModelVersion,
+      aiGeneratedAt: comment.aiGeneratedAt,
+      aiAgentId: comment.aiAgentId,
       likesCount: comment.likesCount,
       reportsCount: comment.reportsCount,
       createdAt: comment.createdAt,

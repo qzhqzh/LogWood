@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
+import { AiAttribution } from '@/components/ai-attribution'
 import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 import { getReviewSubjectPresentation } from '@/shared/reviews/subject'
 
@@ -124,6 +125,13 @@ export default async function TalkPage({ searchParams }: TalkPageProps) {
                       <p className="text-xs text-soft">
                         {authorName} · {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: zhCN })}
                       </p>
+                      <AiAttribution
+                        provider={review.aiProvider}
+                        model={review.aiModel}
+                        modelVersion={review.aiModelVersion}
+                        generatedAt={review.aiGeneratedAt}
+                        className="mt-1"
+                      />
                     </div>
                     <div className="text-yellow-400 text-sm font-semibold">★ {review.rating}</div>
                   </div>

@@ -108,4 +108,41 @@ describe('review/service createReview', () => {
     )
     expect(result.status).toBe(ReviewStatus.pending)
   })
+
+  it('records complete AI attribution for an AI-authored review', async () => {
+    prismaMock.target.findUnique.mockResolvedValue({ id: 't1' })
+    assessContentMock.mockReturnValue({ flagged: false })
+    prismaMock.review.create.mockResolvedValue({
+      id: 'r1',
+      status: ReviewStatus.published,
+      createdAt: new Date('2026-07-29T12:00:00.000Z'),
+    })
+    const generatedAt = new Date('2026-07-29T11:58:00.000Z')
+
+    await createReview(
+      {
+        targetId: 't1',
+        rating: 4,
+        content: '这是一条由 Agent 提交的真实使用记录。',
+        aiAttribution: {
+          provider: 'OpenAI',
+          model: 'gpt-5.4',
+          modelVersion: '2026-06-01',
+          generatedAt,
+        },
+      },
+      { actorType: ActorType.user, actorKey: 'user:u1', userId: 'u1' },
+    )
+
+    expect(prismaMock.review.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          aiProvider: 'OpenAI',
+          aiModel: 'gpt-5.4',
+          aiModelVersion: '2026-06-01',
+          aiGeneratedAt: generatedAt,
+        }),
+      }),
+    )
+  })
 })

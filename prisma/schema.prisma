@@ -80,6 +80,39 @@ enum CommentStatus {
   deleted
 }
 
+enum AgentReplyTaskStatus {
+  pending
+  claimed
+  collecting
+  replied
+  ignored
+  failed
+}
+
+enum AgentReplyAttitude {
+  unknown
+  friendly
+  curious
+  skeptical
+  hostile
+  abusive
+  spam
+}
+
+enum AgentReplyStrategy {
+  friendly
+  technical
+  sharp
+  council
+  ignore
+  escalate
+}
+
+enum AgentReplySourceType {
+  review
+  article
+}
+
 enum ArticleStatus {
   draft
   published
@@ -141,6 +174,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   adminAuditLogs AdminAuditLog[]
+  agentReplyTasks AgentReplyTask[]
 
   @@map("users")
 }
@@ -204,6 +238,10 @@ model Review {
   rating           Int
   language         String        @default("zh")
   status           ReviewStatus  @default(published)
+  aiProvider      String?
+  aiModel         String?
+  aiModelVersion  String?
+  aiGeneratedAt   DateTime?
   qualityScore     Int           @default(0)
   likesCount       Int           @default(0)
   reportsCount     Int           @default(0)
@@ -303,9 +341,16 @@ model Comment {
   reviewId         String
   userId           String?
   anonymousUserId  String?
+  parentId        String?
+  threadRootId    String?
   content          String
   language         String          @default("zh")
   status           CommentStatus   @default(published)
+  aiProvider      String?
+  aiModel         String?
+  aiModelVersion  String?
+  aiGeneratedAt   DateTime?
+  aiAgentId       String?
   likesCount       Int             @default(0)
   reportsCount     Int             @default(0)
   createdAt        DateTime        @default(now())
@@ -313,9 +358,15 @@ model Comment {
   review           Review          @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   anonymousUser    AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  parent            Comment?        @relation("ReviewCommentThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies           Comment[]       @relation("ReviewCommentThread")
+  incomingReplyTask AgentReplyTask? @relation("ReviewReplyIncoming")
+  outgoingReplyTask AgentReplyTask? @relation("ReviewReplyOutgoing")
   likes            CommentLike[]
 
   @@index([reviewId])
+  @@index([parentId])
+  @@index([threadRootId])
   @@index([status])
   @@map("comments")
 }
@@ -348,6 +399,10 @@ model Article {
   coverImageUrl String?
   status        ArticleStatus @default(draft)
   authorUserId  String?
+  aiProvider     String?
+  aiModel        String?
+  aiModelVersion String?
+  aiGeneratedAt  DateTime?
   publishedAt   DateTime?
   viewCount     Int           @default(0)
   createdAt     DateTime      @default(now())
@@ -492,9 +547,16 @@ model ArticleComment {
   articleId        String
   userId           String?
   anonymousUserId  String?
+  parentId        String?
+  threadRootId    String?
   content          String
   language         String          @default("zh")
   status           CommentStatus   @default(published)
+  aiProvider      String?
+  aiModel         String?
+  aiModelVersion  String?
+  aiGeneratedAt   DateTime?
+  aiAgentId       String?
   likesCount       Int             @default(0)
   reportsCount     Int             @default(0)
   createdAt        DateTime        @default(now())
@@ -502,10 +564,76 @@ model ArticleComment {
   article          Article         @relation(fields: [articleId], references: [id], onDelete: Cascade)
   user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   anonymousUser    AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  parent            ArticleComment?  @relation("ArticleCommentThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies           ArticleComment[] @relation("ArticleCommentThread")
+  incomingReplyTask AgentReplyTask?  @relation("ArticleReplyIncoming")
+  outgoingReplyTask AgentReplyTask?  @relation("ArticleReplyOutgoing")
 
   @@index([articleId])
+  @@index([parentId])
+  @@index([threadRootId])
   @@index([status])
   @@map("article_comments")
+}
+
+model AgentReplyTask {
+  id                    String               @id @default(cuid())
+  ownerUserId           String
+  sourceType            AgentReplySourceType
+  reviewCommentId       String?              @unique
+  articleCommentId      String?              @unique
+  replyCommentId        String?              @unique
+  replyArticleCommentId String?              @unique
+  threadKey             String
+  status                AgentReplyTaskStatus @default(pending)
+  attitude              AgentReplyAttitude   @default(unknown)
+  strategy              AgentReplyStrategy   @default(friendly)
+  priority              Int                  @default(0)
+  selectedAgentIds      Json?
+  coordinatorAgentId    String?
+  leaseOwner            String?
+  leaseUntil            DateTime?
+  attempts              Int                  @default(0)
+  lastError             String?
+  completedAt           DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  owner               User                     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  reviewComment       Comment?                 @relation("ReviewReplyIncoming", fields: [reviewCommentId], references: [id], onDelete: Cascade)
+  articleComment      ArticleComment?          @relation("ArticleReplyIncoming", fields: [articleCommentId], references: [id], onDelete: Cascade)
+  replyComment        Comment?                 @relation("ReviewReplyOutgoing", fields: [replyCommentId], references: [id], onDelete: SetNull)
+  replyArticleComment ArticleComment?          @relation("ArticleReplyOutgoing", fields: [replyArticleCommentId], references: [id], onDelete: SetNull)
+  contributions       AgentReplyContribution[]
+
+  @@index([ownerUserId, status, createdAt])
+  @@index([threadKey, status])
+  @@index([leaseUntil])
+  @@map("agent_reply_tasks")
+}
+
+model AgentReplyContribution {
+  id             String   @id @default(cuid())
+  taskId         String
+  agentId        String
+  aiProvider     String
+  aiModel        String
+  aiModelVersion String
+  aiGeneratedAt  DateTime
+  content        String
+  recommendation String?
+  inputTokens    Int?
+  outputTokens   Int?
+  selected       Boolean  @default(false)
+  idempotencyKey String
+  createdAt      DateTime @default(now())
+
+  task AgentReplyTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, idempotencyKey])
+  @@index([taskId, createdAt])
+  @@index([agentId])
+  @@map("agent_reply_contributions")
 }
 
 model ArticleLike {

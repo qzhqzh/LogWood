@@ -5,6 +5,7 @@ import { createArticleComment, getArticleComments } from '@/modules/article'
 import { parsePage, parsePageSize } from '@/lib/safe-parse'
 
 const createArticleCommentSchema = z.object({
+  parentId: z.string().optional(),
   content: z.string().min(1).max(500),
   language: z.string().optional(),
   deviceFingerprint: z.string().optional(),
@@ -45,6 +46,7 @@ export async function POST(
     const result = await createArticleComment(
       {
         articleId: id,
+        parentId: validated.parentId,
         content: validated.content,
         language: validated.language,
       },
@@ -69,6 +71,9 @@ export async function POST(
       }
       if (error.message === 'ERR_ARTICLE_COMMENT_VALIDATION') {
         return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+      if (error.message === 'ERR_ARTICLE_COMMENT_PARENT_NOT_FOUND') {
+        return NextResponse.json({ error: error.message }, { status: 404 })
       }
     }
 

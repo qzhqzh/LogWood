@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
@@ -166,6 +166,13 @@ function protocolForTarget(type: string): ProtocolKey {
   return 'resource'
 }
 
+function resolveEvaluationSubject(item: EvaluationItem): { type: SubjectType; id: string } {
+  if (item.skillId) return { type: 'skill', id: item.skillId }
+  if (item.targetId) return { type: 'target', id: item.targetId }
+  if (item.appId) return { type: 'app', id: item.appId }
+  return { type: 'candidate', id: item.candidateId || '' }
+}
+
 function TextField({
   label,
   value,
@@ -296,14 +303,7 @@ export default function ManageEvaluationsPage() {
     setError(null)
   }
 
-  function resolveEvaluationSubject(item: EvaluationItem): { type: SubjectType; id: string } {
-    if (item.skillId) return { type: 'skill', id: item.skillId }
-    if (item.targetId) return { type: 'target', id: item.targetId }
-    if (item.appId) return { type: 'app', id: item.appId }
-    return { type: 'candidate', id: item.candidateId || '' }
-  }
-
-  function startEditing(item: EvaluationItem) {
+  const startEditing = useCallback((item: EvaluationItem) => {
     const subject = resolveEvaluationSubject(item)
     setEditingId(item.id)
     setSubjectType(subject.type)
@@ -328,7 +328,7 @@ export default function ManageEvaluationsPage() {
     setConclusion(item.conclusion)
     setError(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  }, [])
 
   async function loadData() {
     const [targetRes, skillRes, appRes, candidateRes, evaluationRes] = await Promise.all([
@@ -368,10 +368,10 @@ export default function ManageEvaluationsPage() {
   }, [isAdmin])
 
   useEffect(() => {
-    if (!requestedEditId || evaluations.length === 0) return
+    if (!requestedEditId || evaluations.length === 0 || editingId === requestedEditId) return
     const item = evaluations.find((evaluation) => evaluation.id === requestedEditId)
     if (item) startEditing(item)
-  }, [requestedEditId, evaluations])
+  }, [editingId, evaluations, requestedEditId, startEditing])
 
   useEffect(() => {
     if (!subjectId) return

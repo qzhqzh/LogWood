@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 const createCommentSchema = z.object({
   reviewId: z.string(),
+  parentId: z.string().optional(),
   content: z.string().min(10).max(500),
   language: z.string().optional(),
   deviceFingerprint: z.string().optional(),
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
     const result = await createComment(
       {
         reviewId: validated.reviewId,
+        parentId: validated.parentId,
         content: validated.content,
         language: validated.language,
       },
@@ -79,6 +81,12 @@ export async function POST(request: NextRequest) {
         )
       }
       if (error.message === 'ERR_REVIEW_NOT_FOUND') {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 404 }
+        )
+      }
+      if (error.message === 'ERR_COMMENT_PARENT_NOT_FOUND') {
         return NextResponse.json(
           { error: error.message },
           { status: 404 }

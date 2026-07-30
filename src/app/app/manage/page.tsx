@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { signIn, useSession } from 'next-auth/react'
 import { TagPicker } from '@/components/tag-picker'
@@ -284,11 +285,14 @@ export default function ManageAppsPage() {
                   <p className="text-xs text-gray-500">支持 jpg/png/webp/gif，最大 5MB</p>
                 </div>
                 {(previewPreview || previewImageUrl) && (
-                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-cyan-500/30 flex-shrink-0">
-                    <img
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-cyan-500/30 flex-shrink-0">
+                    <Image
                       src={previewPreview || previewImageUrl}
                       alt="预览"
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="80px"
+                      unoptimized={Boolean(previewPreview)}
+                      className="object-cover"
                     />
                   </div>
                 )}

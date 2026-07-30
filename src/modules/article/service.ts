@@ -1,5 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { ArticleStatus } from '@prisma/client'
+import {
+  AiAttributionInput,
+  normalizeAiAttribution,
+} from '@/modules/ai-attribution'
+import { assessContent } from '@/modules/like'
 
 const articleModel = (prisma as any).article
 
@@ -18,6 +23,7 @@ export interface CreateArticleInput {
   tags?: string[]
   coverImageUrl?: string
   status?: ArticleStatus
+  aiAttribution?: AiAttributionInput
 }
 
 export interface UpdateArticleInput {
@@ -103,6 +109,10 @@ export async function listArticles(query: ArticleListQuery) {
         createdAt: true,
         updatedAt: true,
         viewCount: true,
+        aiProvider: true,
+        aiModel: true,
+        aiModelVersion: true,
+        aiGeneratedAt: true,
         author: {
           select: {
             id: true,
@@ -146,6 +156,10 @@ export async function listAllArticlesForManage() {
       updatedAt: true,
       publishedAt: true,
       viewCount: true,
+      aiProvider: true,
+      aiModel: true,
+      aiModelVersion: true,
+      aiGeneratedAt: true,
       author: {
         select: {
           id: true,
@@ -185,6 +199,10 @@ export async function getArticleByIdForManage(id: string) {
       updatedAt: true,
       publishedAt: true,
       viewCount: true,
+      aiProvider: true,
+      aiModel: true,
+      aiModelVersion: true,
+      aiGeneratedAt: true,
     },
   })
 
@@ -227,6 +245,14 @@ export async function getArticleBySlug(slug: string) {
 export async function createArticle(input: CreateArticleInput, authorUserId?: string) {
   const baseSlug = slugify(input.title)
   const slug = await ensureUniqueSlug(baseSlug)
+  const aiAttribution = normalizeAiAttribution(input.aiAttribution)
+  const aiContentFlagged = Boolean(
+    input.aiAttribution
+    && assessContent([input.title, input.excerpt, input.content].filter(Boolean).join('\n')).flagged,
+  )
+  const status = aiContentFlagged
+    ? ArticleStatus.draft
+    : input.status ?? ArticleStatus.draft
 
   return articleModel.create({
     data: {
@@ -237,9 +263,10 @@ export async function createArticle(input: CreateArticleInput, authorUserId?: st
       content: input.content,
       tags: JSON.stringify(input.tags || []),
       coverImageUrl: input.coverImageUrl,
-      status: input.status ?? ArticleStatus.draft,
+      status,
       authorUserId,
-      publishedAt: input.status === ArticleStatus.published ? new Date() : null,
+      ...aiAttribution,
+      publishedAt: status === ArticleStatus.published ? new Date() : null,
     },
     select: {
       id: true,
@@ -248,6 +275,10 @@ export async function createArticle(input: CreateArticleInput, authorUserId?: st
       status: true,
       publishedAt: true,
       createdAt: true,
+      aiProvider: true,
+      aiModel: true,
+      aiModelVersion: true,
+      aiGeneratedAt: true,
     },
   })
 }

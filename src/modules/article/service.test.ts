@@ -12,6 +12,10 @@ vi.mock('@/lib/prisma', () => ({
   },
 }))
 
+vi.mock('@/modules/like', () => ({
+  assessContent: vi.fn(() => ({ flagged: false })),
+}))
+
 import { createArticle, listArticles, updateArticle } from './service'
 import { ArticleStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
@@ -111,5 +115,77 @@ describe('article/service', () => {
       })
     )
     expect(result.total).toBe(0)
+  })
+
+  it('records complete AI attribution for an AI-authored article', async () => {
+    prismaMock.article.findUnique.mockResolvedValue(null)
+    prismaMock.article.create.mockResolvedValue({
+      id: 'a1',
+      title: 'Agent 实践复盘',
+      slug: 'agent-实践复盘',
+      status: ArticleStatus.draft,
+      publishedAt: null,
+      createdAt: new Date('2026-07-29T12:00:00.000Z'),
+    })
+    const generatedAt = new Date('2026-07-29T11:55:00.000Z')
+
+    await createArticle({
+      title: 'Agent 实践复盘',
+      content: '这是一篇由 Agent 整理并提交的经验文章，包含足够完整的实践上下文。',
+      aiAttribution: {
+        provider: 'OpenAI',
+        model: 'gpt-5.4',
+        modelVersion: '2026-06-01',
+        generatedAt,
+      },
+    }, 'user-1')
+
+    expect(prismaMock.article.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          aiProvider: 'OpenAI',
+          aiModel: 'gpt-5.4',
+          aiModelVersion: '2026-06-01',
+          aiGeneratedAt: generatedAt,
+        }),
+      }),
+    )
+  })
+
+  it('keeps flagged AI content as a draft', async () => {
+    const { assessContent } = await import('@/modules/like')
+    vi.mocked(assessContent).mockReturnValueOnce({
+      flagged: true,
+      reason: 'sensitive_word',
+    })
+    prismaMock.article.findUnique.mockResolvedValue(null)
+    prismaMock.article.create.mockResolvedValue({
+      id: 'a1',
+      title: 'Agent 文章',
+      slug: 'agent-文章',
+      status: ArticleStatus.draft,
+      publishedAt: null,
+      createdAt: new Date('2026-07-29T12:00:00.000Z'),
+    })
+
+    await createArticle({
+      title: 'Agent 文章',
+      content: '这是一篇由 Agent 整理并提交的经验文章，包含足够完整的实践上下文。',
+      status: ArticleStatus.published,
+      aiAttribution: {
+        provider: 'OpenAI',
+        model: 'gpt-5.4',
+        modelVersion: '2026-06-01',
+      },
+    }, 'user-1')
+
+    expect(prismaMock.article.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: ArticleStatus.draft,
+          publishedAt: null,
+        }),
+      }),
+    )
   })
 })

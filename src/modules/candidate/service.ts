@@ -5,8 +5,8 @@ import {
   CandidateStatus,
   Prisma,
 } from '@prisma/client'
-import { createApp } from '@/modules/app'
-import { createSkill } from '@/modules/skill'
+import { createApp, CreateAppInput } from '@/modules/app'
+import { createSkill, CreateSkillInput } from '@/modules/skill'
 import { candidateStatusLabel } from './constants'
 
 export {
@@ -36,6 +36,8 @@ export interface UpdateCandidateInput extends CreateCandidateInput {
 export interface PromoteCandidateInput {
   id: string
   to: 'skill' | 'gallery'
+  skill?: CreateSkillInput
+  app?: CreateAppInput
 }
 
 function slugify(input: string): string {
@@ -81,8 +83,13 @@ export async function listCandidates(opts?: {
   status?: CandidateStatus
   includePromoted?: boolean
   search?: string
+  authorUserId?: string
+  limit?: number
 }) {
   const where: Prisma.CandidateWhereInput = {}
+  if (opts?.authorUserId) {
+    where.authorUserId = opts.authorUserId
+  }
   if (opts?.status) {
     where.status = opts.status
   } else if (!opts?.includePromoted) {
@@ -100,6 +107,7 @@ export async function listCandidates(opts?: {
   const candidates = await prisma.candidate.findMany({
     where,
     orderBy: [{ sortOrder: 'asc' }, { updatedAt: 'desc' }],
+    ...(opts?.limit ? { take: opts.limit } : {}),
     include: {
       _count: { select: { reviews: { where: { status: 'published' } } } },
       reviews: {
@@ -286,7 +294,7 @@ export async function promoteCandidate(input: PromoteCandidateInput) {
   if (input.to === 'skill') {
     const sourceUrl = candidate.sourceUrl || candidate.websiteUrl
     return prisma.$transaction(async (tx) => {
-      const skill = await createSkill({
+      const skillInput: CreateSkillInput = input.skill ?? {
         title: candidate.title,
         category: 'other',
         summary: candidate.summary || candidate.title,
@@ -298,7 +306,8 @@ export async function promoteCandidate(input: PromoteCandidateInput) {
         sourceUrl: sourceUrl || undefined,
         tags: parseTags(candidate.tags),
         status: 'published',
-      }, candidate.authorUserId || undefined, tx)
+      }
+      const skill = await createSkill(skillInput, candidate.authorUserId || undefined, tx)
 
       const updatedCandidate = await markCandidatePromoted(tx, candidate, {
         promotedTo: CandidatePromoteTo.skill,
@@ -311,25 +320,29 @@ export async function promoteCandidate(input: PromoteCandidateInput) {
     })
   }
 
-  const previewImageUrl = candidate.previewImageUrl || candidate.logoUrl
+  const previewImageUrl = input.app?.previewImageUrl
+    || candidate.previewImageUrl
+    || candidate.logoUrl
   if (!previewImageUrl) {
     throw new Error('ERR_CANDIDATE_IMAGE_REQUIRED')
   }
 
-  const appUrl = candidate.websiteUrl
-    || candidate.sourceUrl
-    || `/candidates/${candidate.slug}`
+  const appInput: CreateAppInput = input.app
+    ? { ...input.app, previewImageUrl }
+    : {
+        name: candidate.title,
+        appUrl: candidate.websiteUrl
+          || candidate.sourceUrl
+          || `/candidates/${candidate.slug}`,
+        title: candidate.title,
+        summary: candidate.summary || candidate.title,
+        description: candidate.summary || candidate.title,
+        previewImageUrl,
+        tags: parseTags(candidate.tags),
+        status: 'published',
+      }
   return prisma.$transaction(async (tx) => {
-    const app = await createApp({
-      name: candidate.title,
-      appUrl,
-      title: candidate.title,
-      summary: candidate.summary || candidate.title,
-      description: candidate.summary || candidate.title,
-      previewImageUrl,
-      tags: parseTags(candidate.tags),
-      status: 'published',
-    }, candidate.authorUserId || undefined, tx)
+    const app = await createApp(appInput, candidate.authorUserId || undefined, tx)
 
     const updatedCandidate = await markCandidatePromoted(tx, candidate, {
         promotedTo: CandidatePromoteTo.gallery,

@@ -3,11 +3,13 @@ import { CommentStatus } from '@prisma/client'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
+    $transaction: vi.fn(),
     review: {
       findUnique: vi.fn(),
     },
     comment: {
       create: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       count: vi.fn(),
     },
@@ -32,9 +34,11 @@ import { assessContent } from '@/modules/like'
 import { createComment, getComments } from './service'
 
 const prismaMock = prisma as unknown as {
+  $transaction: ReturnType<typeof vi.fn>
   review: { findUnique: ReturnType<typeof vi.fn> }
   comment: {
     create: ReturnType<typeof vi.fn>
+    findFirst: ReturnType<typeof vi.fn>
     findMany: ReturnType<typeof vi.fn>
     count: ReturnType<typeof vi.fn>
   }
@@ -48,6 +52,9 @@ const assessContentMock = assessContent as unknown as ReturnType<typeof vi.fn>
 describe('comment/service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    prismaMock.$transaction.mockImplementation(
+      (operation: (tx: typeof prismaMock) => unknown) => operation(prismaMock),
+    )
   })
 
   it('throws validation error for too short content', async () => {

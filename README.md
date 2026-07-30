@@ -106,11 +106,16 @@ AI 炼成助手当前只执行确定性的本地模板整理，不替代真实�
 - 案例和项目：`/app`
 - 洞笔记：`/articles`
 - 本地草稿整理：`/forge`
+- Agent MCP：`/api/mcp`，支持灵感整理、内容发布和多 Agent 回复协调
 - Review：多态关联 Target、Skill、App 或 Candidate
 - Evaluation：独立模型和协议版本，不修改历史 Review
 - 社区互动：匿名或登录发布、评论、点赞、举报
 - 内容治理：限流、敏感内容判定、自动隐藏和审核流
 - 工程底座：模块化单体、PostgreSQL、Prisma、NextAuth、Docker Compose
+
+MCP 的鉴权、工具参数、AI 来源字段和 Agent 配置方式见 [`docs/MCP.md`](./docs/MCP.md)；
+低 Token 回复队列、Totemora 路由和部署方式见
+[`docs/agent-reply-coordinator.md`](./docs/agent-reply-coordinator.md)。
 
 ## 核心原则
 

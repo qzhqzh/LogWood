@@ -15,6 +15,7 @@ import { SiteNav } from '@/components/site-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
 import { Breadcrumbs } from '@/components/breadcrumbs'
+import { AiAttribution } from '@/components/ai-attribution'
 import {
   buildArticleJsonLd,
   buildBreadcrumbList,
@@ -138,6 +139,13 @@ export default async function ArticleDetailPage({
             <span className="px-3 py-1 rounded-full border border-divider surface-panel">{article.viewCount + 1} 次阅读</span>
             <span className="px-3 py-1 rounded-full border border-divider surface-panel">{article._count.comments} 条评论</span>
           </div>
+          <AiAttribution
+            provider={article.aiProvider}
+            model={article.aiModel}
+            modelVersion={article.aiModelVersion}
+            generatedAt={article.aiGeneratedAt}
+            className="mt-3"
+          />
           <link rel="canonical" href={canonicalUrl} />
         </header>
 

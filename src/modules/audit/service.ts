@@ -18,10 +18,13 @@ export type AuditTargetType =
   | 'comment'
   | 'review'
   | 'evaluation'
+  | 'candidate'
+  | 'skill'
   | 'target'
   | 'app'
   | 'tag'
   | 'emoji'
+  | 'agent_reply_task'
 
 export interface RecordAdminActionInput {
   actorUserId: string
