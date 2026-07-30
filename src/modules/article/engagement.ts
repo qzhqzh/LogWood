@@ -34,7 +34,7 @@ export interface ArticleCommentWithAuthor {
   }
 }
 
-const ARTICLE_COMMENT_MIN_LENGTH = 1
+const ARTICLE_COMMENT_MIN_LENGTH = 2
 const ARTICLE_COMMENT_MAX_LENGTH = 500
 
 export async function toggleArticleLike(articleId: string, actor: ActorContext): Promise<{ liked: boolean; likesCount: number }> {
@@ -132,7 +132,8 @@ export async function createArticleComment(
   },
   actor: ActorContext
 ): Promise<{ id: string; status: CommentStatus; createdAt: Date }> {
-  if (input.content.length < ARTICLE_COMMENT_MIN_LENGTH || input.content.length > ARTICLE_COMMENT_MAX_LENGTH) {
+  const content = input.content.trim()
+  if (content.length < ARTICLE_COMMENT_MIN_LENGTH || content.length > ARTICLE_COMMENT_MAX_LENGTH) {
     throw new Error('ERR_ARTICLE_COMMENT_VALIDATION')
   }
 
@@ -179,7 +180,7 @@ export async function createArticleComment(
     throw new Error('ERR_RATE_LIMIT_EXCEEDED')
   }
 
-  const moderationResult = assessContent(input.content)
+  const moderationResult = assessContent(content)
   const status = moderationResult.flagged ? CommentStatus.pending : CommentStatus.published
 
   const comment = await prisma.$transaction(async (tx) => {
@@ -190,7 +191,7 @@ export async function createArticleComment(
         threadRootId: parent?.threadRootId ?? parent?.id,
         userId: actor.userId,
         anonymousUserId: actor.anonymousUserId,
-        content: input.content,
+        content,
         language: input.language || 'zh',
         status,
       },
@@ -204,7 +205,7 @@ export async function createArticleComment(
         ownerUserId: article.authorUserId!,
         commentId: created.id,
         commentUserId: actor.userId,
-        content: input.content,
+        content,
         threadKey: parent?.threadRootId ?? parent?.id ?? created.id,
         sourceType: AgentReplySourceType.article,
         isDirectReply: !parent,

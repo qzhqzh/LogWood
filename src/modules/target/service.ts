@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { TargetType } from '@prisma/client'
+import { Prisma, TargetType } from '@prisma/client'
 
 export interface TargetFilter {
   type?: TargetType
@@ -69,12 +69,17 @@ function slugify(input: string): string {
     .replace(/-+/g, '-') || `target-${Date.now()}`
 }
 
-async function ensureUniqueTargetSlug(baseSlug: string): Promise<string> {
+type TargetDb = Pick<Prisma.TransactionClient, 'target'>
+
+async function ensureUniqueTargetSlug(
+  baseSlug: string,
+  db: TargetDb = prisma,
+): Promise<string> {
   let slug = baseSlug
   let suffix = 1
 
   while (true) {
-    const existing = await prisma.target.findUnique({ where: { slug } })
+    const existing = await db.target.findUnique({ where: { slug } })
     if (!existing) return slug
     suffix += 1
     slug = `${baseSlug}-${suffix}`
@@ -140,11 +145,14 @@ export async function listTargets(filter?: TargetFilter): Promise<TargetWithStat
   })
 }
 
-export async function createTarget(input: CreateTargetInput) {
+export async function createTarget(
+  input: CreateTargetInput,
+  db: TargetDb = prisma,
+) {
   const baseSlug = slugify(input.name)
-  const slug = await ensureUniqueTargetSlug(baseSlug)
+  const slug = await ensureUniqueTargetSlug(baseSlug, db)
 
-  return prisma.target.create({
+  return db.target.create({
     data: {
       name: input.name,
       slug,

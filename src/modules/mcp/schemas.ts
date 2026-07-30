@@ -7,12 +7,18 @@ import {
 } from '@prisma/client'
 import * as z from 'zod'
 
-const optionalHttpUrl = z.string().url().optional()
-const optionalAssetUrl = z.string().refine(
-  (value) => /^https?:\/\//i.test(value) || value.startsWith('/'),
-  '必须是 http(s) URL 或站内绝对路径',
-).optional()
+const httpUrl = z.string().url().refine((value) => {
+  const protocol = new URL(value).protocol
+  return protocol === 'http:' || protocol === 'https:'
+}, '必须是 http(s) URL')
+const optionalHttpUrl = httpUrl.optional()
+const optionalAssetUrl = z.union([
+  httpUrl,
+  z.string().regex(/^\/(?!\/)/, '必须是 http(s) URL 或站内绝对路径'),
+]).optional()
 const tagsSchema = z.array(z.string().trim().min(1).max(30)).max(12).optional()
+const leaseTokenSchema = z.string().trim().regex(/^[a-z0-9][a-z0-9._:-]{15,79}$/)
+const mutableCandidateStatusSchema = z.enum(['watching', 'evaluating', 'dropped'])
 
 export const aiAttributionSchema = z.object({
   provider: z.string().trim().min(1).max(80),
@@ -42,7 +48,7 @@ export const listInspirationsSchema = z.object({
 export const updateInspirationShape = {
   candidateId: z.string().min(1),
   tags: tagsSchema,
-  status: z.nativeEnum(CandidateStatus).optional(),
+  status: mutableCandidateStatusSchema.optional(),
 }
 
 export const updateInspirationSchema = z.object(updateInspirationShape).refine(
@@ -65,11 +71,11 @@ export const inspirationToSkillSchema = z.object({
 
 export const inspirationToAppSchema = z.object({
   candidateId: z.string().min(1),
-  name: z.string().trim().min(2).max(120),
-  appUrl: z.string().url(),
-  title: z.string().trim().min(2).max(120),
-  summary: z.string().trim().min(2).max(240),
-  description: z.string().trim().min(2).max(5000),
+  name: z.string().trim().min(2).max(120).optional(),
+  appUrl: httpUrl.optional(),
+  title: z.string().trim().min(2).max(120).optional(),
+  summary: z.string().trim().min(2).max(240).optional(),
+  description: z.string().trim().min(2).max(5000).optional(),
   previewImageUrl: optionalAssetUrl,
   tags: tagsSchema,
   status: z.enum(['draft', 'published', 'archived']).optional(),
@@ -112,6 +118,7 @@ export const replyTaskGetSchema = z.object({
 
 export const replyTaskPlanSchema = z.object({
   taskId: z.string().min(1),
+  leaseToken: leaseTokenSchema,
   selectedAgentIds: z.array(
     z.string().trim().regex(/^[a-z0-9][a-z0-9._:-]{0,79}$/),
   ).min(1).max(5),
@@ -131,6 +138,7 @@ export const replyContributeSchema = z.object({
 
 export const replyFinalizeSchema = z.object({
   taskId: z.string().min(1),
+  leaseToken: leaseTokenSchema,
   replyAgentId: z.string().trim()
     .regex(/^[a-z0-9][a-z0-9._:-]{0,79}$/)
     .optional(),
@@ -140,5 +148,6 @@ export const replyFinalizeSchema = z.object({
 
 export const replyIgnoreSchema = z.object({
   taskId: z.string().min(1),
+  leaseToken: leaseTokenSchema,
   reason: z.string().trim().min(1).max(240),
 })

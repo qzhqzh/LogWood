@@ -37,6 +37,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
   const isAdmin = isAdminSession(session)
   const candidate = await getCandidateBySlug(slug)
   if (!candidate) notFound()
+  const canViewRaw = isAdmin || session?.user?.id === candidate.authorUserId
   const canOrganize = Boolean(
     session?.user?.id
     && (isAdmin || candidate.authorUserId === session.user.id),
@@ -99,6 +100,15 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
           </div>
 
         </header>
+
+        {canViewRaw && candidate.rawContent && candidate.rawContent !== candidate.summary && (
+          <section className="mb-8 border-l-2 border-amber-400/40 pl-4">
+            <h2 className="text-sm font-semibold text-amber-200">原始记录</h2>
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted">
+              {candidate.rawContent}
+            </p>
+          </section>
+        )}
 
         {(candidate.previewImageUrl || candidate.logoUrl) && (
           <div className="relative flex min-h-64 w-full items-center justify-center overflow-hidden rounded-lg border border-divider bg-black/30 mb-8">

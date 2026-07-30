@@ -32,6 +32,7 @@ import {
   createMcpArticle,
   createMcpReview,
   listMcpInspirations,
+  promoteMcpInspirationToApp,
   promoteMcpInspirationToSkill,
   recordMcpInspiration,
   updateMcpInspiration,
@@ -61,6 +62,7 @@ describe('mcp/actions', () => {
         title: '移动端截图归档',
         ideaKey: expect.stringMatching(/^mcp:/),
         summary: '移动端截图归档\n需要保留原图和标签。',
+        rawContent: '移动端截图归档\n需要保留原图和标签。',
         tags: ['移动端', '归档'],
       }),
       'user-1',
@@ -123,6 +125,24 @@ describe('mcp/actions', () => {
         prompt: '按顺序检查版本、测试、变更记录与回滚方案。',
         tags: ['发布', '流程'],
       }),
+    })
+  })
+
+  it('promotes a pure image candidate to the gallery using candidate defaults', async () => {
+    prismaMock.candidate.findFirst.mockResolvedValue({ id: 'candidate-1' })
+    candidateMocks.promoteCandidate.mockResolvedValue({
+      candidate: { id: 'candidate-1' },
+      promoted: { type: 'gallery', id: 'app-1', slug: 'mobile-layout' },
+    })
+
+    await promoteMcpInspirationToApp({
+      candidateId: 'candidate-1',
+    }, 'user-1')
+
+    expect(candidateMocks.promoteCandidate).toHaveBeenCalledWith({
+      id: 'candidate-1',
+      to: 'gallery',
+      app: undefined,
     })
   })
 

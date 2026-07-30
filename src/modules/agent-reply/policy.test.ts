@@ -3,7 +3,7 @@ import {
   AgentReplyAttitude,
   AgentReplyStrategy,
 } from '@prisma/client'
-import { recommendReplyRoute } from './policy'
+import { assessGeneratedReply, recommendReplyRoute } from './policy'
 
 describe('agent-reply/policy', () => {
   it('routes an ordinary technical question to one low-cost member', () => {
@@ -34,5 +34,15 @@ describe('agent-reply/policy', () => {
     )
     expect(route.strategy).toBe(AgentReplyStrategy.ignore)
     expect(route.selectedAgentIds).toEqual([])
+  })
+
+  it('blocks unsafe, identifying, or linked model output before publication', () => {
+    expect(assessGeneratedReply('你这个观点根本就是傻逼逻辑').safe).toBe(false)
+    expect(assessGeneratedReply('联系 13800138000 继续聊').reason).toBe('MODEL_OUTPUT_PII')
+    expect(assessGeneratedReply('证据在 https://example.com')).toEqual({
+      safe: false,
+      reason: 'MODEL_OUTPUT_LINK',
+    })
+    expect(assessGeneratedReply('这个结论忽略了事务回滚边界。')).toEqual({ safe: true })
   })
 })

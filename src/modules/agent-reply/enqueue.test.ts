@@ -7,6 +7,7 @@ import { enqueueAgentReplyTask } from './enqueue'
 
 function createTx(completedRounds = 0) {
   return {
+    $queryRaw: vi.fn().mockResolvedValue([{ id: 'owner-1' }]),
     agentReplyTask: {
       count: vi.fn().mockResolvedValue(completedRounds),
       create: vi.fn().mockImplementation(({ data }) => Promise.resolve({
@@ -32,6 +33,7 @@ describe('agent-reply/enqueue', () => {
     })
 
     expect(result?.status).toBe(AgentReplyTaskStatus.pending)
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1)
     expect(tx.agentReplyTask.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         reviewCommentId: 'comment-1',
@@ -40,7 +42,7 @@ describe('agent-reply/enqueue', () => {
     })
   })
 
-  it('records but does not dispatch a fourth automated round', async () => {
+  it('counts scheduled tasks and does not dispatch a fourth automated round', async () => {
     const tx = createTx(3)
     const result = await enqueueAgentReplyTask(tx as never, {
       ownerUserId: 'owner-1',

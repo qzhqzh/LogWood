@@ -7,7 +7,7 @@ import { z } from 'zod'
 const createCommentSchema = z.object({
   reviewId: z.string(),
   parentId: z.string().optional(),
-  content: z.string().min(10).max(500),
+  content: z.string().trim().min(2).max(500),
   language: z.string().optional(),
   deviceFingerprint: z.string().optional(),
 })

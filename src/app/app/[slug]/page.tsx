@@ -8,6 +8,7 @@ import { JsonLd } from '@/components/json-ld'
 import { Breadcrumbs } from '@/components/breadcrumbs'
 import { EvaluationPanel } from '@/components/evaluation-panel'
 import { ReviewPanel } from '@/components/review-panel'
+import { sanitizeArticleHtml } from '@/modules/article/sanitize'
 import {
   buildBreadcrumbList,
   buildMetadata,
@@ -54,6 +55,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
     { name: app.title, path },
   ]
   const breadcrumbJsonLd = buildBreadcrumbList(breadcrumbItems)
+  const safeDescription = sanitizeArticleHtml(app.description)
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
@@ -75,7 +77,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-400 mb-3">{app.name}</p>
             <h1 className="text-4xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] mb-4">{app.title}</h1>
             <p className="text-xl text-gray-300 mb-6">{app.summary}</p>
-            <div className="prose prose-invert max-w-none text-gray-300 tiptap-editor-content" dangerouslySetInnerHTML={{ __html: app.description }} />
+            <div className="prose prose-invert max-w-none text-gray-300 tiptap-editor-content" dangerouslySetInnerHTML={{ __html: safeDescription }} />
             {app.tags.length > 0 && (
               <div className="mt-8 flex flex-wrap gap-2">
                 {app.tags.map((tag: string) => (

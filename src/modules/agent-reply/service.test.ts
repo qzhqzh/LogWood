@@ -33,7 +33,7 @@ describe('agent-reply/service leases', () => {
       .mockResolvedValueOnce([{ id: 'task-1', leaseOwner: 'worker:a1' }])
     prismaMock.agentReplyTask.updateMany.mockResolvedValue({ count: 1 })
 
-    await claimReplyTasks({
+    const tasks = await claimReplyTasks({
       ownerUserId: 'owner-1',
       coordinatorAgentId: 'totemora-coordinator',
       leaseOwner: 'worker:a1',
@@ -47,6 +47,8 @@ describe('agent-reply/service leases', () => {
         }),
       }),
     )
+    expect(tasks[0]).toMatchObject({ id: 'task-1', leaseToken: 'worker:a1' })
+    expect(tasks[0]).not.toHaveProperty('leaseOwner')
   })
 
   it('rejects a stale worker before changing the reply plan', async () => {
@@ -63,6 +65,13 @@ describe('agent-reply/service leases', () => {
       leaseOwner: 'worker:old',
       selectedAgentIds: ['qwen_worker'],
     })).rejects.toThrow('ERR_REPLY_TASK_LEASED')
+    expect(prismaMock.agentReplyTask.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          leaseUntil: { gt: expect.any(Date) },
+        }),
+      }),
+    )
     expect(prismaMock.agentReplyTask.updateMany).not.toHaveBeenCalled()
   })
 
@@ -88,8 +97,28 @@ describe('agent-reply/service leases', () => {
           leaseOwner: 'worker:old',
           attempts: 2,
         }),
+        data: expect.objectContaining({
+          status: AgentReplyTaskStatus.pending,
+          nextAttemptAt: expect.any(Date),
+        }),
       }),
     )
+  })
+
+  it('rejects unsafe final content before starting a transaction', async () => {
+    await expect(finalizeReplyTask({
+      taskId: 'task-1',
+      ownerUserId: 'owner-1',
+      coordinatorAgentId: 'totemora-coordinator',
+      leaseOwner: 'worker:a1',
+      content: '联系 13800138000，我帮你人肉对方。',
+      aiAttribution: {
+        provider: 'qwen',
+        model: 'qwen3.7-plus',
+        modelVersion: 'member-v2',
+      },
+    })).rejects.toThrow('ERR_REPLY_OUTPUT_UNSAFE')
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
   })
 
   it('rejects finalization after another worker has acquired the lease', async () => {
@@ -121,6 +150,45 @@ describe('agent-reply/service leases', () => {
       leaseOwner: 'worker:old',
       replyAgentId: 'qwen_worker',
       content: '这是一条最终回复。',
+      aiAttribution: {
+        provider: 'qwen',
+        model: 'qwen3.7-plus',
+        modelVersion: 'member-v2',
+      },
+    })).rejects.toThrow('ERR_REPLY_TASK_LEASED')
+    expect(transactionTask.agentReplyTask.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('rejects finalization after the current lease has expired', async () => {
+    const transactionTask = {
+      agentReplyTask: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: 'task-1',
+          status: AgentReplyTaskStatus.collecting,
+          coordinatorAgentId: 'totemora-coordinator',
+          leaseOwner: 'worker:a1',
+          leaseUntil: new Date('2026-01-01T00:00:00.000Z'),
+          selectedAgentIds: ['qwen_worker'],
+          reviewComment: {
+            id: 'comment-1',
+            reviewId: 'review-1',
+          },
+          articleComment: null,
+        }),
+        updateMany: vi.fn(),
+      },
+    }
+    prismaMock.$transaction.mockImplementation(
+      (callback: (tx: typeof transactionTask) => unknown) => callback(transactionTask),
+    )
+
+    await expect(finalizeReplyTask({
+      taskId: 'task-1',
+      ownerUserId: 'owner-1',
+      coordinatorAgentId: 'totemora-coordinator',
+      leaseOwner: 'worker:a1',
+      replyAgentId: 'qwen_worker',
+      content: '这个结论忽略了事务边界。',
       aiAttribution: {
         provider: 'qwen',
         model: 'qwen3.7-plus',

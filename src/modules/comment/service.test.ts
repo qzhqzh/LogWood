@@ -60,7 +60,7 @@ describe('comment/service', () => {
   it('throws validation error for too short content', async () => {
     await expect(
       createComment(
-        { reviewId: 'r1', content: 'short' },
+        { reviewId: 'r1', content: 'x' },
         { actorType: 'anonymous', actorKey: 'ip:1' }
       )
     ).rejects.toThrow('ERR_COMMENT_VALIDATION')

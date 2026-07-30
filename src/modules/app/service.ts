@@ -45,6 +45,20 @@ function slugify(input: string): string {
     .replace(/-+/g, '-') || `app-${Date.now()}`
 }
 
+function safeLink(value: string): string {
+  const normalized = value.trim()
+  if (/^\/(?!\/)/.test(normalized)) return normalized
+  try {
+    const parsed = new URL(normalized)
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return normalized
+    }
+  } catch {
+    // Fall through to the stable validation error.
+  }
+  throw new Error('ERR_APP_URL_INVALID')
+}
+
 async function ensureUniqueSlug(
   baseSlug: string,
   appIdToIgnore?: string,
@@ -175,11 +189,11 @@ export async function createApp(
     data: {
       name: input.name,
       slug,
-      appUrl: input.appUrl,
+      appUrl: safeLink(input.appUrl),
       title: input.title,
       summary: input.summary,
       description: input.description,
-      previewImageUrl: input.previewImageUrl || null,
+      previewImageUrl: input.previewImageUrl ? safeLink(input.previewImageUrl) : null,
       tags: JSON.stringify(input.tags || []),
       status: input.status || 'published',
       authorUserId,
@@ -216,11 +230,11 @@ export async function updateApp(input: UpdateAppInput) {
     data: {
       name: input.name,
       slug: nextSlug,
-      appUrl: input.appUrl,
+      appUrl: safeLink(input.appUrl),
       title: input.title,
       summary: input.summary,
       description: input.description,
-      previewImageUrl: input.previewImageUrl || null,
+      previewImageUrl: input.previewImageUrl ? safeLink(input.previewImageUrl) : null,
       tags: JSON.stringify(input.tags || []),
       status: input.status || 'published',
     },

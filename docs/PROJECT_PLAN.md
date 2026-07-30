@@ -43,6 +43,7 @@
   - 复用现有 Candidate 模型，作为灵感池。
   - `watching / evaluating / dropped / promoted` 分别展示为未处理 / 好灵感 / 不合适 / 已转化。
   - 登录用户可通过 `New` 提交文本或图片；文本由 DeepSeek 保守提炼，图片直接保存。
+  - 文本灵感同时保留原始输入和 AI 派生摘要，避免提炼后无法追溯。
   - 灵感作者或管理员可随时归类、增删 Tags，并按标题、备注和 Tags 搜索。
 - 收藏室：`/skills`
   - 独立 Skill 模型；当前主要为 Prompt × Effect 型资产。
@@ -52,6 +53,10 @@
 - 吐槽室：`/talk`
   - 聚合历史 Review 自由记录、提问和吐槽。
 - 洞笔记：`/articles`
+- Agent MCP：`/api/mcp`
+  - 独立 Bearer Token 鉴权，支持灵感记录/整理/晋升、AI 吐槽与文章发布。
+  - AI 内容强制记录 Provider、Model、Version 和生成时间。
+  - 用户回复 AI 内容时，在评论事务内创建低 Token 回复任务。
 - 收藏室历史数据：`/tools`
   - 保留历史 Target、Editor、Coding、Model、Prompt 数据和详情 URL，后续并入收藏室统一模型。
 - 画廊：`/app`
@@ -86,6 +91,8 @@ Target、Skill、App、Candidate 详情现在同时展示：
 - 架构风格：模块化单体（`src/modules`）
 - 部署：Docker Compose；默认 `NODE_ENV=production`，由 entrypoint 执行 build + start。仅本地实时开发显式使用 `NODE_ENV=development`。
 - 数据库更新：当前仓库启动链路使用 `prisma db push`；正式环境应在执行前审阅 schema diff 和备份策略。
+- 回复 Worker：通过 `agent-reply` Compose profile 使用 host network 常驻运行；
+  PostgreSQL 只发布到宿主机回环地址。空队列只查询数据库，不调用模型。
 
 Evaluation v2 上线要求：
 
@@ -103,6 +110,9 @@ bun run build
 - `skill`：Skill CRUD、分类、效果图和草稿
 - `candidate`：灵感 / 候选及现有晋升流程
   - 快速创建采用 Route Handler → Candidate AI Service → Candidate Service；API key 仅由服务端环境变量读取。
+- `mcp`：Agent 工具 schema、Bearer 鉴权、Owner 隔离、内容发布和审计入口。
+- `agent-reply`：本地策略、线程轮次门禁、任务租约、候选幂等、输出安全检查和唯一最终发布。
+- `scripts/reply-worker.ts`：按处理容量逐条领取任务，路由 Totemora 成员并执行退避重试。
 - `target`：历史模型、软件、工具和 Prompt 资源
 - `app`：案例、应用和项目
 - `review`：自由记录，多态关联 Target / Skill / App / Candidate
@@ -115,6 +125,10 @@ bun run build
 - `src/shared/reviews/subject.ts`：当前多态对象统一展示适配
 
 迁移策略：先用适配层统一公开语义，再设计 Resource、版本和成熟度状态；不得为模型整洁牺牲历史内容、互动或 URL。
+
+回复队列的部署与安全约束见 [`agent-reply-coordinator.md`](./agent-reply-coordinator.md)，
+MCP 工具契约见 [`MCP.md`](./MCP.md)。产品 / 服务仍是待建模阶段，不能用 App / 画廊
+条目冒充多 Skill 组合的产品资产。
 
 ## 6. Evaluation v2 实现约束
 

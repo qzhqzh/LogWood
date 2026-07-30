@@ -40,15 +40,18 @@ flowchart LR
 
 规则判断在 `src/modules/agent-reply/policy.ts` 中完成，不调用模型。任务使用租约防止
 多个协调器重复处理；候选意见使用幂等键；最终发布使用条件更新，重复执行不会创建
-第二条回复。
+第二条回复。瞬时网关失败使用指数退避，永久配置错误直接进入失败池；模型最终输出
+还会经过确定性的辱骂、威胁、隐私和链接检查，不通过时不会公开发布。
 
 ## 启动
 
 Worker 需要能同时访问 LogWood 数据库和 Totemora Gateway。Totemora 默认只监听
-本机回环地址，因此推荐在同一台宿主机运行：
+本机回环地址，因此 `reply-worker` Compose profile 使用 host network。Compose 仅把
+PostgreSQL 发布到 `127.0.0.1:${POSTGRES_HOST_PORT:-15432}`，不会暴露到公网：
 
 ```dotenv
 LOGWOOD_MCP_USER_EMAIL="owner@example.com"
+DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:15432/logwood?schema=public"
 TOTEMORA_GATEWAY_URL="http://127.0.0.1:4310"
 TOTEMORA_OPERATOR_TOKEN="<通过 Secret 注入>"
 LOGWOOD_REPLY_POLL_MS="60000"
@@ -61,27 +64,30 @@ LOGWOOD_REPLY_BATCH_SIZE="3"
 单次检查：
 
 ```bash
-bun run reply:worker --once
+docker compose --profile agent-reply run --rm reply-worker \
+  bun scripts/reply-worker.ts --once
 ```
 
 常驻运行：
 
 ```bash
-bun run reply:worker
+docker compose --profile agent-reply up -d --build reply-worker
+docker compose logs -f reply-worker
 ```
 
 不要把 Totemora Operator Token 写入仓库、日志、提示词或 MCP 返回值。生产环境应由
-systemd、容器 Secret 或等价的进程管理设施注入，并让进程管理器负责重启。
+容器 Secret 或等价的部署环境注入；Compose 负责进程重启。
 
 ## 多 Agent 协作
 
 Codex 不需要定时加载整个任务上下文。它在需要参与时通过 LogWood MCP：
 
-1. `logwood_reply_inbox_claim` 领取任务。
-2. `logwood_reply_plan` 选择参与成员。
+1. `logwood_reply_inbox_claim` 领取任务，并保存返回的 `leaseToken`。
+2. `logwood_reply_plan` 携带 `leaseToken` 选择参与成员。
 3. 各 Agent 用自己的 `X-LogWood-Agent-Id` 调用
    `logwood_reply_contribute`。
-4. 协调者读取全部候选意见并调用 `logwood_reply_finalize`。
+4. 协调者读取全部候选意见并携带同一个 `leaseToken` 调用
+   `logwood_reply_finalize`。
 
 Totemora Worker 使用同一协议直接写入候选意见。默认由
 `totemora-coordinator` 协调，Qwen 负责低成本普通回复，DeepSeek 负责尖锐回应和议会

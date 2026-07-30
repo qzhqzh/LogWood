@@ -20,6 +20,7 @@ import {
   councilSynthesisPrompt,
   responsePrompt,
 } from '../src/modules/agent-reply/prompts'
+import { assessGeneratedReply } from '../src/modules/agent-reply/policy'
 import { boundedWorkerInteger } from '../src/modules/agent-reply/worker-config'
 
 const COORDINATOR_AGENT_ID = 'totemora-coordinator'
@@ -91,6 +92,34 @@ async function saveContribution(input: {
   })
 }
 
+async function finalizeSafeReply(input: {
+  ownerUserId: string
+  taskId: string
+  replyAgentId: string
+  reply: TotemoraMemberReply
+}) {
+  const content = boundedReply(input.reply.content)
+  const assessment = assessGeneratedReply(content)
+  if (!assessment.safe) {
+    return ignoreReplyTask({
+      taskId: input.taskId,
+      ownerUserId: input.ownerUserId,
+      coordinatorAgentId: COORDINATOR_AGENT_ID,
+      leaseOwner: WORKER_LEASE_OWNER,
+      reason: assessment.reason || 'MODEL_OUTPUT_UNSAFE',
+    })
+  }
+  return finalizeReplyTask({
+    taskId: input.taskId,
+    ownerUserId: input.ownerUserId,
+    coordinatorAgentId: COORDINATOR_AGENT_ID,
+    leaseOwner: WORKER_LEASE_OWNER,
+    replyAgentId: input.replyAgentId,
+    content,
+    aiAttribution: toAiAttribution(input.reply),
+  })
+}
+
 async function processClaimedTask(input: {
   taskId: string
   ownerUserId: string
@@ -121,23 +150,25 @@ async function processClaimedTask(input: {
   const selectedAgentIds = configuredAgents.length > 0
     ? configuredAgents
     : [DEFAULT_QWEN_MEMBER]
+  const plannedAgentIds = task.strategy === AgentReplyStrategy.council
+    ? Array.from(new Set([
+        DEFAULT_QWEN_MEMBER,
+        DEFAULT_DEEPSEEK_MEMBER,
+        ...selectedAgentIds,
+      ])).slice(0, 5)
+    : selectedAgentIds
   await planReplyTask({
     taskId: task.id,
     ownerUserId: input.ownerUserId,
     coordinatorAgentId: COORDINATOR_AGENT_ID,
     leaseOwner: WORKER_LEASE_OWNER,
-    selectedAgentIds,
+    selectedAgentIds: plannedAgentIds,
     strategy: task.strategy,
     attitude: task.attitude,
   })
 
   if (task.strategy === AgentReplyStrategy.council) {
-    const councilIds = Array.from(new Set([
-      ...selectedAgentIds,
-      DEFAULT_QWEN_MEMBER,
-      DEFAULT_DEEPSEEK_MEMBER,
-    ])).slice(0, 5)
-    const settled = await Promise.allSettled(councilIds.map(async (agentId) => {
+    const settled = await Promise.allSettled(plannedAgentIds.map(async (agentId) => {
       const reply = await input.client.chat(
         agentId,
         responsePrompt(content, task.strategy, 'candidate', sourceContext),
@@ -167,14 +198,11 @@ async function processClaimedTask(input: {
       reply: synthesis,
       role: 'synthesis',
     })
-    return finalizeReplyTask({
+    return finalizeSafeReply({
       taskId: task.id,
       ownerUserId: input.ownerUserId,
-      coordinatorAgentId: COORDINATOR_AGENT_ID,
-      leaseOwner: WORKER_LEASE_OWNER,
       replyAgentId: DEFAULT_DEEPSEEK_MEMBER,
-      content: boundedReply(synthesis.content),
-      aiAttribution: toAiAttribution(synthesis),
+      reply: synthesis,
     })
   }
 
@@ -192,14 +220,11 @@ async function processClaimedTask(input: {
     reply,
     role: 'final',
   })
-  return finalizeReplyTask({
+  return finalizeSafeReply({
     taskId: task.id,
     ownerUserId: input.ownerUserId,
-    coordinatorAgentId: COORDINATOR_AGENT_ID,
-    leaseOwner: WORKER_LEASE_OWNER,
     replyAgentId: agentId,
-    content: boundedReply(reply.content),
-    aiAttribution: toAiAttribution(reply),
+    reply,
   })
 }
 
@@ -212,41 +237,46 @@ export async function runReplyWorkerOnce(options: WorkerOptions = {}) {
   })
   if (!owner) throw new Error('ERR_MCP_USER_NOT_FOUND')
 
-  const tasks = await claimReplyTasks({
-    ownerUserId: owner.id,
-    coordinatorAgentId: COORDINATOR_AGENT_ID,
-    leaseOwner: WORKER_LEASE_OWNER,
-    limit: boundedWorkerInteger(
-      options.batchSize ?? process.env.LOGWOOD_REPLY_BATCH_SIZE,
-      { fallback: 3, min: 1, max: 10 },
-    ),
-    leaseSeconds: 600,
-  })
-  if (tasks.length === 0) return { claimed: 0, results: [] }
-  let client: TotemoraClient
-  try {
-    client = options.client ?? new TotemoraClient({
-      baseUrl: process.env.TOTEMORA_GATEWAY_URL || 'http://127.0.0.1:4310',
-      operatorToken: process.env.TOTEMORA_OPERATOR_TOKEN || '',
-    })
-  } catch (error) {
-    await Promise.all(tasks.map((task) => recordReplyTaskFailure({
-      taskId: task.id,
+  const batchSize = boundedWorkerInteger(
+    options.batchSize ?? process.env.LOGWOOD_REPLY_BATCH_SIZE,
+    { fallback: 3, min: 1, max: 10 },
+  )
+  let client = options.client
+  let claimed = 0
+  const results: unknown[] = []
+  for (let index = 0; index < batchSize; index += 1) {
+    const [task] = await claimReplyTasks({
       ownerUserId: owner.id,
       coordinatorAgentId: COORDINATOR_AGENT_ID,
       leaseOwner: WORKER_LEASE_OWNER,
-      error,
-    })))
-    return {
-      claimed: tasks.length,
-      results: tasks.map((task) => ({
-        taskId: task.id,
-        error: error instanceof Error ? error.message : 'ERR_REPLY_WORKER_FAILED',
-      })),
+      limit: 1,
+      leaseSeconds: 600,
+    })
+    if (!task) break
+    claimed += 1
+
+    if (!client) {
+      try {
+        client = new TotemoraClient({
+          baseUrl: process.env.TOTEMORA_GATEWAY_URL || 'http://127.0.0.1:4310',
+          operatorToken: process.env.TOTEMORA_OPERATOR_TOKEN || '',
+        })
+      } catch (error) {
+        await recordReplyTaskFailure({
+          taskId: task.id,
+          ownerUserId: owner.id,
+          coordinatorAgentId: COORDINATOR_AGENT_ID,
+          leaseOwner: WORKER_LEASE_OWNER,
+          error,
+        })
+        results.push({
+          taskId: task.id,
+          error: error instanceof Error ? error.message : 'ERR_REPLY_WORKER_FAILED',
+        })
+        break
+      }
     }
-  }
-  const results = []
-  for (const task of tasks) {
+
     try {
       results.push(await processClaimedTask({
         taskId: task.id,
@@ -267,7 +297,7 @@ export async function runReplyWorkerOnce(options: WorkerOptions = {}) {
       })
     }
   }
-  return { claimed: tasks.length, results }
+  return { claimed, results }
 }
 
 async function main() {

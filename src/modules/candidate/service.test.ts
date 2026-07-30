@@ -14,10 +14,12 @@ const prismaMock = vi.hoisted(() => {
 })
 const createAppMock = vi.hoisted(() => vi.fn())
 const createSkillMock = vi.hoisted(() => vi.fn())
+const createTargetMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/modules/app', () => ({ createApp: createAppMock }))
 vi.mock('@/modules/skill', () => ({ createSkill: createSkillMock }))
+vi.mock('@/modules/target', () => ({ createTarget: createTargetMock }))
 
 import { organizeCandidate, promoteCandidate } from './service'
 
@@ -68,6 +70,20 @@ describe('candidate/service', () => {
       id: 'candidate-1',
       status: 'dropped',
     })).rejects.toThrow('ERR_CANDIDATE_ALREADY_PROMOTED')
+    expect(prismaMock.candidate.update).not.toHaveBeenCalled()
+  })
+
+  it('does not allow a pool update to impersonate an atomic promotion', async () => {
+    prismaMock.candidate.findUnique.mockResolvedValue({
+      id: 'candidate-1',
+      status: 'watching',
+      tags: '[]',
+    })
+
+    await expect(organizeCandidate({
+      id: 'candidate-1',
+      status: 'promoted',
+    })).rejects.toThrow('ERR_CANDIDATE_PROMOTION_REQUIRED')
     expect(prismaMock.candidate.update).not.toHaveBeenCalled()
   })
 
@@ -240,5 +256,43 @@ describe('candidate/service', () => {
       previewImageUrl: '/uploads/candidates/example.webp',
       tags: ['移动端'],
     }), undefined, prismaMock)
+  })
+
+  it('keeps the legacy tool promotion API working transactionally', async () => {
+    prismaMock.candidate.findUnique
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        slug: 'legacy-tool',
+        status: 'watching',
+        title: '旧工具入口',
+        summary: '兼容旧客户端',
+        tags: '["工具"]',
+        websiteUrl: 'https://example.com',
+        sourceUrl: null,
+        logoUrl: null,
+        previewImageUrl: null,
+      })
+      .mockResolvedValueOnce({
+        id: 'candidate-1',
+        slug: 'legacy-tool',
+        status: 'promoted',
+        tags: '["工具"]',
+      })
+    createTargetMock.mockResolvedValue({
+      id: 'target-1',
+      slug: 'legacy-tool',
+    })
+    prismaMock.candidate.updateMany.mockResolvedValue({ count: 1 })
+
+    await expect(promoteCandidate({
+      id: 'candidate-1',
+      to: 'tool',
+    })).resolves.toMatchObject({
+      promoted: { type: 'tool', id: 'target-1' },
+    })
+    expect(createTargetMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: '旧工具入口' }),
+      prismaMock,
+    )
   })
 })

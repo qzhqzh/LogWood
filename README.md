@@ -190,6 +190,15 @@ docker compose exec web bunx prisma db push
 
 正式生产数据库应先备份并审阅 schema diff；长期建议切换到版本化 Prisma migration。
 
+启用 AI 内容回复 Worker：
+
+```bash
+docker compose --profile agent-reply up -d --build reply-worker
+```
+
+Worker 的 Totemora 连接、Secret 和空队列成本说明见
+[`docs/agent-reply-coordinator.md`](./docs/agent-reply-coordinator.md)。
+
 ### 4. 验证
 
 ```bash

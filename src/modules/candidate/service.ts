@@ -4,9 +4,11 @@ import {
   CandidatePromoteTo,
   CandidateStatus,
   Prisma,
+  TargetType,
 } from '@prisma/client'
 import { createApp, CreateAppInput } from '@/modules/app'
 import { createSkill, CreateSkillInput } from '@/modules/skill'
+import { createTarget } from '@/modules/target'
 import { candidateStatusLabel } from './constants'
 
 export {
@@ -20,6 +22,7 @@ export interface CreateCandidateInput {
   title: string
   ideaKey?: string
   summary?: string
+  rawContent?: string
   websiteUrl?: string
   sourceUrl?: string
   logoUrl?: string
@@ -35,7 +38,8 @@ export interface UpdateCandidateInput extends CreateCandidateInput {
 
 export interface PromoteCandidateInput {
   id: string
-  to: 'skill' | 'gallery'
+  to: 'tool' | 'skill' | 'gallery'
+  targetType?: TargetType
   skill?: CreateSkillInput
   app?: CreateAppInput
 }
@@ -49,6 +53,19 @@ function slugify(input: string): string {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-') || `candidate-${Date.now()}`
   )
+}
+
+function safeCandidateLink(value?: string): string | null {
+  const normalized = value?.trim()
+  if (!normalized) return null
+  if (/^\/(?!\/)/.test(normalized)) return normalized
+  try {
+    const protocol = new URL(normalized).protocol
+    if (protocol === 'http:' || protocol === 'https:') return normalized
+  } catch {
+    // Fall through to the stable validation error.
+  }
+  throw new Error('ERR_CANDIDATE_URL_INVALID')
 }
 
 async function ensureUniqueSlug(baseSlug: string, ignoreId?: string): Promise<string> {
@@ -123,9 +140,10 @@ export async function listCandidates(opts?: {
       ratings.length > 0
         ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
         : null
-    const { reviews, ...rest } = c
+    const { reviews, rawContent, ...rest } = c
     return {
       ...mapCandidate(rest),
+      ...(opts?.authorUserId ? { rawContent } : {}),
       reviewCount: c._count.reviews,
       avgRating,
     }
@@ -183,6 +201,9 @@ export async function organizeCandidate(input: {
 }) {
   const existing = await prisma.candidate.findUnique({ where: { id: input.id } })
   if (!existing) throw new Error('ERR_CANDIDATE_NOT_FOUND')
+  if (input.status === CandidateStatus.promoted) {
+    throw new Error('ERR_CANDIDATE_PROMOTION_REQUIRED')
+  }
   if (existing.status === CandidateStatus.promoted && input.status) {
     throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
   }
@@ -228,6 +249,9 @@ function buildCandidateIdeaSlug(ideaKey: string, authorUserId: string): string {
 }
 
 export async function createCandidate(input: CreateCandidateInput, authorUserId?: string) {
+  if (input.status === CandidateStatus.promoted) {
+    throw new Error('ERR_CANDIDATE_PROMOTION_REQUIRED')
+  }
   const slug = input.ideaKey
     ? buildCandidateIdeaSlug(input.ideaKey, authorUserId || 'system')
     : await ensureUniqueSlug(slugify(input.title))
@@ -237,10 +261,11 @@ export async function createCandidate(input: CreateCandidateInput, authorUserId?
         title: input.title.trim(),
         slug,
         summary: input.summary?.trim() || null,
-        websiteUrl: input.websiteUrl?.trim() || null,
-        sourceUrl: input.sourceUrl?.trim() || null,
-        logoUrl: input.logoUrl?.trim() || null,
-        previewImageUrl: input.previewImageUrl?.trim() || null,
+        rawContent: input.rawContent?.trim() || null,
+        websiteUrl: safeCandidateLink(input.websiteUrl),
+        sourceUrl: safeCandidateLink(input.sourceUrl),
+        logoUrl: safeCandidateLink(input.logoUrl),
+        previewImageUrl: safeCandidateLink(input.previewImageUrl),
         tags: JSON.stringify(input.tags || []),
         status: input.status ?? CandidateStatus.watching,
         sortOrder: input.sortOrder ?? 0,
@@ -253,6 +278,12 @@ export async function createCandidate(input: CreateCandidateInput, authorUserId?
 export async function updateCandidate(input: UpdateCandidateInput) {
   const existing = await prisma.candidate.findUnique({ where: { id: input.id } })
   if (!existing) throw new Error('ERR_CANDIDATE_NOT_FOUND')
+  if (
+    input.status === CandidateStatus.promoted
+    && existing.status !== CandidateStatus.promoted
+  ) {
+    throw new Error('ERR_CANDIDATE_PROMOTION_REQUIRED')
+  }
 
   let slug = existing.slug
   if (input.title.trim() !== existing.title && !existing.slug.startsWith('idea-')) {
@@ -266,10 +297,11 @@ export async function updateCandidate(input: UpdateCandidateInput) {
         title: input.title.trim(),
         slug,
         summary: input.summary?.trim() || null,
-        websiteUrl: input.websiteUrl?.trim() || null,
-        sourceUrl: input.sourceUrl?.trim() || null,
-        logoUrl: input.logoUrl?.trim() || null,
-        previewImageUrl: input.previewImageUrl?.trim() || null,
+        rawContent: input.rawContent?.trim() || existing.rawContent,
+        websiteUrl: safeCandidateLink(input.websiteUrl),
+        sourceUrl: safeCandidateLink(input.sourceUrl),
+        logoUrl: safeCandidateLink(input.logoUrl),
+        previewImageUrl: safeCandidateLink(input.previewImageUrl),
         tags: JSON.stringify(input.tags || []),
         status: input.status ?? existing.status,
         sortOrder: input.sortOrder ?? existing.sortOrder,
@@ -289,6 +321,29 @@ export async function promoteCandidate(input: PromoteCandidateInput) {
   if (!candidate) throw new Error('ERR_CANDIDATE_NOT_FOUND')
   if (candidate.status === CandidateStatus.promoted) {
     throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
+  }
+
+  if (input.to === 'tool') {
+    return prisma.$transaction(async (tx) => {
+      const target = await createTarget({
+        name: candidate.title,
+        type: input.targetType || TargetType.coding,
+        logoUrl: candidate.logoUrl || undefined,
+        description: candidate.summary || undefined,
+        websiteUrl: candidate.websiteUrl || undefined,
+        previewImageUrl: candidate.previewImageUrl || undefined,
+        sourceUrl: candidate.sourceUrl || undefined,
+        features: parseTags(candidate.tags),
+      }, tx)
+      const updatedCandidate = await markCandidatePromoted(tx, candidate, {
+        promotedTo: CandidatePromoteTo.tool,
+        promotedTargetId: target.id,
+      })
+      return {
+        candidate: updatedCandidate,
+        promoted: { type: 'tool' as const, id: target.id, slug: target.slug },
+      }
+    })
   }
 
   if (input.to === 'skill') {
@@ -358,7 +413,11 @@ export async function promoteCandidate(input: PromoteCandidateInput) {
 async function markCandidatePromoted(
   tx: Prisma.TransactionClient,
   candidate: { id: string; status: CandidateStatus },
-  data: Pick<Prisma.CandidateUpdateManyMutationInput, 'promotedTo' | 'promotedSkillId' | 'promotedAppId'>,
+  data: Pick<Prisma.CandidateUncheckedUpdateManyInput, 'promotedTo'>
+    & Partial<Pick<
+      Prisma.CandidateUncheckedUpdateManyInput,
+      'promotedTargetId' | 'promotedSkillId' | 'promotedAppId'
+    >>,
 ) {
   const result = await tx.candidate.updateMany({
     where: {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   publishReviewSchema,
   recordInspirationSchema,
+  replyTaskPlanSchema,
   updateInspirationSchema,
 } from './schemas'
 
@@ -17,6 +18,38 @@ describe('mcp/schemas', () => {
   it('requires an actual inspiration update', () => {
     expect(() => updateInspirationSchema.parse({
       candidateId: 'candidate-1',
+    })).toThrow()
+
+    expect(() => updateInspirationSchema.parse({
+      candidateId: 'candidate-1',
+      status: 'promoted',
+    })).toThrow()
+  })
+
+  it('requires a lease token before planning an agent reply', () => {
+    expect(() => replyTaskPlanSchema.parse({
+      taskId: 'task-1',
+      selectedAgentIds: ['agent-1'],
+    })).toThrow()
+
+    expect(replyTaskPlanSchema.parse({
+      taskId: 'task-1',
+      leaseToken: 'lease-token-123456',
+      selectedAgentIds: ['agent-1'],
+    })).toMatchObject({
+      taskId: 'task-1',
+      leaseToken: 'lease-token-123456',
+    })
+  })
+
+  it('rejects non-http links and protocol-relative asset URLs', () => {
+    expect(() => recordInspirationSchema.parse({
+      content: '记录危险链接',
+      sourceUrl: 'javascript:alert(1)',
+    })).toThrow()
+    expect(() => recordInspirationSchema.parse({
+      content: '记录站外图片',
+      previewImageUrl: '//evil.example/image.png',
     })).toThrow()
   })
 

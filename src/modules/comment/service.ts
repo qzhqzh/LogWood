@@ -48,14 +48,15 @@ export interface CommentWithAuthor {
   isLikedByMe?: boolean
 }
 
-const CONTENT_MIN_LENGTH = 10
+const CONTENT_MIN_LENGTH = 2
 const CONTENT_MAX_LENGTH = 500
 
 export async function createComment(
   input: CreateCommentInput,
   actor: ActorContext
 ): Promise<{ id: string; status: CommentStatus; createdAt: Date }> {
-  if (input.content.length < CONTENT_MIN_LENGTH || input.content.length > CONTENT_MAX_LENGTH) {
+  const content = input.content.trim()
+  if (content.length < CONTENT_MIN_LENGTH || content.length > CONTENT_MAX_LENGTH) {
     throw new Error('ERR_COMMENT_VALIDATION')
   }
 
@@ -106,7 +107,7 @@ export async function createComment(
     throw new Error('ERR_RATE_LIMIT_EXCEEDED')
   }
 
-  const moderationResult = assessContent(input.content)
+  const moderationResult = assessContent(content)
   const status = moderationResult.flagged ? CommentStatus.pending : CommentStatus.published
 
   const comment = await prisma.$transaction(async (tx) => {
@@ -117,7 +118,7 @@ export async function createComment(
         threadRootId: parent?.threadRootId ?? parent?.id,
         userId: actor.userId,
         anonymousUserId: actor.anonymousUserId,
-        content: input.content,
+        content,
         language: input.language || 'zh',
         status,
       },
@@ -128,7 +129,7 @@ export async function createComment(
         ownerUserId: review.userId!,
         commentId: created.id,
         commentUserId: actor.userId,
-        content: input.content,
+        content,
         threadKey: parent?.threadRootId ?? parent?.id ?? created.id,
         sourceType: AgentReplySourceType.review,
         isDirectReply: !parent,

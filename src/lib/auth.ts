@@ -58,7 +58,11 @@ if (process.env.NODE_ENV === 'production' && !globalForAuthWarning.__logwoodAuth
 
   // Soft warn: plaintext admin password is acceptable for emergency access
   // but should be migrated to ADMIN_PASSWORD_HASH (bcrypt) in any real deploy.
-  if (adminPassword && !adminPasswordHash) {
+  if (
+    adminPassword
+    && !adminPasswordHash
+    && process.env.NEXT_PHASE !== 'phase-production-build'
+  ) {
     console.warn(
       'ADMIN_PASSWORD is set in plaintext. Prefer ADMIN_PASSWORD_HASH (bcrypt) in production.',
     )

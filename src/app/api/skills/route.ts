@@ -151,6 +151,9 @@ export async function DELETE(request: NextRequest) {
     if (error instanceof Error && error.message === 'ERR_SUBJECT_HAS_EVALUATIONS') {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }
+    if (error instanceof Error && error.message === 'ERR_SKILL_IN_USE') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     console.error('DELETE /api/skills error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

@@ -6,7 +6,7 @@ import { parsePage, parsePageSize } from '@/lib/safe-parse'
 
 const createArticleCommentSchema = z.object({
   parentId: z.string().optional(),
-  content: z.string().min(1).max(500),
+  content: z.string().trim().min(2).max(500),
   language: z.string().optional(),
   deviceFingerprint: z.string().optional(),
 })

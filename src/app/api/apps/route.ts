@@ -9,18 +9,28 @@ import { parsePage, parsePageSize } from '@/lib/safe-parse'
 
 export const dynamic = 'force-dynamic'
 
+const safeLinkSchema = z.string().refine(
+  (value) => {
+    if (/^\/(?!\/)/.test(value)) return true
+    try {
+      const protocol = new URL(value).protocol
+      return protocol === 'http:' || protocol === 'https:'
+    } catch {
+      return false
+    }
+  },
+  { message: '必须是 http(s) URL 或站内绝对路径' },
+)
+
 const createAppSchema = z.object({
   name: z.string().min(2).max(80),
-  appUrl: z.string().url(),
+  appUrl: safeLinkSchema,
   title: z.string().min(2).max(120),
   summary: z.string().min(10).max(240),
   description: z.string().min(20).max(100000),
   previewImageUrl: z.preprocess(
     (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
-    z.string().refine(
-      (v) => /^https?:\/\//.test(v) || v.startsWith('/'),
-      { message: 'previewImageUrl 必须是 http(s) 或 / 开头的合法路径' }
-    ).optional()
+    safeLinkSchema.optional()
   ),
   tags: z.array(z.string().min(1).max(30)).optional(),
   status: z.enum(APP_STATUSES).optional(),

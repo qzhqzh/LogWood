@@ -31,15 +31,26 @@ export async function enqueueAgentReplyTask(
   }
 
   const route = recommendReplyRoute(input.content)
-  const completedRounds = await tx.agentReplyTask.count({
-    where: {
-      ownerUserId: input.ownerUserId,
-      threadKey: input.threadKey,
-      status: AgentReplyTaskStatus.replied,
-    },
-  })
-  const exceededRoundLimit = completedRounds >= MAX_AUTOMATED_ROUNDS
   const terminalByPolicy = route.strategy === 'ignore' || route.strategy === 'escalate'
+  let exceededRoundLimit = false
+  if (!terminalByPolicy) {
+    await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${input.ownerUserId} FOR UPDATE`
+    const scheduledRounds = await tx.agentReplyTask.count({
+      where: {
+        ownerUserId: input.ownerUserId,
+        threadKey: input.threadKey,
+        status: {
+          in: [
+            AgentReplyTaskStatus.pending,
+            AgentReplyTaskStatus.claimed,
+            AgentReplyTaskStatus.collecting,
+            AgentReplyTaskStatus.replied,
+          ],
+        },
+      },
+    })
+    exceededRoundLimit = scheduledRounds >= MAX_AUTOMATED_ROUNDS
+  }
   const status = exceededRoundLimit || terminalByPolicy
     ? AgentReplyTaskStatus.ignored
     : AgentReplyTaskStatus.pending

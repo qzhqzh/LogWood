@@ -92,7 +92,7 @@ export function ArticleEngagement({ articleId, initialCommentCount = 0 }: Articl
   const [error, setError] = useState<string | null>(null)
   const commentFormRef = useRef<HTMLFormElement>(null)
 
-  const canSubmit = useMemo(() => commentContent.trim().length > 0, [commentContent])
+  const canSubmit = useMemo(() => commentContent.trim().length >= 2, [commentContent])
   const commentTree = useMemo(() => buildCommentTree(comments), [comments])
 
   function selectReplyTarget(item: ArticleCommentItem) {

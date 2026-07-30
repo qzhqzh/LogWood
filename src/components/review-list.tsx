@@ -206,7 +206,7 @@ export function ReviewList({
 
   const submitComment = async (reviewId: string) => {
     const content = (draftsByReviewId[reviewId] || '').trim()
-    if (content.length < 10 || content.length > 500) return
+    if (content.length < 2 || content.length > 500) return
     setSubmittingByReviewId((prev) => ({ ...prev, [reviewId]: true }))
     setCommentErrorsByReviewId((prev) => ({ ...prev, [reviewId]: null }))
     try {
@@ -385,7 +385,7 @@ export function ReviewList({
                       type="button"
                       onClick={() => submitComment(review.id)}
                       disabled={
-                        (draftsByReviewId[review.id] || '').trim().length < 10
+                        (draftsByReviewId[review.id] || '').trim().length < 2
                         || submittingByReviewId[review.id]
                       }
                       className="cyber-button rounded-lg px-3 py-1.5 text-sm disabled:opacity-50"

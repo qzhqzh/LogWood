@@ -40,16 +40,25 @@ export class TotemoraClient {
   }
 
   async listMembers(): Promise<TotemoraMember[]> {
-    const response = await this.fetchImpl(`${this.baseUrl}/api/tribe`, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(this.timeoutMs),
-    })
-    if (!response.ok) throw new Error('ERR_TOTEMORA_TRIBE_UNAVAILABLE')
-    const payload = await response.json() as {
-      members?: TotemoraMember[]
-      tribe?: { members?: TotemoraMember[] }
+    let response: Response
+    try {
+      response = await this.fetchImpl(`${this.baseUrl}/api/tribe`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(this.timeoutMs),
+      })
+    } catch {
+      throw new Error('ERR_TOTEMORA_TRIBE_UNAVAILABLE')
     }
-    return payload.members ?? payload.tribe?.members ?? []
+    if (!response.ok) throw new Error('ERR_TOTEMORA_TRIBE_UNAVAILABLE')
+    try {
+      const payload = await response.json() as {
+        members?: TotemoraMember[]
+        tribe?: { members?: TotemoraMember[] }
+      }
+      return payload.members ?? payload.tribe?.members ?? []
+    } catch {
+      throw new Error('ERR_TOTEMORA_TRIBE_UNAVAILABLE')
+    }
   }
 
   private async getMembers(): Promise<TotemoraMember[]> {
@@ -79,24 +88,32 @@ export class TotemoraClient {
       throw new Error('ERR_TOTEMORA_MEMBER_UNAVAILABLE')
     }
 
-    const response = await this.fetchImpl(
-      `${this.baseUrl}/api/members/${encodeURIComponent(memberId)}/chat`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.options.operatorToken}`,
+    let response: Response
+    try {
+      response = await this.fetchImpl(
+        `${this.baseUrl}/api/members/${encodeURIComponent(memberId)}/chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.options.operatorToken}`,
+          },
+          body: JSON.stringify({
+            message,
+            ask_mentor: false,
+          }),
+          signal: AbortSignal.timeout(this.timeoutMs),
         },
-        body: JSON.stringify({
-          message,
-          ask_mentor: false,
-        }),
-        signal: AbortSignal.timeout(this.timeoutMs),
-      },
-    )
+      )
+    } catch {
+      throw new Error('ERR_TOTEMORA_CHAT_FAILED')
+    }
     if (!response.ok) throw new Error('ERR_TOTEMORA_CHAT_FAILED')
-    const payload = await response.json() as {
-      reply?: { content?: string; at?: string }
+    let payload: { reply?: { content?: string; at?: string } }
+    try {
+      payload = await response.json() as typeof payload
+    } catch {
+      throw new Error('ERR_TOTEMORA_CHAT_FAILED')
     }
     const content = payload.reply?.content?.trim()
     if (!content) throw new Error('ERR_TOTEMORA_EMPTY_REPLY')

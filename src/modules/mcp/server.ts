@@ -160,7 +160,7 @@ export function createLogWoodMcpServer(
 
   server.registerTool('logwood_reply_inbox_claim', {
     title: '领取回复任务',
-    description: '按优先级领取回复任务并建立短租约；空收件箱不会触发任何模型。',
+    description: '按优先级领取回复任务并返回 leaseToken；空收件箱不会触发任何模型。',
     inputSchema: replyInboxClaimSchema.shape,
     annotations: {
       readOnlyHint: false,
@@ -186,7 +186,7 @@ export function createLogWoodMcpServer(
 
   server.registerTool('logwood_reply_plan', {
     title: '安排回复成员',
-    description: '由协调者指定一个或多个 Agent，以及友好、技术、尖锐或议会策略。',
+    description: '由持有 leaseToken 的协调者指定 Agent 和回复策略。',
     inputSchema: replyTaskPlanSchema.shape,
     annotations: {
       readOnlyHint: false,
@@ -216,7 +216,7 @@ export function createLogWoodMcpServer(
 
   server.registerTool('logwood_reply_finalize', {
     title: '发布协调回复',
-    description: '协调者从候选意见中形成唯一公开回复，并记录最终 Agent 和模型归属。',
+    description: '持有 leaseToken 的协调者发布唯一安全回复，并记录 Agent 和模型归属。',
     inputSchema: replyFinalizeSchema.shape,
     annotations: {
       readOnlyHint: false,

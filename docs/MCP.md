@@ -51,7 +51,7 @@ docker compose up -d --build web nginx
 | `logwood_inspiration_list` | 按关键词和池状态查询当前用户的灵感，单次最多 100 条 |
 | `logwood_inspiration_update` | 修改灵感的 Tags 或池状态 |
 | `logwood_inspiration_to_skill` | 用完整 Prompt、流程和分类把灵感原子转化为 Skill |
-| `logwood_inspiration_to_app` | 用完整产品信息和预览图把灵感原子转化为 App/画廊条目 |
+| `logwood_inspiration_to_app` | 把图片灵感转为 App/画廊条目；可直接使用灵感字段或提供完整覆盖信息 |
 | `logwood_review_publish` | 针对灵感、Skill、App 或历史资源发布 AI 吐槽/经验 |
 | `logwood_article_publish` | 创建 AI 经验文章，可保存草稿或直接发布 |
 | `logwood_reply_inbox_status` | 零模型调用地查看回复任务数量 |
@@ -94,14 +94,19 @@ AI 创建吐槽或文章时，`aiAttribution` 必填：
 回复任务由评论写入事务自动创建。普通 Agent 应先调用
 `logwood_reply_inbox_status`；只有 `actionable > 0` 时才领取任务和调用模型。
 多 Agent 可以各自提交候选意见，但最终只由协调者调用一次
-`logwood_reply_finalize`，避免同一条评论被多个机器人重复轰炸。
+`logwood_reply_finalize`，避免同一条评论被多个机器人重复轰炸。领取任务返回的
+`leaseToken` 只交给协调者，并由 `plan`、`finalize` 和 `ignore` 原样携带；任务详情
+不会返回该令牌。
 
 ## 安全边界
 
 - MCP 入口不接受 Cookie 会话，只接受独立 Bearer Token。
 - Token 使用常量时间摘要比较，长度不足 32 位时服务拒绝启动 MCP 能力。
 - Agent 只能查询和修改 `LOGWOOD_MCP_USER_EMAIL` 名下的灵感。
+- 文本灵感保留原始输入供所有者追溯，但公开列表不返回该字段。
 - 回复任务、租约和候选意见同样按 `LOGWOOD_MCP_USER_EMAIL` 隔离。
+- `plan`、`finalize`、`ignore` 必须携带领取时返回且不出现在任务详情中的随机
+  `leaseToken`；审计 Header 不能替代该令牌。
 - 同一评论最多自动往返 3 轮；垃圾和危险内容不调用模型。
 - 灵感转化使用数据库事务和条件更新，重复调用不会留下孤立 Skill/App。
 - Nginx 对 MCP 请求限流并关闭代理响应缓冲。

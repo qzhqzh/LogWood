@@ -61,6 +61,19 @@ describe('app/service', () => {
     expect(result.slug).toBe('dev-toolbox-2')
   })
 
+  it('rejects executable and protocol-relative app links', async () => {
+    prismaMock.app.findUnique.mockResolvedValue(null)
+
+    await expect(createApp({
+      name: 'Unsafe App',
+      appUrl: 'javascript:alert(1)',
+      title: 'Unsafe App',
+      summary: 'summary',
+      description: 'description',
+    })).rejects.toThrow('ERR_APP_URL_INVALID')
+    expect(prismaMock.app.create).not.toHaveBeenCalled()
+  })
+
   it('lists published apps by default', async () => {
     prismaMock.app.findMany.mockResolvedValue([])
     prismaMock.app.count.mockResolvedValue(0)

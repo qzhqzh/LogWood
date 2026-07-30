@@ -70,11 +70,11 @@ export interface PromoteMcpInspirationToSkillInput {
 
 export interface PromoteMcpInspirationToAppInput {
   candidateId: string
-  name: string
-  appUrl: string
-  title: string
-  summary: string
-  description: string
+  name?: string
+  appUrl?: string
+  title?: string
+  summary?: string
+  description?: string
   previewImageUrl?: string
   tags?: string[]
   status?: 'draft' | 'published' | 'archived'
@@ -103,6 +103,7 @@ export interface CreateMcpArticleInput {
 
 export interface McpReplyPlanInput {
   taskId: string
+  leaseToken: string
   selectedAgentIds: string[]
   strategy?: AgentReplyStrategy
   attitude?: AgentReplyAttitude
@@ -120,6 +121,7 @@ export interface McpReplyContributionInput {
 
 export interface McpReplyFinalizeInput {
   taskId: string
+  leaseToken: string
   replyAgentId?: string
   content: string
   aiAttribution: AiAttributionInput
@@ -192,6 +194,7 @@ export async function recordMcpInspiration(
       title,
       ideaKey,
       summary: input.summary?.trim() || content,
+      rawContent: content,
       sourceUrl: input.sourceUrl,
       websiteUrl: input.websiteUrl,
       previewImageUrl: input.previewImageUrl,
@@ -293,16 +296,33 @@ export async function promoteMcpInspirationToApp(
   authorUserId: string,
 ) {
   await assertOwnedCandidate(input.candidateId, authorUserId)
-  const app: CreateAppInput = {
-    name: input.name,
-    appUrl: input.appUrl,
-    title: input.title,
-    summary: input.summary,
-    description: input.description,
-    previewImageUrl: input.previewImageUrl,
-    tags: normalizeTags(input.tags),
-    status: input.status ?? 'published',
+  const providedDetails = [
+    input.name,
+    input.appUrl,
+    input.title,
+    input.summary,
+    input.description,
+  ]
+  const hasAnyDetails = providedDetails.some((value) => value !== undefined)
+  const hasAllDetails = providedDetails.every((value) => value !== undefined)
+  const hasSupplementalDetails = input.previewImageUrl !== undefined
+    || input.tags !== undefined
+    || input.status !== undefined
+  if (hasAnyDetails !== hasAllDetails || (!hasAllDetails && hasSupplementalDetails)) {
+    throw new Error('ERR_MCP_APP_DETAILS_INCOMPLETE')
   }
+  const app: CreateAppInput | undefined = hasAllDetails
+    ? {
+        name: input.name!,
+        appUrl: input.appUrl!,
+        title: input.title!,
+        summary: input.summary!,
+        description: input.description!,
+        previewImageUrl: input.previewImageUrl,
+        tags: normalizeTags(input.tags),
+        status: input.status ?? 'published',
+      }
+    : undefined
   const result = await promoteCandidate({
     id: input.candidateId,
     to: 'gallery',
@@ -443,10 +463,12 @@ export async function planMcpReplyTask(
   authorUserId: string,
   agentId: string,
 ) {
+  const { leaseToken, ...plan } = input
   return planReplyTask({
-    ...input,
+    ...plan,
     ownerUserId: authorUserId,
     coordinatorAgentId: agentId,
+    leaseOwner: leaseToken,
   })
 }
 
@@ -467,10 +489,12 @@ export async function finalizeMcpReplyTask(
   authorUserId: string,
   agentId: string,
 ) {
+  const { leaseToken, ...reply } = input
   const result = await finalizeReplyTask({
-    ...input,
+    ...reply,
     ownerUserId: authorUserId,
     coordinatorAgentId: agentId,
+    leaseOwner: leaseToken,
   })
   await recordAdminAction({
     actorUserId: authorUserId,
@@ -487,13 +511,15 @@ export async function finalizeMcpReplyTask(
 }
 
 export async function ignoreMcpReplyTask(
-  input: { taskId: string; reason: string },
+  input: { taskId: string; leaseToken: string; reason: string },
   authorUserId: string,
   agentId: string,
 ) {
+  const { leaseToken, ...reply } = input
   return ignoreReplyTask({
-    ...input,
+    ...reply,
     ownerUserId: authorUserId,
     coordinatorAgentId: agentId,
+    leaseOwner: leaseToken,
   })
 }

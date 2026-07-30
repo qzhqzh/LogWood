@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import {
   AgentReplyAttitude,
   AgentReplyStrategy,
@@ -10,12 +11,21 @@ import {
   AiAttributionInput,
   normalizeAiAttribution,
 } from '@/modules/ai-attribution'
+import { assessGeneratedReply } from './policy'
 
 const DEFAULT_LEASE_SECONDS = 120
 const MAX_LEASE_SECONDS = 900
+const COLLECTING_LEASE_SECONDS = 600
 const MAX_REPLY_LENGTH = 500
 const MAX_CONTRIBUTION_LENGTH = 4000
 const MAX_AGENT_COUNT = 5
+const MAX_FAILURE_ATTEMPTS = 6
+const RETRYABLE_FAILURES = new Set([
+  'ERR_REPLY_COUNCIL_FAILED',
+  'ERR_TOTEMORA_CHAT_FAILED',
+  'ERR_TOTEMORA_EMPTY_REPLY',
+  'ERR_TOTEMORA_TRIBE_UNAVAILABLE',
+])
 
 function normalizeAgentId(value: string): string {
   const normalized = value.trim().toLowerCase()
@@ -39,11 +49,11 @@ function activeTaskWhere(ownerUserId: string, taskId: string) {
     ownerUserId,
     status: {
       in: [
-        AgentReplyTaskStatus.pending,
         AgentReplyTaskStatus.claimed,
         AgentReplyTaskStatus.collecting,
       ],
     },
+    leaseUntil: { gt: new Date() },
   }
 }
 
@@ -79,7 +89,9 @@ export async function claimReplyTasks(input: {
   leaseSeconds?: number
 }) {
   const coordinatorAgentId = normalizeAgentId(input.coordinatorAgentId)
-  const leaseOwner = normalizeAgentId(input.leaseOwner ?? coordinatorAgentId)
+  const leaseOwner = normalizeAgentId(
+    input.leaseOwner ?? randomBytes(24).toString('hex'),
+  )
   const limit = Math.min(Math.max(input.limit ?? 1, 1), 10)
   const leaseSeconds = Math.min(
     Math.max(input.leaseSeconds ?? DEFAULT_LEASE_SECONDS, 30),
@@ -90,7 +102,13 @@ export async function claimReplyTasks(input: {
   const claimable = {
     ownerUserId: input.ownerUserId,
     OR: [
-      { status: AgentReplyTaskStatus.pending },
+      {
+        status: AgentReplyTaskStatus.pending,
+        OR: [
+          { nextAttemptAt: null },
+          { nextAttemptAt: { lte: now } },
+        ],
+      },
       {
         status: {
           in: [
@@ -98,7 +116,10 @@ export async function claimReplyTasks(input: {
             AgentReplyTaskStatus.collecting,
           ],
         },
-        leaseUntil: { lt: now },
+        OR: [
+          { leaseUntil: null },
+          { leaseUntil: { lt: now } },
+        ],
       },
     ],
   }
@@ -127,6 +148,7 @@ export async function claimReplyTasks(input: {
         leaseOwner,
         leaseUntil,
         attempts: { increment: 1 },
+        nextAttemptAt: null,
         lastError: null,
       },
     })
@@ -134,13 +156,17 @@ export async function claimReplyTasks(input: {
   }
 
   if (claimedIds.length === 0) return []
-  return prisma.agentReplyTask.findMany({
+  const tasks = await prisma.agentReplyTask.findMany({
     where: { id: { in: claimedIds } },
     orderBy: [
       { priority: 'desc' },
       { createdAt: 'asc' },
     ],
   })
+  return tasks.map(({ leaseOwner: taskLeaseOwner, ...task }) => ({
+    ...task,
+    leaseToken: taskLeaseOwner,
+  }))
 }
 
 export async function getReplyTask(taskId: string, ownerUserId: string) {
@@ -175,7 +201,8 @@ export async function getReplyTask(taskId: string, ownerUserId: string) {
     },
   })
   if (!task) throw new Error('ERR_REPLY_TASK_NOT_FOUND')
-  return task
+  const { leaseOwner: _leaseOwner, ...publicTask } = task
+  return publicTask
 }
 
 export async function planReplyTask(input: {
@@ -211,6 +238,7 @@ export async function planReplyTask(input: {
       status: AgentReplyTaskStatus.collecting,
       coordinatorAgentId,
       leaseOwner,
+      leaseUntil: new Date(Date.now() + COLLECTING_LEASE_SECONDS * 1000),
       selectedAgentIds: normalizeSelectedAgents(input.selectedAgentIds),
       strategy: input.strategy,
       attitude: input.attitude,
@@ -243,10 +271,21 @@ export async function contributeToReplyTask(input: {
     throw new Error('ERR_REPLY_CONTRIBUTION_INVALID')
   }
   const task = await prisma.agentReplyTask.findFirst({
-    where: activeTaskWhere(input.ownerUserId, input.taskId),
-    select: { id: true },
+    where: {
+      id: input.taskId,
+      ownerUserId: input.ownerUserId,
+      status: AgentReplyTaskStatus.collecting,
+      leaseUntil: { gt: new Date() },
+    },
+    select: { id: true, selectedAgentIds: true },
   })
   if (!task) throw new Error('ERR_REPLY_TASK_NOT_ACTIONABLE')
+  const selectedAgentIds = Array.isArray(task.selectedAgentIds)
+    ? task.selectedAgentIds.filter((value): value is string => typeof value === 'string')
+    : []
+  if (!selectedAgentIds.includes(agentId)) {
+    throw new Error('ERR_REPLY_AGENT_NOT_SELECTED')
+  }
   const attribution = normalizeAiAttribution(input.aiAttribution)
 
   return prisma.agentReplyContribution.upsert({
@@ -290,6 +329,9 @@ export async function finalizeReplyTask(input: {
   if (!content || content.length > MAX_REPLY_LENGTH) {
     throw new Error('ERR_REPLY_CONTENT_INVALID')
   }
+  if (!assessGeneratedReply(content).safe) {
+    throw new Error('ERR_REPLY_OUTPUT_UNSAFE')
+  }
   const attribution = normalizeAiAttribution(input.aiAttribution)
 
   return prisma.$transaction(async (tx) => {
@@ -309,8 +351,7 @@ export async function finalizeReplyTask(input: {
       }
     }
     if (
-      task.status !== AgentReplyTaskStatus.pending
-      && task.status !== AgentReplyTaskStatus.claimed
+      task.status !== AgentReplyTaskStatus.claimed
       && task.status !== AgentReplyTaskStatus.collecting
     ) {
       throw new Error('ERR_REPLY_TASK_NOT_ACTIONABLE')
@@ -319,6 +360,9 @@ export async function finalizeReplyTask(input: {
       throw new Error('ERR_REPLY_TASK_LEASED')
     }
     if (task.leaseOwner && task.leaseOwner !== leaseOwner) {
+      throw new Error('ERR_REPLY_TASK_LEASED')
+    }
+    if (!task.leaseUntil || task.leaseUntil <= new Date()) {
       throw new Error('ERR_REPLY_TASK_LEASED')
     }
 
@@ -452,6 +496,7 @@ export async function recordReplyTaskFailure(input: {
   const coordinatorAgentId = normalizeAgentId(input.coordinatorAgentId)
   const leaseOwner = normalizeAgentId(input.leaseOwner ?? coordinatorAgentId)
   const message = input.error instanceof Error
+    && /^ERR_[A-Z0-9_]+$/.test(input.error.message)
     ? input.error.message
     : 'ERR_REPLY_WORKER_FAILED'
   const task = await prisma.agentReplyTask.findFirst({
@@ -463,6 +508,9 @@ export async function recordReplyTaskFailure(input: {
     select: { id: true, attempts: true },
   })
   if (!task) return
+  const shouldRetry = RETRYABLE_FAILURES.has(message)
+    && task.attempts < MAX_FAILURE_ATTEMPTS
+  const retryDelayMs = Math.min(2 ** Math.max(task.attempts - 1, 0) * 60_000, 30 * 60_000)
   await prisma.agentReplyTask.updateMany({
     where: {
       ...activeTaskWhere(input.ownerUserId, task.id),
@@ -471,11 +519,14 @@ export async function recordReplyTaskFailure(input: {
       attempts: task.attempts,
     },
     data: {
-      status: task.attempts >= 3
-        ? AgentReplyTaskStatus.failed
-        : AgentReplyTaskStatus.pending,
+      status: shouldRetry
+        ? AgentReplyTaskStatus.pending
+        : AgentReplyTaskStatus.failed,
       leaseOwner: null,
       leaseUntil: null,
+      nextAttemptAt: shouldRetry
+        ? new Date(Date.now() + retryDelayMs)
+        : null,
       lastError: message.slice(0, 240),
     },
   })

@@ -23,7 +23,15 @@ const optionalUrl = z.preprocess((value) => {
   if (/^https?:\/\//i.test(trimmed)) return trimmed
   if (trimmed.startsWith('/')) return trimmed
   return `https://${trimmed}`
-}, z.string().optional())
+}, z.string().refine((value) => {
+  if (/^\/(?!\/)/.test(value)) return true
+  try {
+    const protocol = new URL(value).protocol
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
+}, '必须是 http(s) URL 或站内绝对路径').optional())
 
 const candidateBodySchema = z.object({
   title: z.string().min(2).max(120),
@@ -85,6 +93,9 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'ERR_CANDIDATE_VALIDATION', details: error.errors }, { status: 400 })
     }
+    if (error instanceof Error && error.message === 'ERR_CANDIDATE_PROMOTION_REQUIRED') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     console.error('POST /api/candidates error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -111,6 +122,12 @@ export async function PATCH(request: NextRequest) {
     }
     if (error instanceof Error && error.message === 'ERR_CANDIDATE_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
+    }
+    if (
+      error instanceof Error
+      && ['ERR_CANDIDATE_PROMOTION_REQUIRED', 'ERR_CANDIDATE_ALREADY_PROMOTED'].includes(error.message)
+    ) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
     }
     console.error('PATCH /api/candidates error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

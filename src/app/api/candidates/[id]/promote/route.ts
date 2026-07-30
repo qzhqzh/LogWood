@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { TargetType } from '@prisma/client'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
@@ -9,7 +10,8 @@ import { promoteCandidate } from '@/modules/candidate'
 export const dynamic = 'force-dynamic'
 
 const promoteSchema = z.object({
-  to: z.enum(['skill', 'gallery']),
+  to: z.enum(['tool', 'skill', 'gallery']),
+  targetType: z.nativeEnum(TargetType).optional(),
 })
 
 export async function POST(
@@ -30,6 +32,7 @@ export async function POST(
     const result = await promoteCandidate({
       id,
       to: body.to,
+      targetType: body.targetType,
     })
 
     revalidatePath('/candidates')

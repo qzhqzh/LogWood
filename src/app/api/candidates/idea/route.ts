@@ -65,6 +65,7 @@ export async function POST(request: Request) {
         title: idea.title,
         ideaKey,
         summary: idea.summary,
+        rawContent: validated.input,
         sourceUrl: idea.sourceUrl,
         websiteUrl: idea.websiteUrl,
         tags: idea.tags,
