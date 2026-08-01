@@ -112,7 +112,7 @@ export async function listTargets(filter?: TargetFilter): Promise<TargetWithStat
       _avg: { rating: true },
     })
     for (const group of groups) {
-      if (typeof group._avg.rating === 'number') {
+      if (group.targetId && typeof group._avg.rating === 'number') {
         ratingByTarget.set(group.targetId, Math.round(group._avg.rating * 10) / 10)
       }
     }
@@ -292,7 +292,7 @@ export async function getTargetsByIds(ids: string[]): Promise<TargetCompareCard[
     _avg: { rating: true },
   })
   for (const group of groups) {
-    if (typeof group._avg.rating === 'number') {
+    if (group.targetId && typeof group._avg.rating === 'number') {
       ratingByTarget.set(group.targetId, Math.round(group._avg.rating * 10) / 10)
     }
   }

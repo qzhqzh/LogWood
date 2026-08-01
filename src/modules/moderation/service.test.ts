@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ReportStatus, ReportTargetType, CommentStatus, ArticleStatus } from '@prisma/client'
+import { ActorType, ReportStatus, ReportTargetType, CommentStatus, ArticleStatus } from '@prisma/client'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
@@ -56,7 +56,7 @@ describe('moderation/service', () => {
 
     const result = await createReport(
       { targetType: ReportTargetType.article, targetId: 'a1', reason: 'spam content' },
-      { userId: 'u1' }
+      { actorType: ActorType.user, actorKey: 'user:u1', userId: 'u1' }
     )
 
     expect(result).toEqual({ id: 'r1', status: ReportStatus.open })
