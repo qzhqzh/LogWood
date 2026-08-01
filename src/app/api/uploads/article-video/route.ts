@@ -1,11 +1,10 @@
-import path from 'path'
-import { mkdir, writeFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { fileMatchesMime } from '@/lib/file-signature'
+import { persistPublicUpload } from '@/lib/public-upload'
 
 const MAX_SIZE_BYTES = 30 * 1024 * 1024
 const ALLOWED_MIME = new Set([
@@ -63,10 +62,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Magic-byte check (R-03): refuse uploads whose first bytes do not match
-    // the claimed Content-Type.
     const buffer = Buffer.from(await file.arrayBuffer())
-    if (!fileMatchesMime(buffer.subarray(0, 32), file.type)) {
+    if (!fileMatchesMime(buffer, file.type)) {
       return NextResponse.json(
         { error: '文件签名与声明的视频类型不一致，已拒绝' },
         { status: 400 },
@@ -75,15 +72,13 @@ export async function POST(request: Request) {
 
     const ext = EXTENSION_BY_MIME[file.type] || 'mp4'
     const fileName = `${Date.now()}-${randomUUID()}.${ext}`
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'articles')
-    const absolutePath = path.join(uploadDir, fileName)
-
-    await mkdir(uploadDir, { recursive: true })
-    await writeFile(absolutePath, buffer)
-
-    return NextResponse.json({
-      url: `/uploads/articles/${fileName}`,
+    const url = await persistPublicUpload({
+      category: 'articles',
+      fileName,
+      buffer,
     })
+
+    return NextResponse.json({ url })
   } catch (error) {
     if (
       error instanceof Error &&
