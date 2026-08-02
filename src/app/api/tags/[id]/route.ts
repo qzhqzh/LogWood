@@ -7,7 +7,7 @@ import { recordAdminAction } from '@/modules/audit'
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -27,7 +27,6 @@ export async function DELETE(
       targetId: params.id,
     })
 
-    return NextResponse.json(result)
     return NextResponse.json(result)
   } catch (error) {
     if (error instanceof Error && error.message === 'ERR_TAG_NOT_FOUND') {

@@ -1,11 +1,10 @@
-import path from 'path'
-import { mkdir, writeFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { fileMatchesMime } from '@/lib/file-signature'
+import { persistPublicUpload } from '@/lib/public-upload'
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
 const ALLOWED_MIME = new Set([
@@ -14,9 +13,7 @@ const ALLOWED_MIME = new Set([
   'image/webp',
   'image/gif',
 ])
-// File extensions we will materialise on disk. Refusing anything outside this
-// map prevents `image/svg+xml` style MIME types from producing weird filenames
-// like `*.svg+xml`.
+
 const EXTENSION_BY_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -49,10 +46,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '图片大小不能超过 5MB' }, { status: 400 })
     }
 
-    // Read once: we need the bytes anyway to write to disk, and we sanity
-    // check the magic bytes against the claimed MIME before persisting (R-03).
     const buffer = Buffer.from(await file.arrayBuffer())
-    if (!fileMatchesMime(buffer.subarray(0, 32), file.type)) {
+    if (!fileMatchesMime(buffer, file.type)) {
       return NextResponse.json(
         { error: '文件签名与声明的类型不一致，已拒绝' },
         { status: 400 },
@@ -61,15 +56,13 @@ export async function POST(request: Request) {
 
     const ext = EXTENSION_BY_MIME[file.type] || 'bin'
     const fileName = `${Date.now()}-${randomUUID()}.${ext}`
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'apps')
-    const absolutePath = path.join(uploadDir, fileName)
-
-    await mkdir(uploadDir, { recursive: true })
-    await writeFile(absolutePath, buffer)
-
-    return NextResponse.json({
-      url: `/uploads/apps/${fileName}`,
+    const url = await persistPublicUpload({
+      category: 'apps',
+      fileName,
+      buffer,
     })
+
+    return NextResponse.json({ url })
   } catch (error) {
     console.error('POST /api/uploads/app-preview error:', error)
     return NextResponse.json({ error: '上传失败' }, { status: 500 })
