@@ -2,6 +2,10 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 import { canonicalFor } from '@/shared/seo'
 
+// The sitemap reflects database content and must not require PostgreSQL while
+// producing the application image. It is generated on request in production.
+export const dynamic = 'force-dynamic'
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
 
@@ -11,6 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: canonicalFor('/'), lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: canonicalFor('/candidates'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: canonicalFor('/skills'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { url: canonicalFor('/scraps'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: canonicalFor('/evaluations'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: canonicalFor('/talk'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
     { url: canonicalFor('/articles'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
@@ -34,7 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
     prisma.candidate.findMany({
       select: { slug: true, updatedAt: true },
-      where: { status: { in: ['watching', 'evaluating', 'promoted'] } },
+      where: { status: { in: ['watching', 'evaluating', 'promoted', 'dropped'] } },
     }),
     prisma.skill.findMany({
       select: { slug: true, updatedAt: true },

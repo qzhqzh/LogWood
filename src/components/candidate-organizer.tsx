@@ -25,12 +25,12 @@ const STATUS_OPTIONS: Array<{
   },
   {
     value: 'evaluating',
-    label: '好灵感',
+    label: '观察中',
     activeClass: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200',
   },
   {
     value: 'dropped',
-    label: '不合适',
+    label: '送入废品站',
     activeClass: 'border-rose-400/50 bg-rose-400/10 text-rose-200',
   },
 ]
@@ -111,7 +111,7 @@ export function CandidateOrganizer({
           <h2 id="organize-title" className="text-base font-semibold text-[var(--color-text-strong)]">
             整理灵感
           </h2>
-          <p className="mt-1 text-sm text-soft">归类决定所在池子，Tags 用于快速搜索。</p>
+          <p className="mt-1 text-sm text-soft">状态决定下一步去向，Tags 用于快速搜索。</p>
         </div>
         {saving && (
           <span className="inline-flex items-center gap-2 text-xs text-soft" role="status">

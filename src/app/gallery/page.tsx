@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-/** Alias: /gallery → 画廊（现用 /app） */
+/** Alias: /gallery → 收藏室的视觉视图 */
 export default function GalleryAliasPage() {
-  redirect('/app')
+  redirect('/skills?type=visual')
 }

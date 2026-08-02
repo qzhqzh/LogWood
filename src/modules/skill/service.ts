@@ -174,15 +174,18 @@ export async function updateSkill(input: UpdateSkillInput) {
   }).then(mapSkill)
 }
 
-export async function deleteSkill(id: string) {
-  const existing = await prisma.skill.findUnique({ where: { id } })
+export async function deleteSkill(
+  id: string,
+  db: typeof prisma | Prisma.TransactionClient = prisma,
+) {
+  const existing = await db.skill.findUnique({ where: { id } })
   if (!existing) throw new Error('ERR_SKILL_NOT_FOUND')
-  const promotedCandidate = await prisma.candidate.findFirst({
+  const promotedCandidate = await db.candidate.findFirst({
     where: { promotedSkillId: id },
     select: { id: true },
   })
   if (promotedCandidate) throw new Error('ERR_SKILL_IN_USE')
-  return prisma.skill.delete({ where: { id }, select: { id: true, slug: true } })
+  return db.skill.delete({ where: { id }, select: { id: true, slug: true } })
 }
 
 export async function countPublishedSkills() {

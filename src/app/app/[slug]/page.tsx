@@ -8,6 +8,7 @@ import { JsonLd } from '@/components/json-ld'
 import { Breadcrumbs } from '@/components/breadcrumbs'
 import { EvaluationPanel } from '@/components/evaluation-panel'
 import { ReviewPanel } from '@/components/review-panel'
+import { LifecycleOriginHistory } from '@/components/lifecycle-origin-history'
 import { sanitizeArticleHtml } from '@/modules/article/sanitize'
 import {
   buildBreadcrumbList,
@@ -101,6 +102,7 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
           </div>
         </div>
 
+        <LifecycleOriginHistory subjectType="app" subjectId={app.id} />
         <EvaluationPanel subjectType="app" subjectId={app.id} />
         <ReviewPanel subjectType="app" subjectId={app.id} title="自由记录、提问或吐槽" />
       </section>

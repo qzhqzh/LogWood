@@ -19,6 +19,7 @@ export interface TargetWithStats {
   previewImageUrl: string | null
   sourceUrl: string | null
   compareGroup: string | null
+  updatedAt?: Date
   _count?: {
     reviews: number
   }
@@ -139,6 +140,7 @@ export async function listTargets(filter?: TargetFilter): Promise<TargetWithStat
       previewImageUrl: target.previewImageUrl,
       sourceUrl: target.sourceUrl,
       compareGroup: target.compareGroup,
+      updatedAt: target.updatedAt,
       _count: target._count,
       avgRating: avgRating ?? undefined,
     }
@@ -208,8 +210,10 @@ export async function updateTarget(input: UpdateTargetInput) {
   })
 }
 
-export async function deleteTarget(id: string) {
-  const existing = await prisma.target.findUnique({
+type TargetDeleteDb = Pick<Prisma.TransactionClient, 'target' | 'candidate'>
+
+export async function deleteTarget(id: string, db: TargetDeleteDb = prisma) {
+  const existing = await db.target.findUnique({
     where: { id },
     select: { id: true },
   })
@@ -218,7 +222,13 @@ export async function deleteTarget(id: string) {
     throw new Error('ERR_TARGET_NOT_FOUND')
   }
 
-  return prisma.target.delete({
+  const promotedCandidate = await db.candidate.findFirst({
+    where: { promotedTargetId: id },
+    select: { id: true },
+  })
+  if (promotedCandidate) throw new Error('ERR_TARGET_IN_USE')
+
+  return db.target.delete({
     where: { id },
     select: { id: true },
   })
@@ -262,6 +272,7 @@ export async function getTargetBySlug(
     previewImageUrl: target.previewImageUrl,
     sourceUrl: target.sourceUrl,
     compareGroup: target.compareGroup,
+    updatedAt: target.updatedAt,
     _count: target._count,
     avgRating,
   }

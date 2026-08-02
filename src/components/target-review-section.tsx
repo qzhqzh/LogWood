@@ -1,5 +1,6 @@
 import { EvaluationPanel } from '@/components/evaluation-panel'
 import { ReviewPanel } from '@/components/review-panel'
+import { LifecycleOriginHistory } from '@/components/lifecycle-origin-history'
 
 interface TargetReviewSectionProps {
   targetId: string
@@ -9,6 +10,7 @@ interface TargetReviewSectionProps {
 export function TargetReviewSection({ targetId, canPublishReview }: TargetReviewSectionProps) {
   return (
     <>
+      <LifecycleOriginHistory subjectType="target" subjectId={targetId} />
       <EvaluationPanel subjectType="target" subjectId={targetId} />
       <ReviewPanel
         subjectType="target"

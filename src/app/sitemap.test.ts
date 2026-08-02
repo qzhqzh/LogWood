@@ -53,6 +53,7 @@ describe('app/sitemap', () => {
     expect(urls).toContain('https://logwood.test')
     expect(urls).toContain('https://logwood.test/candidates')
     expect(urls).toContain('https://logwood.test/skills')
+    expect(urls).toContain('https://logwood.test/scraps')
     expect(urls).toContain('https://logwood.test/evaluations')
     expect(urls).toContain('https://logwood.test/talk')
     expect(urls).toContain('https://logwood.test/articles')

@@ -22,7 +22,12 @@ interface ManagedComment {
       name: string
       slug: string
       type: string
-    }
+    } | null
+    subject: {
+      title: string
+      href: string
+      kind: string
+    } | null
   }
 }
 
@@ -190,7 +195,7 @@ export default function ManageCommentsPage() {
         ) : (
           <div className="space-y-3">
             {comments.map((comment) => {
-              const targetHref = `/${comment.review.target.type}/${comment.review.target.slug}`
+              const subject = comment.review.subject
               return (
                 <div key={comment.id} className="cyber-card rounded-2xl p-4">
                   <div className="flex items-start justify-between gap-4 mb-3">
@@ -234,10 +239,14 @@ export default function ManageCommentsPage() {
                   <p className="text-sm text-gray-300 whitespace-pre-wrap break-all mb-3">{comment.content}</p>
 
                   <div className="text-xs text-gray-400">
-                    目标：
-                    <Link href={targetHref} className="text-cyan-400 hover:text-cyan-300">
-                      {comment.review.target.name}
-                    </Link>
+                    目标：{' '}
+                    {subject ? (
+                      <Link href={subject.href} className="text-cyan-400 hover:text-cyan-300">
+                        {subject.title} · {subject.kind}
+                      </Link>
+                    ) : (
+                      <span>历史对象不可访问</span>
+                    )}
                   </div>
                 </div>
               )

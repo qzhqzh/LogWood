@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { recordAdminAction } from '@/modules/audit'
-import { assertNoEvaluationsForSubject } from '@/modules/evaluation'
+import { deleteSubjectWithHistoryGuard } from '@/modules/evaluation'
 import {
   createTarget,
   deleteTarget,
@@ -176,8 +176,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const validated = deleteTargetSchema.parse(await request.json())
-    await assertNoEvaluationsForSubject('target', validated.id)
-    const result = await deleteTarget(validated.id)
+    const result = await deleteSubjectWithHistoryGuard(
+      'target',
+      validated.id,
+      (tx) => deleteTarget(validated.id, tx),
+    )
 
     await recordAdminAction({
       actorUserId: session.user.id,
@@ -198,7 +201,10 @@ export async function DELETE(request: NextRequest) {
     if (error instanceof Error && error.message === 'ERR_TARGET_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
-    if (error instanceof Error && error.message === 'ERR_SUBJECT_HAS_EVALUATIONS') {
+    if (error instanceof Error && error.message === 'ERR_SUBJECT_HAS_HISTORY') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+    if (error instanceof Error && error.message === 'ERR_TARGET_IN_USE') {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }
     console.error('DELETE /api/targets error:', error)
