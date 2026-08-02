@@ -13,6 +13,7 @@ import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 import { getSkillBySlug, skillCategoryLabel } from '@/modules/skill'
 import { SkillCopyButton } from '@/components/skill-copy-button'
 import { ReviewPanel } from '@/components/review-panel'
+import { LifecycleOriginHistory } from '@/components/lifecycle-origin-history'
 
 export const revalidate = 60
 
@@ -122,6 +123,7 @@ export default async function SkillDetailPage({ params }: SkillDetailPageProps) 
           </p>
         )}
 
+        <LifecycleOriginHistory subjectType="skill" subjectId={skill.id} />
         <EvaluationPanel subjectType="skill" subjectId={skill.id} />
         <ReviewPanel subjectType="skill" subjectId={skill.id} title="自由记录、提问或吐槽" />
       </article>

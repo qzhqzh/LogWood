@@ -39,7 +39,9 @@ export async function POST(
     revalidatePath('/tools')
     revalidatePath('/skills')
     revalidatePath('/app')
+    revalidatePath('/scraps')
     revalidatePath(`/candidates/${result.candidate.slug}`)
+    revalidatePath('/')
 
     return NextResponse.json(result)
   } catch (error) {

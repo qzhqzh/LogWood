@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
+import { permanentRedirect } from 'next/navigation'
 import { CandidateStatus } from '@prisma/client'
 import { Search } from 'lucide-react'
 import { SiteNav } from '@/components/site-nav'
@@ -27,9 +28,8 @@ interface CandidatesPageProps {
 
 const STATUS_FILTERS: Array<{ key: string; label: string; status?: CandidateStatus }> = [
   { key: 'inbox', label: '未处理', status: CandidateStatus.watching },
-  { key: 'good', label: '好灵感', status: CandidateStatus.evaluating },
-  { key: 'bad', label: '不合适', status: CandidateStatus.dropped },
-  { key: 'converted', label: '已转化', status: CandidateStatus.promoted },
+  { key: 'trying', label: '观察中', status: CandidateStatus.evaluating },
+  { key: 'collected', label: '已入藏', status: CandidateStatus.promoted },
   { key: 'all', label: '全部历史' },
 ]
 
@@ -38,11 +38,19 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
   const isAdmin = isAdminSession(session)
   const { status: statusRaw, q: searchRaw } = await searchParams
   const search = searchRaw?.trim() || ''
-  const filter = STATUS_FILTERS.find((f) => f.key === statusRaw) || STATUS_FILTERS[0]
+  if (statusRaw === 'bad' || statusRaw === 'dropped') {
+    permanentRedirect(search ? `/scraps?q=${encodeURIComponent(search)}` : '/scraps')
+  }
+  const normalizedStatus = statusRaw === 'good'
+    ? 'trying'
+    : statusRaw === 'converted'
+      ? 'collected'
+      : statusRaw
+  const filter = STATUS_FILTERS.find((f) => f.key === normalizedStatus) || STATUS_FILTERS[0]
 
   const candidates = await listCandidates(
     filter.key === 'all'
-      ? { includePromoted: true, search }
+      ? { statuses: [CandidateStatus.watching, CandidateStatus.evaluating, CandidateStatus.promoted], search }
       : filter.status
         ? { status: filter.status, search }
         : undefined,
@@ -63,20 +71,20 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
       />
 
       <header className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
-        <p className="text-xs tracking-[0.28em] text-amber-300/90 uppercase mb-3">INSPIRATION POOL · TRY · VERIFY</p>
+        <p className="mb-3 text-sm font-medium text-amber-300/90">先记录，再判断</p>
         <div className="mb-4 flex items-center justify-between gap-4">
           <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] gradient-text">找灵感</h1>
           <QuickIdeaDialog isAuthenticated={Boolean(session?.user?.id)} />
         </div>
         <p className="text-lg text-muted max-w-3xl leading-relaxed">
-          先收住碎片，再用 Tags 和归类快速整理。文字、工具和流程进入收藏室，视觉风格和图片案例进入画廊。
+          先收住碎片，再用 Tags 和归类完成判断。值得继续的内容进入收藏室，当前不再继续的内容进入废品站。
         </p>
         <div className="mt-5 flex flex-wrap gap-3 text-sm text-soft">
           <span className="px-3 py-1 rounded-full border border-amber-500/25 bg-amber-500/5">灵感</span>
           <span>→</span>
           <span className="px-3 py-1 rounded-full border border-amber-500/25 bg-amber-500/5">收藏室</span>
           <span className="text-soft">/</span>
-          <span className="px-3 py-1 rounded-full border border-cyan-500/25 bg-cyan-500/5">画廊</span>
+          <Link href="/scraps" className="px-3 py-1 rounded-full border border-rose-500/25 bg-rose-500/5 text-rose-200 hover:border-rose-400/50">废品站</Link>
         </div>
 
         <form className="relative mt-7 max-w-xl" action="/candidates">

@@ -13,7 +13,7 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 import { prisma } from '@/lib/prisma'
-import { createApp, getAppBySlug, listAllAppsForManage, listApps, updateApp } from './service'
+import { createApp, getAppBySlug, listAllAppsForManage, listApps, listPublishedApps, updateApp } from './service'
 
 const prismaMock = prisma as unknown as {
   app: {
@@ -86,6 +86,17 @@ describe('app/service', () => {
       })
     )
     expect(result.total).toBe(0)
+  })
+
+  it('lists the complete public visual collection without pagination', async () => {
+    prismaMock.app.findMany.mockResolvedValue([])
+
+    await listPublishedApps()
+
+    expect(prismaMock.app.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { status: 'published' } }),
+    )
+    expect(prismaMock.app.findMany.mock.calls[0][0]).not.toHaveProperty('take')
   })
 
   it('parses app tags from storage', async () => {

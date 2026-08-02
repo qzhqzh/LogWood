@@ -65,6 +65,21 @@ export interface ReviewWithAuthor {
     slug: string
     type: string
   } | null
+  skill?: {
+    id: string
+    title: string
+    slug: string
+  } | null
+  app?: {
+    id: string
+    title: string
+    slug: string
+  } | null
+  candidate?: {
+    id: string
+    title: string
+    slug: string
+  } | null
   isLikedByMe?: boolean
 }
 
@@ -208,6 +223,15 @@ export async function getReviews(
         target: {
           select: { id: true, name: true, slug: true, type: true },
         },
+        skill: {
+          select: { id: true, title: true, slug: true },
+        },
+        app: {
+          select: { id: true, title: true, slug: true },
+        },
+        candidate: {
+          select: { id: true, title: true, slug: true },
+        },
       },
     }),
     prisma.review.count({ where }),
@@ -269,6 +293,9 @@ export async function getReviews(
         ? { type: 'user' as const, name: review.user.name || 'User', avatarUrl: review.user.avatarUrl }
         : { type: 'anonymous' as const, name: review.anonymousUser?.displayName || '匿名用户' },
       target: review.target,
+      skill: review.skill,
+      app: review.app,
+      candidate: review.candidate,
       isLikedByMe: likedReviewIds.includes(review.id),
     })),
     total,
@@ -290,6 +317,15 @@ export async function getReviewById(
       },
       target: {
         select: { id: true, name: true, slug: true, type: true },
+      },
+      skill: {
+        select: { id: true, title: true, slug: true },
+      },
+      app: {
+        select: { id: true, title: true, slug: true },
+      },
+      candidate: {
+        select: { id: true, title: true, slug: true },
       },
     },
   })
@@ -338,6 +374,9 @@ export async function getReviewById(
       ? { type: 'user' as const, name: review.user.name || 'User', avatarUrl: review.user.avatarUrl }
       : { type: 'anonymous' as const, name: review.anonymousUser?.displayName || '匿名用户' },
     target: review.target,
+    skill: review.skill,
+    app: review.app,
+    candidate: review.candidate,
     isLikedByMe,
   }
 }

@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
-import { assertNoEvaluationsForSubject } from '@/modules/evaluation'
+import { deleteSubjectWithHistoryGuard } from '@/modules/evaluation'
 import {
   createCandidate,
   deleteCandidate,
@@ -88,6 +88,8 @@ export async function POST(request: NextRequest) {
     const validated = candidateBodySchema.parse(await request.json())
     const candidate = await createCandidate(validated, session.user.id)
     revalidatePath('/candidates')
+    revalidatePath('/scraps')
+    revalidatePath('/')
     return NextResponse.json({ candidate }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -114,7 +116,10 @@ export async function PATCH(request: NextRequest) {
     const validated = updateSchema.parse(await request.json())
     const candidate = await updateCandidate(validated)
     revalidatePath('/candidates')
+    revalidatePath('/scraps')
+    revalidatePath('/skills')
     revalidatePath(`/candidates/${candidate.slug}`)
+    revalidatePath('/')
     return NextResponse.json({ candidate })
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -149,9 +154,15 @@ export async function DELETE(request: NextRequest) {
     }
 
     const validated = deleteSchema.parse(await request.json())
-    await assertNoEvaluationsForSubject('candidate', validated.id)
-    const result = await deleteCandidate(validated.id)
+    const result = await deleteSubjectWithHistoryGuard(
+      'candidate',
+      validated.id,
+      (tx) => deleteCandidate(validated.id, tx),
+    )
     revalidatePath('/candidates')
+    revalidatePath('/scraps')
+    revalidatePath('/skills')
+    revalidatePath('/')
     return NextResponse.json(result)
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -160,7 +171,10 @@ export async function DELETE(request: NextRequest) {
     if (error instanceof Error && error.message === 'ERR_CANDIDATE_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
-    if (error instanceof Error && error.message === 'ERR_SUBJECT_HAS_EVALUATIONS') {
+    if (error instanceof Error && error.message === 'ERR_SUBJECT_HAS_HISTORY') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+    if (error instanceof Error && error.message === 'ERR_CANDIDATE_HISTORY_PROTECTED') {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }
     console.error('DELETE /api/candidates error:', error)

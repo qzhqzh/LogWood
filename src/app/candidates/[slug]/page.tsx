@@ -13,6 +13,7 @@ import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 import { candidateStatusLabel, getCandidateBySlug } from '@/modules/candidate'
+import { resolvePromotionDestination } from '@/modules/lifecycle'
 
 export const revalidate = 30
 
@@ -42,13 +43,17 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
     session?.user?.id
     && (isAdmin || candidate.authorUserId === session.user.id),
   )
+  const isScrap = candidate.status === 'dropped'
+  const promotionDestination = await resolvePromotionDestination(candidate)
+  const parentPath = isScrap ? '/scraps' : '/candidates'
+  const parentLabel = isScrap ? '废品站' : '找灵感'
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <JsonLd
         value={buildBreadcrumbList([
           { name: '首页', path: '/' },
-          { name: '找灵感', path: '/candidates' },
+          { name: parentLabel, path: parentPath },
           { name: candidate.title, path: `/candidates/${candidate.slug}` },
         ])}
       />
@@ -59,8 +64,8 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
       />
 
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <Link href="/candidates" className="text-sm text-amber-300 hover:text-amber-200">
-          ← 回灵感池
+        <Link href={parentPath} className="text-sm text-amber-300 hover:text-amber-200">
+          ← 回{parentLabel}
         </Link>
 
         <header className="mt-6 mb-8">
@@ -72,7 +77,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
               <span className="text-yellow-400 text-sm">★ {candidate.avgRating} · {candidate.reviewCount} 条真实记录</span>
             )}
           </div>
-          <h1 className="text-3xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">
+          <h1 className="text-3xl md:text-5xl font-bold text-[var(--color-text-strong)] mb-4">
             {candidate.title}
           </h1>
           {candidate.summary && <p className="text-lg text-muted max-w-3xl">{candidate.summary}</p>}
@@ -88,21 +93,17 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
                 来源 ↗
               </a>
             )}
-            {candidate.promotedTo === 'tool' && candidate.promotedTargetId && (
-              <Link href="/tools" className="text-emerald-300 hover:text-emerald-200">已收入收藏室 →</Link>
-            )}
-            {candidate.promotedTo === 'skill' && candidate.promotedSkillId && (
-              <Link href="/skills" className="text-emerald-300 hover:text-emerald-200">已收入收藏室 →</Link>
-            )}
-            {candidate.promotedTo === 'gallery' && candidate.promotedAppId && (
-              <Link href="/app" className="text-emerald-300 hover:text-emerald-200">已收入画廊 →</Link>
-            )}
+            {promotionDestination ? (
+              <Link href={promotionDestination.href} className="text-emerald-300 hover:text-emerald-200">
+                已入藏为“{promotionDestination.title}” →
+              </Link>
+            ) : null}
           </div>
 
         </header>
 
         {canViewRaw && candidate.rawContent && candidate.rawContent !== candidate.summary && (
-          <section className="mb-8 border-l-2 border-amber-400/40 pl-4">
+          <section className="mb-8 rounded-lg border border-divider p-4">
             <h2 className="text-sm font-semibold text-amber-200">原始记录</h2>
             <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted">
               {candidate.rawContent}
@@ -130,10 +131,12 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
           canEdit={canOrganize}
         />
 
-        <section className="cyber-card rounded-2xl p-5 mb-8">
-          <p className="text-xs tracking-[0.25em] text-amber-300 uppercase mb-2">NEXT QUESTION</p>
+        <section className="cyber-card rounded-lg p-5 mb-8">
+          <p className="text-sm font-medium text-amber-300 mb-2">下一步判断</p>
           <p className="text-muted">
-            它是否值得留下？请记录实际版本、使用场景、成功点和失败点。有效经验后续可以继续提炼为模板、Prompt、Workflow 或 Skill。
+            {isScrap
+              ? '记录为什么不再继续、是否有更好替代，以及什么条件变化后值得重新考虑。'
+              : '它是否值得留下？请记录实际版本、使用场景、成功点和失败点。有效经验可以继续整理为能力、工具或视觉收藏。'}
           </p>
         </section>
 
@@ -141,7 +144,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
         <ReviewPanel
           subjectType="candidate"
           subjectId={candidate.id}
-          canPublishReview={candidate.status !== 'promoted' && candidate.status !== 'dropped'}
+          canPublishReview={candidate.status !== 'promoted'}
           title="自由试用记录、提问或吐槽"
         />
       </article>

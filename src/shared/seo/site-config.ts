@@ -15,12 +15,13 @@ export const SITE_NAME = '空心树洞'
 export const SITE_TAGLINE = '大浪淘沙，找寻灵感'
 
 export const SITE_DESCRIPTION =
-  '空心树洞是 AI 灵感炼成与实践沉淀社区：把灵感与资源经过试用、评测和打磨，沉淀为可复用的模板、提示词、工作流与 Skill，同时保存吐槽、失败和技术反思。'
+  '空心树洞是灵感淘洗与经验沉淀系统：收住零散灵感，经过观察和判断进入收藏室或废品站，同时保存吐槽、证据和长期笔记。'
 
 export const SITE_KEYWORDS: string[] = [
   '空心树洞',
   'AI Skill',
   '收藏室',
+  '废品站',
   '提示词',
   'Prompt',
   'AI 工作流',

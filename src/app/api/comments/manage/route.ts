@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { CommentStatus } from '@prisma/client'
+import { CommentStatus, Prisma } from '@prisma/client'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { prisma } from '@/lib/prisma'
 import { parsePage, parsePageSize, parseSearchKeyword } from '@/lib/safe-parse'
+import { getReviewSubjectPresentation } from '@/shared/reviews/subject'
 
 type ManageStatusFilter = 'all' | 'active' | 'hidden'
 
@@ -26,20 +27,7 @@ export async function GET(request: NextRequest) {
     const status = (searchParams.get('status') || 'active') as ManageStatusFilter
     const keyword = parseSearchKeyword(searchParams.get('q'))
 
-    const where: {
-      status: CommentStatus | { in: CommentStatus[] }
-      OR?: Array<{
-        content?: { contains: string; mode: 'insensitive' }
-        user?: { name: { contains: string; mode: 'insensitive' } }
-        anonymousUser?: { displayName: { contains: string; mode: 'insensitive' } }
-        review?: {
-          OR: Array<{
-            content?: { contains: string; mode: 'insensitive' }
-            target?: { name: { contains: string; mode: 'insensitive' } }
-          }>
-        }
-      }>
-    } = {
+    const where: Prisma.CommentWhereInput = {
       status:
         status === 'all'
           ? { in: [CommentStatus.published, CommentStatus.hidden] }
@@ -58,6 +46,9 @@ export async function GET(request: NextRequest) {
             OR: [
               { content: { contains: keyword, mode: 'insensitive' } },
               { target: { name: { contains: keyword, mode: 'insensitive' } } },
+              { skill: { title: { contains: keyword, mode: 'insensitive' } } },
+              { app: { title: { contains: keyword, mode: 'insensitive' } } },
+              { candidate: { title: { contains: keyword, mode: 'insensitive' } } },
             ],
           },
         },
@@ -78,6 +69,9 @@ export async function GET(request: NextRequest) {
               id: true,
               content: true,
               target: { select: { id: true, name: true, slug: true, type: true } },
+              skill: { select: { id: true, title: true, slug: true } },
+              app: { select: { id: true, title: true, slug: true } },
+              candidate: { select: { id: true, title: true, slug: true } },
             },
           },
         },
@@ -86,19 +80,23 @@ export async function GET(request: NextRequest) {
     ])
 
     return NextResponse.json({
-      comments: comments.map((comment) => ({
-        id: comment.id,
-        content: comment.content,
-        status: comment.status,
-        createdAt: comment.createdAt,
-        likesCount: comment.likesCount,
-        authorName: comment.user?.name || comment.anonymousUser?.displayName || '匿名用户',
-        review: {
-          id: comment.review.id,
-          content: comment.review.content,
-          target: comment.review.target,
-        },
-      })),
+      comments: comments.map((comment) => {
+        const subject = getReviewSubjectPresentation(comment.review)
+        return {
+          id: comment.id,
+          content: comment.content,
+          status: comment.status,
+          createdAt: comment.createdAt,
+          likesCount: comment.likesCount,
+          authorName: comment.user?.name || comment.anonymousUser?.displayName || '匿名用户',
+          review: {
+            id: comment.review.id,
+            content: comment.review.content,
+            target: comment.review.target,
+            subject,
+          },
+        }
+      }),
       total,
       page,
       pageSize,

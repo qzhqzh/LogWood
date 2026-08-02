@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
     const app = await createApp(validated, session.user.id)
 
     revalidatePath('/app')
+    revalidatePath('/skills')
     revalidatePath('/')
     return NextResponse.json(app, { status: 201 })
   } catch (error) {
@@ -118,6 +119,7 @@ export async function PATCH(request: NextRequest) {
     const app = await updateApp(validated)
 
     revalidatePath('/app')
+    revalidatePath('/skills')
     revalidatePath(`/app/${app.slug}`)
     revalidatePath('/')
     return NextResponse.json(app)

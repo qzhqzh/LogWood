@@ -234,7 +234,7 @@ export default function ManageAppsPage() {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">{editingId ? '编辑视觉收藏' : '新增视觉收藏'}</h2>
-              <p className="text-sm text-gray-400 mt-1">画廊是图片优先的收藏室；编辑时 slug 保持不变。</p>
+              <p className="text-sm text-gray-400 mt-1">视觉收藏是图片优先的收藏室视图；编辑时 slug 保持不变。</p>
             </div>
             {editingId && (
               <button type="button" onClick={resetForm} className="rounded-lg border border-cyan-500/30 px-4 py-2 text-sm text-cyan-300 hover:border-cyan-400/50 hover:text-cyan-200">

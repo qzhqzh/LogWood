@@ -36,6 +36,21 @@ export interface UpdateAppInput {
   status?: AppStatus
 }
 
+export interface PublishedApp {
+  id: string
+  name: string
+  slug: string
+  appUrl: string
+  title: string
+  summary: string
+  description: string
+  previewImageUrl: string | null
+  tags: string[]
+  status: AppStatus
+  createdAt: Date
+  updatedAt: Date
+}
+
 function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -123,6 +138,32 @@ export async function listApps(query: AppListQuery) {
     })),
     total,
   }
+}
+
+export async function listPublishedApps(): Promise<PublishedApp[]> {
+  const apps = await appModel.findMany({
+    where: { status: 'published' },
+    orderBy: [{ updatedAt: 'desc' }],
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      appUrl: true,
+      title: true,
+      summary: true,
+      description: true,
+      previewImageUrl: true,
+      tags: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  })
+
+  return apps.map((app: any) => ({
+    ...app,
+    tags: parseTags(app.tags),
+  })) as PublishedApp[]
 }
 
 export async function listAllAppsForManage() {

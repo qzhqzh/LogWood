@@ -52,7 +52,9 @@ export async function PATCH(
     })
 
     revalidatePath('/candidates')
+    revalidatePath('/scraps')
     revalidatePath(`/candidates/${candidate.slug}`)
+    revalidatePath('/')
     return NextResponse.json({ candidate })
   } catch (error) {
     if (error instanceof z.ZodError) {

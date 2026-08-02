@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const prismaMock = vi.hoisted(() => {
   const mock = {
     candidate: {
+      delete: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
@@ -21,12 +22,45 @@ vi.mock('@/modules/app', () => ({ createApp: createAppMock }))
 vi.mock('@/modules/skill', () => ({ createSkill: createSkillMock }))
 vi.mock('@/modules/target', () => ({ createTarget: createTargetMock }))
 
-import { organizeCandidate, promoteCandidate, updateCandidate } from './service'
+import { deleteCandidate, organizeCandidate, promoteCandidate, updateCandidate } from './service'
 
 describe('candidate/service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock))
+  })
+
+  it('keeps dropped history instead of physically deleting it', async () => {
+    prismaMock.candidate.findUnique.mockResolvedValue({
+      id: 'candidate-1',
+      slug: 'discarded-idea',
+      status: 'dropped',
+      promotedTo: null,
+      promotedTargetId: null,
+      promotedSkillId: null,
+      promotedAppId: null,
+    })
+
+    await expect(deleteCandidate('candidate-1')).rejects.toThrow('ERR_CANDIDATE_HISTORY_PROTECTED')
+    expect(prismaMock.candidate.delete).not.toHaveBeenCalled()
+  })
+
+  it('allows an unprocessed candidate without history metadata to be deleted', async () => {
+    prismaMock.candidate.findUnique.mockResolvedValue({
+      id: 'candidate-1',
+      slug: 'duplicate-inbox-item',
+      status: 'watching',
+      promotedTo: null,
+      promotedTargetId: null,
+      promotedSkillId: null,
+      promotedAppId: null,
+    })
+    prismaMock.candidate.delete.mockResolvedValue({ id: 'candidate-1', slug: 'duplicate-inbox-item' })
+
+    await expect(deleteCandidate('candidate-1')).resolves.toEqual({
+      id: 'candidate-1',
+      slug: 'duplicate-inbox-item',
+    })
   })
 
   it('updates the pool and searchable tags together', async () => {

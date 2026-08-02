@@ -15,6 +15,11 @@ const sections = [
     colorClass: 'hover-text-coding',
   },
   {
+    title: '废品站',
+    href: '/scraps',
+    colorClass: 'hover:text-rose-200',
+  },
+  {
     title: '正式评测',
     href: '/evaluations',
     colorClass: 'hover:text-emerald-200',
@@ -33,11 +38,6 @@ const sections = [
     title: 'AI 炼成助手',
     href: '/forge',
     colorClass: 'hover-text-article',
-  },
-  {
-    title: '画廊',
-    href: '/app',
-    colorClass: 'hover-text-app',
   },
 ] as const
 

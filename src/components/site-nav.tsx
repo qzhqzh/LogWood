@@ -5,6 +5,7 @@ type NavSection =
   | 'home'
   | 'inspiration'
   | 'skills'
+  | 'scraps'
   | 'talk'
   | 'articles'
   | 'gallery'
@@ -13,7 +14,7 @@ type NavSection =
   | 'coding'
   | 'app'
 
-type NavLinkSection = 'inspiration' | 'skills' | 'talk' | 'articles'
+type NavLinkSection = 'inspiration' | 'skills' | 'scraps' | 'talk' | 'articles'
 type NormalizedNavSection = 'home' | NavLinkSection
 
 interface SiteNavItem {
@@ -32,16 +33,14 @@ interface SiteNavProps {
 }
 
 function normalizeActive(active: NavSection): NormalizedNavSection {
-  if (active === 'skills' || active === 'talk' || active === 'articles') return active
+  if (active === 'skills' || active === 'scraps' || active === 'talk' || active === 'articles') return active
   if (
     active === 'inspiration' ||
-    active === 'candidates' ||
-    active === 'coding' ||
-    active === 'gallery' ||
-    active === 'app'
+    active === 'candidates'
   ) {
     return 'inspiration'
   }
+  if (active === 'coding' || active === 'gallery' || active === 'app') return 'skills'
   return 'home'
 }
 
@@ -50,7 +49,7 @@ function navBarTintClass(): string {
 }
 
 function navLinkClass(section: NavLinkSection, active: NormalizedNavSection): string {
-  const base = 'text-sm sm:text-base transition-colors font-semibold tracking-wide whitespace-nowrap shrink-0'
+  const base = 'text-sm sm:text-base transition-colors font-semibold whitespace-nowrap shrink-0'
   const isActive = section === active
 
   if (section === 'inspiration') {
@@ -58,6 +57,9 @@ function navLinkClass(section: NavLinkSection, active: NormalizedNavSection): st
   }
   if (section === 'skills') {
     return `${base} ${isActive ? 'text-coding' : 'text-muted hover-text-coding'}`
+  }
+  if (section === 'scraps') {
+    return `${base} ${isActive ? 'text-rose-300' : 'text-muted hover:text-rose-200'}`
   }
   if (section === 'talk') {
     return `${base} ${isActive ? 'text-app' : 'text-muted hover-text-app'}`
@@ -78,6 +80,12 @@ function defaultNavItems(active: NormalizedNavSection): SiteNavItem[] {
       label: '收藏室',
       shortLabel: '收藏',
       className: navLinkClass('skills', active),
+    },
+    {
+      href: '/scraps',
+      label: '废品站',
+      shortLabel: '废品',
+      className: navLinkClass('scraps', active),
     },
     {
       href: '/talk',
@@ -112,12 +120,12 @@ export function SiteNav({
             <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-[var(--color-accent-coding)] to-[var(--color-accent-app)] rounded-lg flex items-center justify-center">
               <span className="text-[var(--color-bg)] font-bold text-sm">空</span>
             </div>
-            <span className="hidden md:block text-xl sm:text-2xl font-bold font-['Orbitron'] gradient-text truncate">
+            <span className="hidden md:block text-xl sm:text-2xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] truncate">
               {SITE_NAME}
             </span>
           </Link>
 
-          <div className="flex items-center justify-end gap-2 sm:gap-5 min-w-0">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-5 min-w-0">
             {items.map((item) => (
               <Link key={`${item.href}:${item.label}`} href={item.href} className={item.className}>
                 <span className="sm:hidden">{item.shortLabel || item.label}</span>
@@ -127,7 +135,7 @@ export function SiteNav({
             {actionLabel && actionHref && (
               <Link
                 href={actionHref}
-                className="cyber-button shrink-0 text-center px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold tracking-wide"
+                className="cyber-button shrink-0 text-center px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold"
                 title={actionLabel}
               >
                 <span className="sm:hidden">管理</span>

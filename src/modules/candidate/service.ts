@@ -98,6 +98,7 @@ function mapCandidate<T extends { tags: string }>(
 
 export async function listCandidates(opts?: {
   status?: CandidateStatus
+  statuses?: CandidateStatus[]
   includePromoted?: boolean
   search?: string
   authorUserId?: string
@@ -107,7 +108,9 @@ export async function listCandidates(opts?: {
   if (opts?.authorUserId) {
     where.authorUserId = opts.authorUserId
   }
-  if (opts?.status) {
+  if (opts?.statuses?.length) {
+    where.status = { in: opts.statuses }
+  } else if (opts?.status) {
     where.status = opts.status
   } else if (!opts?.includePromoted) {
     where.status = { in: [CandidateStatus.watching, CandidateStatus.evaluating] }
@@ -328,10 +331,23 @@ export async function updateCandidate(input: UpdateCandidateInput) {
   })
 }
 
-export async function deleteCandidate(id: string) {
-  const existing = await prisma.candidate.findUnique({ where: { id } })
+export async function deleteCandidate(
+  id: string,
+  db: Pick<Prisma.TransactionClient, 'candidate'> = prisma,
+) {
+  const existing = await db.candidate.findUnique({ where: { id } })
   if (!existing) throw new Error('ERR_CANDIDATE_NOT_FOUND')
-  return prisma.candidate.delete({ where: { id }, select: { id: true, slug: true } })
+  if (
+    existing.status === CandidateStatus.dropped
+    || existing.status === CandidateStatus.promoted
+    || existing.promotedTo
+    || existing.promotedTargetId
+    || existing.promotedSkillId
+    || existing.promotedAppId
+  ) {
+    throw new Error('ERR_CANDIDATE_HISTORY_PROTECTED')
+  }
+  return db.candidate.delete({ where: { id }, select: { id: true, slug: true } })
 }
 
 export async function promoteCandidate(input: PromoteCandidateInput) {

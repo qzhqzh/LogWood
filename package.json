@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "reply:worker": "bun scripts/reply-worker.ts",
     "db:generate": "prisma generate",
+    "db:audit-lifecycle": "bun scripts/audit-lifecycle-data.ts",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",

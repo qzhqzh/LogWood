@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation'
 import { signIn, useSession } from 'next-auth/react'
 import { SiteFooter } from '@/components/site-footer'
 import { CANDIDATE_STATUS_LABELS } from '@/modules/candidate/constants'
+import { SKILL_CATEGORIES } from '@/shared/skills/taxonomy'
+import type { TargetType } from '@prisma/client'
 
 type CandidateStatus = 'watching' | 'evaluating' | 'promoted' | 'dropped'
 
@@ -47,6 +49,7 @@ export default function ManageCandidatesPage() {
   const [status, setStatus] = useState<CandidateStatus>('watching')
   const [loading, setLoading] = useState(false)
   const [promotingId, setPromotingId] = useState<string | null>(null)
+  const [targetTypes, setTargetTypes] = useState<Record<string, TargetType>>({})
   const [error, setError] = useState<string | null>(null)
 
   const canSubmit = useMemo(() => title.trim().length >= 2, [title])
@@ -148,8 +151,12 @@ export default function ManageCandidatesPage() {
     }
   }
 
-  async function promoteCandidate(item: CandidateItem, to: 'skill' | 'gallery') {
-    const destination = to === 'skill' ? '收藏室' : '画廊'
+  async function promoteCandidate(
+    item: CandidateItem,
+    to: 'tool' | 'skill' | 'gallery',
+    targetType?: TargetType,
+  ) {
+    const destination = to === 'skill' ? '能力收藏' : to === 'tool' ? '工具收藏' : '视觉收藏'
     if (!window.confirm(`将「${item.title}」收入${destination}？`)) return
     try {
       setPromotingId(item.id)
@@ -159,6 +166,7 @@ export default function ManageCandidatesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to,
+          targetType,
         }),
       })
       const data = await res.json()
@@ -202,10 +210,10 @@ export default function ManageCandidatesPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
           <div>
-            <p className="text-xs tracking-[0.28em] text-amber-300/80 uppercase mb-2">SHORTLIST</p>
-            <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">候选管理</h1>
+            <p className="mb-2 text-sm font-medium text-amber-300/80">整理与归类</p>
+            <h1 className="text-3xl font-bold font-['Orbitron'] gradient-text">灵感管理</h1>
           </div>
-          <Link href="/candidates" className="text-amber-300 hover:text-amber-200">回候选评测</Link>
+          <Link href="/candidates" className="text-amber-300 hover:text-amber-200">回找灵感</Link>
         </div>
 
         <form onSubmit={submitCandidate} className="cyber-card rounded-2xl p-6 mb-8 space-y-4">
@@ -288,7 +296,28 @@ export default function ManageCandidatesPage() {
                           onClick={() => promoteCandidate(item, 'skill')}
                           className="text-cyan-300 hover:text-cyan-200 disabled:opacity-50"
                         >
-                          收进收藏室
+                          收为能力
+                        </button>
+                        <select
+                          aria-label={`选择「${item.title}」的工具类型`}
+                          value={targetTypes[item.id] || 'coding'}
+                          onChange={(event) => setTargetTypes((current) => ({
+                            ...current,
+                            [item.id]: event.target.value as TargetType,
+                          }))}
+                          className="cyber-input rounded-md px-2 py-1 text-xs"
+                        >
+                          {SKILL_CATEGORIES.map((category) => (
+                            <option key={category.key} value={category.key}>{category.label}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          disabled={promotingId === item.id}
+                          onClick={() => promoteCandidate(item, 'tool', targetTypes[item.id] || 'coding')}
+                          className="text-amber-300 hover:text-amber-200 disabled:opacity-50"
+                        >
+                          收为工具
                         </button>
                         {(item.previewImageUrl || item.logoUrl) && (
                           <button
@@ -297,12 +326,16 @@ export default function ManageCandidatesPage() {
                             onClick={() => promoteCandidate(item, 'gallery')}
                             className="text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
                           >
-                            收进画廊
+                            收为视觉
                           </button>
                         )}
                       </>
                     )}
-                    <button type="button" onClick={() => removeCandidate(item)} className="text-red-400 hover:text-red-300">删除</button>
+                    {item.status === 'watching' || item.status === 'evaluating' ? (
+                      <button type="button" onClick={() => removeCandidate(item)} className="text-red-400 hover:text-red-300">删除</button>
+                    ) : (
+                      <span className="text-xs text-soft">历史保留</span>
+                    )}
                   </div>
                 </div>
               </div>

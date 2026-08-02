@@ -10,6 +10,9 @@ vi.mock('@/lib/prisma', () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    candidate: {
+      findFirst: vi.fn(),
+    },
     review: {
       groupBy: vi.fn(),
       aggregate: vi.fn(),
@@ -33,11 +36,15 @@ const prismaMock = prisma as unknown as {
     groupBy: ReturnType<typeof vi.fn>
     aggregate: ReturnType<typeof vi.fn>
   }
+  candidate: {
+    findFirst: ReturnType<typeof vi.fn>
+  }
 }
 
 describe('target/service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    prismaMock.candidate.findFirst.mockResolvedValue(null)
   })
 
   it('listTargets parses features and rounds avg rating from groupBy aggregate', async () => {
@@ -202,5 +209,13 @@ describe('target/service', () => {
       select: { id: true },
     })
     expect(result.id).toBe('t9')
+  })
+
+  it('keeps a target that is the destination of a promoted idea', async () => {
+    prismaMock.target.findUnique.mockResolvedValue({ id: 't9' })
+    prismaMock.candidate.findFirst.mockResolvedValue({ id: 'candidate-1' })
+
+    await expect(deleteTarget('t9')).rejects.toThrow('ERR_TARGET_IN_USE')
+    expect(prismaMock.target.delete).not.toHaveBeenCalled()
   })
 })

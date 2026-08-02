@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
-import { assertNoEvaluationsForSubject } from '@/modules/evaluation'
+import { deleteSubjectWithHistoryGuard } from '@/modules/evaluation'
 import {
   createSkill,
   deleteSkill,
@@ -136,8 +136,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const validated = deleteSchema.parse(await request.json())
-    await assertNoEvaluationsForSubject('skill', validated.id)
-    const result = await deleteSkill(validated.id)
+    const result = await deleteSubjectWithHistoryGuard(
+      'skill',
+      validated.id,
+      (tx) => deleteSkill(validated.id, tx),
+    )
     revalidatePath('/skills')
     revalidatePath('/')
     return NextResponse.json(result)
@@ -148,7 +151,7 @@ export async function DELETE(request: NextRequest) {
     if (error instanceof Error && error.message === 'ERR_SKILL_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
-    if (error instanceof Error && error.message === 'ERR_SUBJECT_HAS_EVALUATIONS') {
+    if (error instanceof Error && error.message === 'ERR_SUBJECT_HAS_HISTORY') {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }
     if (error instanceof Error && error.message === 'ERR_SKILL_IN_USE') {
