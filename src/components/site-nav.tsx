@@ -9,12 +9,13 @@ type NavSection =
   | 'talk'
   | 'articles'
   | 'gallery'
+  | 'awesome'
   | 'forge'
   | 'candidates'
   | 'coding'
   | 'app'
 
-type NavLinkSection = 'inspiration' | 'skills' | 'scraps' | 'talk' | 'articles'
+type NavLinkSection = 'inspiration' | 'skills' | 'scraps' | 'talk' | 'articles' | 'awesome'
 type NormalizedNavSection = 'home' | NavLinkSection
 
 interface SiteNavItem {
@@ -33,6 +34,7 @@ interface SiteNavProps {
 }
 
 function normalizeActive(active: NavSection): NormalizedNavSection {
+  if (active === 'awesome') return active
   if (active === 'skills' || active === 'scraps' || active === 'talk' || active === 'articles') return active
   if (
     active === 'inspiration' ||
@@ -64,6 +66,9 @@ function navLinkClass(section: NavLinkSection, active: NormalizedNavSection): st
   if (section === 'talk') {
     return `${base} ${isActive ? 'text-app' : 'text-muted hover-text-app'}`
   }
+  if (section === 'awesome') {
+    return `${base} ${isActive ? 'text-emerald-300' : 'text-muted hover:text-emerald-200'}`
+  }
   return `${base} ${isActive ? 'text-article' : 'text-muted hover-text-article'}`
 }
 
@@ -80,6 +85,12 @@ function defaultNavItems(active: NormalizedNavSection): SiteNavItem[] {
       label: '收藏室',
       shortLabel: '收藏',
       className: navLinkClass('skills', active),
+    },
+    {
+      href: '/awesome',
+      label: 'AWESOME',
+      shortLabel: 'AWESOME',
+      className: navLinkClass('awesome', active),
     },
     {
       href: '/scraps',

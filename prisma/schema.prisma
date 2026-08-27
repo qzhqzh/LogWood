@@ -175,6 +175,7 @@ model User {
   sessions      Session[]
   adminAuditLogs AdminAuditLog[]
   agentReplyTasks AgentReplyTask[]
+  candidateInterests CandidateInterest[]
 
   @@map("users")
 }
@@ -195,6 +196,7 @@ model AnonymousUser {
   articleLikes        ArticleLike[]
   reports             Report[]
   articleComments     ArticleComment[]
+  candidateInterests  CandidateInterest[]
 
   @@map("anonymous_users")
 }
@@ -516,11 +518,38 @@ model Candidate {
   promotedSkill     Skill?               @relation("CandidatePromotedSkill", fields: [promotedSkillId], references: [id], onDelete: Restrict)
   reviews           Review[]
   evaluations       Evaluation[]
+  interests         CandidateInterest[]
 
   @@index([status, sortOrder])
   @@index([status, updatedAt])
   @@index([promotedSkillId])
   @@map("candidates")
+}
+
+/// A distinct 1-5 intent signal for project candidates. This is deliberately
+/// separate from Review.rating so lightweight interest never pollutes tested
+/// experience or evidence records. Exactly one actor relation is populated;
+/// the service enforces that invariant and uses the matching unique key for
+/// an atomic upsert.
+model CandidateInterest {
+  id              String   @id @default(cuid())
+  candidateId     String
+  userId          String?
+  anonymousUserId String?
+  score           Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  candidate     Candidate      @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anonymousUser AnonymousUser? @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, userId])
+  @@unique([candidateId, anonymousUserId])
+  @@index([candidateId])
+  @@index([userId])
+  @@index([anonymousUserId])
+  @@map("candidate_interests")
 }
 
 model App {

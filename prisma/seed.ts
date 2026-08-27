@@ -1,4 +1,9 @@
 import { PrismaClient, TargetType } from '@prisma/client'
+import {
+  AWESOME_PROJECTS,
+  awesomeCandidateTags,
+  awesomeDossierJson,
+} from '../src/content/awesome-projects'
 
 const prisma = new PrismaClient()
 
@@ -364,6 +369,23 @@ aspect 4:5, high detail bark texture`,
 
   await (prisma as any).tag.createMany({
     data: tags,
+    skipDuplicates: true,
+  })
+
+  console.log('Seeding AWESOME project candidates...')
+
+  await prisma.candidate.createMany({
+    data: AWESOME_PROJECTS.map((project) => ({
+      title: project.title,
+      slug: project.slug,
+      summary: project.summary,
+      rawContent: awesomeDossierJson(project),
+      websiteUrl: project.websiteUrl,
+      sourceUrl: project.sourceUrl,
+      tags: JSON.stringify(awesomeCandidateTags(project)),
+      status: 'watching' as const,
+      sortOrder: project.sortOrder,
+    })),
     skipDuplicates: true,
   })
 
