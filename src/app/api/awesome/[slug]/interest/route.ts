@@ -22,6 +22,7 @@ export async function POST(
     const interest = await setAwesomeInterest(slug, input.score, actor)
 
     revalidatePath('/awesome')
+    revalidatePath('/awesome/skills')
     return NextResponse.json({ interest })
   } catch (error) {
     if (error instanceof z.ZodError) {

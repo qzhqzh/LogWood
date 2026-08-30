@@ -1,9 +1,13 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
+  AWESOME_COMPUTE_LEVELS,
   AWESOME_DIRECTIONS,
+  AWESOME_READINESS,
+  type AwesomeComputeLevel,
   type AwesomeDirection,
+  type AwesomeReadiness,
 } from '@/content/awesome-projects'
 import type {
   AwesomeInterestSummary,
@@ -11,7 +15,9 @@ import type {
 } from '@/modules/candidate/awesome'
 import styles from './awesome-project-board.module.css'
 
-type AwesomeFilter = AwesomeDirection | 'all'
+type AwesomeDirectionFilter = AwesomeDirection | 'all'
+type AwesomeReadinessFilter = AwesomeReadiness | 'all'
+type AwesomeComputeFilter = AwesomeComputeLevel | 'all'
 
 const STATUS_LABELS: Record<string, string> = {
   watching: 'BACKLOG',
@@ -40,11 +46,29 @@ export function rankAwesomeProjectCards(projects: AwesomeProject[]): AwesomeProj
 
 export function filterAwesomeProjectCards(
   projects: AwesomeProject[],
-  filter: AwesomeFilter,
+  direction: AwesomeDirectionFilter,
+  readiness: AwesomeReadinessFilter = 'all',
+  compute: AwesomeComputeFilter = 'all',
+  query = '',
 ): AwesomeProject[] {
-  return filter === 'all'
-    ? projects
-    : projects.filter((project) => project.dossier.direction === filter)
+  const normalizedQuery = query.trim().toLocaleLowerCase()
+
+  return projects.filter((project) => {
+    if (direction !== 'all' && project.dossier.direction !== direction) return false
+    if (readiness !== 'all' && project.dossier.readiness !== readiness) return false
+    if (compute !== 'all' && project.dossier.compute !== compute) return false
+    if (!normalizedQuery) return true
+
+    const searchText = [
+      project.title,
+      project.summary,
+      project.dossier.upstreamName,
+      project.dossier.artifact,
+      project.dossier.direction,
+      project.dossier.buildProposal,
+    ].join(' ').toLocaleLowerCase()
+    return searchText.includes(normalizedQuery)
+  })
 }
 
 function getFingerprint(): string {
@@ -75,7 +99,12 @@ interface AwesomeProjectBoardProps {
 
 export function AwesomeProjectBoard({ initialProjects }: AwesomeProjectBoardProps) {
   const [projects, setProjects] = useState(() => rankAwesomeProjectCards(initialProjects))
-  const [filter, setFilter] = useState<AwesomeFilter>('all')
+  const [direction, setDirection] = useState<AwesomeDirectionFilter>('all')
+  const [readiness, setReadiness] = useState<AwesomeReadinessFilter>('all')
+  const [compute, setCompute] = useState<AwesomeComputeFilter>('all')
+  const [query, setQuery] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [expandedSlug, setExpandedSlug] = useState<string | null>(null)
   const [pendingSlug, setPendingSlug] = useState<string | null>(null)
   const [noticeBySlug, setNoticeBySlug] = useState<Record<string, string>>({})
   const [syncNotice, setSyncNotice] = useState<string | null>(null)
@@ -95,7 +124,7 @@ export function AwesomeProjectBoard({ initialProjects }: AwesomeProjectBoardProp
         if (payload.projects) setProjects(rankAwesomeProjectCards(payload.projects))
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') return
-        setSyncNotice('无法同步你的历史评分；当前总榜仍可浏览。')
+        setSyncNotice('历史评分暂未同步，总榜仍可浏览。')
       }
     }
 
@@ -134,9 +163,25 @@ export function AwesomeProjectBoard({ initialProjects }: AwesomeProjectBoardProp
     }
   }
 
-  const visibleProjects = filterAwesomeProjectCards(projects, filter)
-  const ratedProjects = projects.filter((project) => project.interest.ratingCount > 0).length
+  function resetFilters() {
+    setDirection('all')
+    setReadiness('all')
+    setCompute('all')
+    setQuery('')
+  }
+
+  const visibleProjects = useMemo(
+    () => filterAwesomeProjectCards(projects, direction, readiness, compute, query),
+    [compute, direction, projects, query, readiness],
+  )
+  const readyProjects = projects.filter((project) => project.dossier.readiness === 'ready').length
+  const heavyProjects = projects.filter((project) => project.dossier.compute === 'heavy').length
+  const holdProjects = projects.filter((project) => project.dossier.readiness === 'hold').length
   const totalSignal = projects.reduce((sum, project) => sum + project.interest.totalScore, 0)
+  const activeFilterCount = Number(direction !== 'all')
+    + Number(readiness !== 'all')
+    + Number(compute !== 'all')
+    + Number(Boolean(query.trim()))
 
   return (
     <>
@@ -144,82 +189,140 @@ export function AwesomeProjectBoard({ initialProjects }: AwesomeProjectBoardProp
         <div className={styles.headerMain}>
           <h1>AWESOME</h1>
           <div className={styles.statement}>
-            <p>有价值，能落地，才进入队列。</p>
-            <p>这里不是收藏夹。每条候选都连接一个真实开源上游、一项本站能力缺口和一个最小可交付。</p>
+            <p>
+              FIND.<br />
+              RANK.<br />
+              <strong>BUILD.</strong>
+            </p>
+            <span>OPEN-SOURCE PROJECT RADAR</span>
           </div>
         </div>
-        <div className={styles.headerRail} aria-label="候选池状态">
-          <span>{projects.length} CANDIDATES</span>
-          <span>{ratedProjects} RATED</span>
-          <span>{totalSignal} INTEREST POINTS</span>
-          <strong>RANK = TOTAL INTEREST ↓</strong>
+        <div className={styles.headerRail} aria-label="项目雷达状态">
+          <span>{projects.length} PROJECTS</span>
+          <span>{readyProjects} READY</span>
+          <span>{heavyProjects} HEAVY COMPUTE</span>
+          <span>{holdProjects} ON HOLD</span>
+          <strong>{totalSignal} INTEREST SIGNAL</strong>
         </div>
       </header>
 
       <div className={styles.workspace}>
-        <aside className={styles.filters} aria-label="候选方向筛选">
-          <div className={styles.filterHeading}>
-            <h2>DIRECTORY</h2>
-            <span>{String(visibleProjects.length).padStart(2, '0')} / {String(projects.length).padStart(2, '0')}</span>
-          </div>
-          <div className={styles.filterList} role="group" aria-label="按方向筛选">
+        <aside className={styles.filters} aria-label="项目筛选">
+          <button
+            type="button"
+            className={styles.filterToggle}
+            aria-expanded={filtersOpen}
+            aria-controls="awesome-filter-controls"
+            onClick={() => setFiltersOpen((current) => !current)}
+          >
+            <span>FILTERS</span>
+            <small>{activeFilterCount > 0 ? `${activeFilterCount} ACTIVE` : 'OPEN +'}</small>
+          </button>
+
+          <div
+            id="awesome-filter-controls"
+            className={styles.filterControls}
+            data-open={filtersOpen}
+          >
+            <div className={styles.searchBlock}>
+              <label htmlFor="awesome-search">SEARCH</label>
+              <input
+                id="awesome-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="PROJECTS, TOOLS, OUTPUTS"
+              />
+            </div>
+
+          <FilterGroup title="READINESS">
             <button
               type="button"
-              aria-pressed={filter === 'all'}
-              onClick={() => setFilter('all')}
+              aria-pressed={readiness === 'all'}
+              onClick={() => setReadiness('all')}
             >
-              <span>ALL DIRECTIONS</span>
-              <small>{projects.length}</small>
+              <span>ALL STAGES</span><small>{projects.length}</small>
             </button>
-            {AWESOME_DIRECTIONS.map((direction) => {
-              const count = projects.filter(
-                (project) => project.dossier.direction === direction.id,
-              ).length
-              return (
-                <button
-                  key={direction.id}
-                  type="button"
-                  aria-pressed={filter === direction.id}
-                  onClick={() => setFilter(direction.id)}
-                >
-                  <span>{direction.label}</span>
-                  <small>{count}</small>
-                </button>
-              )
-            })}
-          </div>
+            {AWESOME_READINESS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={readiness === item.id}
+                onClick={() => setReadiness(item.id)}
+              >
+                <span>{item.label}</span>
+                <small>{projects.filter((project) => project.dossier.readiness === item.id).length}</small>
+              </button>
+            ))}
+          </FilterGroup>
 
-          <section className={styles.criteria} aria-labelledby="awesome-criteria-title">
-            <h2 id="awesome-criteria-title">ENTRY CRITERIA</h2>
-            <ul>
-              <li><span>01</span>解决真实、反复出现的问题</li>
-              <li><span>02</span>有可检查的开源上游与许可</li>
-              <li><span>03</span>能切成一项最小可交付</li>
-              <li><span>04</span>完成后能沉淀为本站能力</li>
-            </ul>
-          </section>
+          <FilterGroup title="COMPUTE">
+            <button
+              type="button"
+              aria-pressed={compute === 'all'}
+              onClick={() => setCompute('all')}
+            >
+              <span>ANY</span><small>{projects.length}</small>
+            </button>
+            {AWESOME_COMPUTE_LEVELS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={compute === item.id}
+                onClick={() => setCompute(item.id)}
+              >
+                <span>{item.label}</span>
+                <small>{projects.filter((project) => project.dossier.compute === item.id).length}</small>
+              </button>
+            ))}
+          </FilterGroup>
+
+          <FilterGroup title="FIELDS">
+            <button
+              type="button"
+              aria-pressed={direction === 'all'}
+              onClick={() => setDirection('all')}
+            >
+              <span>ALL DIRECTIONS</span><small>{projects.length}</small>
+            </button>
+            {AWESOME_DIRECTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={direction === item.id}
+                onClick={() => setDirection(item.id)}
+              >
+                <span>{item.label}</span>
+                <small>{projects.filter((project) => project.dossier.direction === item.id).length}</small>
+              </button>
+            ))}
+          </FilterGroup>
+
+          </div>
         </aside>
 
         <section className={styles.queue} aria-labelledby="awesome-queue-title">
           <div className={styles.queueHeading}>
             <div>
-              <h2 id="awesome-queue-title">PROJECT QUEUE</h2>
-              <p>给真正想投入的方向打 1–5 分。总兴趣分更高的候选自动上浮。</p>
+              <h2 id="awesome-queue-title">PROJECT RADAR</h2>
+              <span>{String(visibleProjects.length).padStart(2, '0')} / {String(projects.length).padStart(2, '0')}</span>
             </div>
-            <span aria-live="polite">{syncNotice || 'COLLECTIVE SIGNAL / ONE SCORE PER PERSON'}</span>
+            <span aria-live="polite">{syncNotice || 'SCAN · OPEN · SCORE'}</span>
           </div>
 
           {visibleProjects.length === 0 ? (
             <div className={styles.empty}>
-              <strong>NO CANDIDATES IN THIS DIRECTION</strong>
-              <p>切换到其他方向，或在 Candidate 中补充带有 awesome 标签的候选。</p>
+              <strong>NO MATCHES</strong>
+              <button type="button" onClick={resetFilters}>RESET FILTERS</button>
             </div>
           ) : (
             <ol className={styles.ledger}>
               {visibleProjects.map((project) => {
                 const globalRank = projects.findIndex((item) => item.slug === project.slug) + 1
+                const isExpanded = expandedSlug === project.slug
                 const isPending = pendingSlug === project.slug
                 const notice = noticeBySlug[project.slug]
+                const detailsId = `awesome-details-${project.slug}`
 
                 return (
                   <li key={project.id} className={styles.project}>
@@ -229,90 +332,108 @@ export function AwesomeProjectBoard({ initialProjects }: AwesomeProjectBoardProp
                     </div>
 
                     <article className={styles.projectBody}>
-                      <header className={styles.projectHeader}>
-                        <div>
+                      <button
+                        type="button"
+                        className={styles.projectToggle}
+                        aria-expanded={isExpanded}
+                        aria-controls={detailsId}
+                        onClick={() => setExpandedSlug(isExpanded ? null : project.slug)}
+                      >
+                        <div className={styles.projectLead}>
                           <div className={styles.projectMeta}>
-                            <span>{project.dossier.posture}</span>
-                            <span>{STATUS_LABELS[project.status] || project.status.toUpperCase()}</span>
+                            <span>{project.dossier.readiness.toUpperCase()}</span>
+                            <span>{project.dossier.compute.toUpperCase()} COMPUTE</span>
                             <span>{project.dossier.direction.replaceAll('-', ' ').toUpperCase()}</span>
                           </div>
                           <h3>{project.title}</h3>
                           <p>{project.summary}</p>
                         </div>
-                        <div className={styles.upstream}>
-                          <span>UPSTREAM</span>
-                          <strong>{project.dossier.upstreamName}</strong>
-                          <small>{project.dossier.license}</small>
+                        <div className={styles.projectSignal}>
+                          <span>{project.dossier.artifact}</span>
+                          <strong>{project.interest.totalScore}</strong>
+                          <small>{isExpanded ? 'CLOSE −' : 'OPEN +'}</small>
                         </div>
-                      </header>
+                      </button>
 
-                      <div className={styles.projectReasoning}>
-                        <section>
-                          <h4>WHY IT MATTERS</h4>
-                          <p>{project.dossier.whyItMatters}</p>
-                        </section>
-                        <section>
-                          <h4>WHAT WE BUILD</h4>
-                          <p>{project.dossier.buildProposal}</p>
-                        </section>
-                        <section>
-                          <h4>FIRST MILESTONE · {project.dossier.effort}</h4>
-                          <p>{project.dossier.firstMilestone}</p>
-                        </section>
-                      </div>
-
-                      <details className={styles.researchNote}>
-                        <summary>RESEARCH NOTE</summary>
-                        <p>{project.dossier.researchNote}</p>
-                      </details>
-
-                      <footer className={styles.projectFooter}>
-                        <div className={styles.sourceLinks}>
-                          {project.sourceUrl ? (
-                            <a href={project.sourceUrl} target="_blank" rel="noopener noreferrer">
-                              SOURCE REPO ↗
-                            </a>
-                          ) : null}
-                          {project.websiteUrl ? (
-                            <a href={project.websiteUrl} target="_blank" rel="noopener noreferrer">
-                              PROJECT SITE ↗
-                            </a>
-                          ) : null}
-                        </div>
-
-                        <div className={styles.interestPanel}>
-                          <div className={styles.interestStats}>
-                            <span>INTEREST</span>
-                            <strong>{project.interest.totalScore}</strong>
-                            <small>
-                              {project.interest.ratingCount > 0
-                                ? `${project.interest.averageScore}/5 · ${project.interest.ratingCount} PEOPLE`
-                                : 'NO SIGNAL YET'}
-                            </small>
+                      {isExpanded ? (
+                        <div id={detailsId} className={styles.projectDetails}>
+                          <div className={styles.upstreamRail}>
+                            <span>{project.dossier.upstreamName}</span>
+                            <span>{project.dossier.license}</span>
+                            <span>{project.dossier.licenseStatus.toUpperCase()} LICENSE</span>
+                            <span>{project.dossier.posture}</span>
+                            <span>{STATUS_LABELS[project.status] || project.status.toUpperCase()}</span>
                           </div>
-                          <fieldset disabled={isPending}>
-                            <legend>YOUR SCORE</legend>
-                            <div>
-                              {[1, 2, 3, 4, 5].map((score) => (
-                                <button
-                                  key={score}
-                                  type="button"
-                                  aria-label={`给 ${project.title} 评分 ${score}/5`}
-                                  aria-pressed={project.interest.myScore === score}
-                                  onClick={() => void setInterest(project.slug, score)}
-                                >
-                                  {score}
-                                </button>
-                              ))}
+
+                          <div className={styles.projectReasoning}>
+                            <section>
+                              <h4>WHY IT MATTERS</h4>
+                              <p>{project.dossier.whyItMatters}</p>
+                            </section>
+                            <section>
+                              <h4>WHAT WE BUILD</h4>
+                              <p>{project.dossier.buildProposal}</p>
+                            </section>
+                            <section>
+                              <h4>FIRST MILESTONE · {project.dossier.effort}</h4>
+                              <p>{project.dossier.firstMilestone}</p>
+                            </section>
+                          </div>
+
+                          <details className={styles.researchNote}>
+                            <summary>RESEARCH NOTE</summary>
+                            <p>{project.dossier.researchNote}</p>
+                          </details>
+
+                          <footer className={styles.projectFooter}>
+                            <div className={styles.sourceLinks}>
+                              {project.sourceUrl ? (
+                                <a href={project.sourceUrl} target="_blank" rel="noopener noreferrer">
+                                  SOURCE REPO ↗
+                                </a>
+                              ) : null}
+                              {project.websiteUrl ? (
+                                <a href={project.websiteUrl} target="_blank" rel="noopener noreferrer">
+                                  PROJECT SITE ↗
+                                </a>
+                              ) : null}
                             </div>
-                          </fieldset>
+
+                            <div className={styles.interestPanel}>
+                              <div className={styles.interestStats}>
+                                <span>INTEREST</span>
+                                <strong>{project.interest.totalScore}</strong>
+                                <small>
+                                  {project.interest.ratingCount > 0
+                                    ? `${project.interest.averageScore}/5 · ${project.interest.ratingCount} PEOPLE`
+                                    : 'NO SIGNAL YET'}
+                                </small>
+                              </div>
+                              <fieldset disabled={isPending}>
+                                <legend>YOUR SCORE</legend>
+                                <div>
+                                  {[1, 2, 3, 4, 5].map((score) => (
+                                    <button
+                                      key={score}
+                                      type="button"
+                                      aria-label={`给 ${project.title} 评分 ${score}/5`}
+                                      aria-pressed={project.interest.myScore === score}
+                                      onClick={() => void setInterest(project.slug, score)}
+                                    >
+                                      {score}
+                                    </button>
+                                  ))}
+                                </div>
+                              </fieldset>
+                            </div>
+                          </footer>
+                          <p className={styles.notice} aria-live="polite">
+                            {notice || (project.interest.myScore
+                              ? `YOUR SCORE ${project.interest.myScore}/5`
+                              : 'RATE 1–5 · CHANGE ANYTIME')}
+                          </p>
                         </div>
-                      </footer>
-                      <p className={styles.notice} aria-live="polite">
-                        {notice || (project.interest.myScore
-                          ? `YOUR SCORE ${project.interest.myScore}/5`
-                          : '选择 1–5，之后可以修改。')}
-                      </p>
+                      ) : null}
                     </article>
                   </li>
                 )
@@ -322,5 +443,18 @@ export function AwesomeProjectBoard({ initialProjects }: AwesomeProjectBoardProp
         </section>
       </div>
     </>
+  )
+}
+
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className={styles.filterGroup}>
+      <div className={styles.filterHeading}>
+        <h2>{title}</h2>
+      </div>
+      <div className={styles.filterList} role="group" aria-label={`${title} filter`}>
+        {children}
+      </div>
+    </section>
   )
 }

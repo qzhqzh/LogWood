@@ -24,7 +24,11 @@ function buildProject(overrides: Partial<AwesomeProject> = {}): AwesomeProject {
       upstreamName: 'promptfoo',
       direction: 'prompt-quality',
       license: 'MIT',
+      licenseStatus: 'clear',
       effort: '3 DAYS',
+      readiness: 'ready',
+      compute: 'light',
+      artifact: 'EVALUATION MATRIX',
       posture: 'INTEGRATE',
       whyItMatters: 'It replaces guesswork with repeatable evidence.',
       buildProposal: 'Connect prompt versions to a stable evaluation matrix.',
@@ -48,11 +52,15 @@ describe('AwesomeProjectBoard', () => {
     }))
 
     expect(html).toContain('AWESOME')
-    expect(html).toContain('PROJECT QUEUE')
-    expect(html).toContain('WHAT WE BUILD')
-    expect(html).toContain('FIRST MILESTONE')
-    expect(html).toContain('SOURCE REPO')
-    expect(html).toContain('aria-label="给 Prompt Regression Lab 评分 5/5"')
+    expect(html).toContain('FIND.')
+    expect(html).toContain('RANK.')
+    expect(html).toContain('BUILD.')
+    expect(html).toContain('PROJECT RADAR')
+    expect(html).toContain('OPEN-SOURCE PROJECT RADAR')
+    expect(html).toContain('EVALUATION MATRIX')
+    expect(html).not.toContain('这里不是收藏夹')
+    expect(html).not.toContain('ENTRY CRITERIA')
+    expect(html).toContain('aria-controls="awesome-details-prompt-regression-lab"')
     expect(html).toContain('aria-pressed="true"')
   })
 
@@ -60,6 +68,8 @@ describe('AwesomeProjectBoard', () => {
     const visual = buildProject({
       id: 'visual',
       slug: 'visual',
+      title: 'Visual Production Lab',
+      summary: 'Test image pipelines with real evidence.',
       dossier: { ...buildProject().dossier, direction: 'visual-production' },
       interest: { totalScore: 12, averageScore: 4, ratingCount: 3, myScore: null },
     })
@@ -67,5 +77,7 @@ describe('AwesomeProjectBoard', () => {
 
     expect(rankAwesomeProjectCards([prompt, visual])[0]?.slug).toBe('visual')
     expect(filterAwesomeProjectCards([prompt, visual], 'prompt-quality')).toEqual([prompt])
+    expect(filterAwesomeProjectCards([prompt, visual], 'all', 'ready', 'light', 'regression')).toEqual([prompt])
+    expect(filterAwesomeProjectCards([prompt, visual], 'all', 'hold')).toEqual([])
   })
 })

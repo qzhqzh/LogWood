@@ -2,18 +2,27 @@ import { prisma } from '@/lib/prisma'
 import type { ActorContext } from '@/modules/identity'
 import { checkAndConsume, checkIpSegmentLimit } from '@/modules/rate-limit'
 import {
+  AWESOME_COMPUTE_LEVELS,
   AWESOME_DIRECTIONS,
   AWESOME_PROJECT_SCHEMA,
+  AWESOME_READINESS,
+  type AwesomeComputeLevel,
   type AwesomeDirection,
+  type AwesomeLicenseStatus,
   type AwesomeProjectDossier,
+  type AwesomeReadiness,
 } from '@/content/awesome-projects'
 
 const AWESOME_TAG = 'awesome'
 const AWESOME_TAG_FRAGMENT = `"${AWESOME_TAG}"`
+const AWESOME_SKILL_TAG_FRAGMENT = '"catalog:skill"'
 const CANDIDATE_PRIVATE_TAG = 'visibility:private'
 const INTEREST_SCORE_MIN = 1
 const INTEREST_SCORE_MAX = 5
 const validDirections = new Set<string>(AWESOME_DIRECTIONS.map((item) => item.id))
+const validReadiness = new Set<string>(AWESOME_READINESS.map((item) => item.id))
+const validComputeLevels = new Set<string>(AWESOME_COMPUTE_LEVELS.map((item) => item.id))
+const validLicenseStatuses = new Set<string>(['clear', 'review', 'restricted'])
 
 export interface AwesomeInterestSummary {
   totalScore: number
@@ -62,7 +71,11 @@ function fallbackDossier(title: string, tags: readonly string[]): AwesomeProject
     upstreamName: title,
     direction: directionFromTags(tags),
     license: 'REVIEW REQUIRED',
+    licenseStatus: 'review',
     effort: 'TO ESTIMATE',
+    readiness: 'radar',
+    compute: 'medium',
+    artifact: 'WORKING PROTOTYPE',
     posture: 'STUDY',
     whyItMatters: '这条候选仍需补充价值判断和与本站能力的连接。',
     buildProposal: '先完成源码、许可、数据边界和最小可交付审计，再决定集成或自建。',
@@ -95,7 +108,30 @@ function parseDossier(
     ) {
       return fallbackDossier(title, tags)
     }
-    return value as AwesomeProjectDossier
+    return {
+      schema: AWESOME_PROJECT_SCHEMA,
+      upstreamName: value.upstreamName,
+      direction: value.direction as AwesomeDirection,
+      license: value.license,
+      licenseStatus: validLicenseStatuses.has(value.licenseStatus || '')
+        ? value.licenseStatus as AwesomeLicenseStatus
+        : 'review',
+      effort: value.effort,
+      readiness: validReadiness.has(value.readiness || '')
+        ? value.readiness as AwesomeReadiness
+        : 'radar',
+      compute: validComputeLevels.has(value.compute || '')
+        ? value.compute as AwesomeComputeLevel
+        : 'medium',
+      artifact: typeof value.artifact === 'string' && value.artifact.trim()
+        ? value.artifact
+        : 'WORKING PROTOTYPE',
+      posture: value.posture as AwesomeProjectDossier['posture'],
+      whyItMatters: value.whyItMatters,
+      buildProposal: value.buildProposal,
+      firstMilestone: value.firstMilestone,
+      researchNote: value.researchNote,
+    }
   } catch {
     return fallbackDossier(title, tags)
   }
@@ -115,7 +151,10 @@ export async function listAwesomeProjects(actor?: ActorContext): Promise<Awesome
   const candidates = await prisma.candidate.findMany({
     where: {
       tags: { contains: AWESOME_TAG_FRAGMENT },
-      NOT: { tags: { contains: `"${CANDIDATE_PRIVATE_TAG}"` } },
+      NOT: [
+        { tags: { contains: `"${CANDIDATE_PRIVATE_TAG}"` } },
+        { tags: { contains: AWESOME_SKILL_TAG_FRAGMENT } },
+      ],
     },
     orderBy: [{ sortOrder: 'asc' }, { updatedAt: 'desc' }],
     select: {

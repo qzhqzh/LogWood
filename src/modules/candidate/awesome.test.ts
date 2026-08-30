@@ -50,7 +50,11 @@ function project(title: string, totalScore: number, sortOrder: number): AwesomeP
       upstreamName: title,
       direction: 'prompt-quality',
       license: 'MIT',
+      licenseStatus: 'clear',
       effort: '1 DAY',
+      readiness: 'ready',
+      compute: 'light',
+      artifact: 'TEST RESULT',
       posture: 'STUDY',
       whyItMatters: 'why',
       buildProposal: 'build',
@@ -132,12 +136,21 @@ describe('candidate/awesome', () => {
     expect(prismaMock.candidate.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {
         tags: { contains: '"awesome"' },
-        NOT: { tags: { contains: '"visibility:private"' } },
+        NOT: [
+          { tags: { contains: '"visibility:private"' } },
+          { tags: { contains: '"catalog:skill"' } },
+        ],
       },
     }))
     expect(result[0]).toMatchObject({
       slug: 'prompt-lab',
       tags: ['direction:prompt-quality'],
+      dossier: {
+        readiness: 'radar',
+        compute: 'medium',
+        artifact: 'WORKING PROTOTYPE',
+        licenseStatus: 'review',
+      },
       interest: {
         totalScore: 13,
         averageScore: 4.3,
