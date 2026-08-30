@@ -1,0 +1,131 @@
+{
+  "schemaVersion": "1.0.0",
+  "profiles": [
+    {
+      "id": "acs-jacs-au-2026-08",
+      "publisher": "ACS Publications",
+      "journal": "JACS Au",
+      "policyState": "allowed",
+      "sourceUrls": [
+        "https://researcher-resources.acs.org/publish/aipolicy",
+        "https://researcher-resources.acs.org/publish/author_guidelines?coden=jaaucr"
+      ],
+      "verifiedAt": "2026-08-29",
+      "reviewAfter": "2026-11-27",
+      "policyNotes": [
+        "AI-generated cover artwork is permitted with disclosure.",
+        "The author must confirm that the selected tool permits commercial publication use.",
+        "The target journal guide, not a publisher-wide default, supplies the physical specification."
+      ],
+      "disclosure": {
+        "required": true,
+        "template": "Cover artwork was generated with [provider] using [model] from an author-prepared, redacted scientific concept brief, then reviewed and selected by the authors for scientific accuracy and originality."
+      },
+      "toolCommercialUseConfirmationRequired": true,
+      "permissionEvidenceRequired": false,
+      "exactJournalProfile": true,
+      "spec": {
+        "physicalWidth": 8.19,
+        "physicalHeight": 10,
+        "physicalUnit": "in",
+        "dpi": 300,
+        "minPixels": {
+          "width": 2457,
+          "height": 3000
+        },
+        "acceptedFormats": ["png", "jpeg", "tiff", "eps"],
+        "allowAlpha": false,
+        "colorSpace": "srgb",
+        "safeAreas": [
+          {
+            "id": "masthead",
+            "label": "Generic masthead reserve — do not place a logo here",
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 0.25
+          }
+        ]
+      }
+    },
+    {
+      "id": "elsevier-permission-required-2026-08",
+      "publisher": "Elsevier",
+      "journal": "Exact Elsevier journal required",
+      "policyState": "permission_required",
+      "sourceUrls": [
+        "https://www.elsevier.com/about/policies-and-standards/generative-ai-policies-for-journals"
+      ],
+      "verifiedAt": "2026-08-29",
+      "reviewAfter": "2026-11-27",
+      "policyNotes": [
+        "Prior permission from the journal editor and publisher is required for AI-generated cover art.",
+        "This publisher-level record does not contain a journal-specific export specification."
+      ],
+      "disclosure": {
+        "required": true,
+        "template": "Cover artwork was generated with [provider] using [model] under prior editor and publisher permission recorded in this run, and was reviewed and edited by the authors."
+      },
+      "toolCommercialUseConfirmationRequired": true,
+      "permissionEvidenceRequired": true,
+      "exactJournalProfile": false,
+      "spec": null
+    },
+    {
+      "id": "nature-generative-ai-prohibited-2026-08",
+      "publisher": "Springer Nature",
+      "journal": "Nature",
+      "policyState": "prohibited",
+      "sourceUrls": [
+        "https://research-figure-guide.nature.com/covers/"
+      ],
+      "verifiedAt": "2026-08-29",
+      "reviewAfter": "2026-11-27",
+      "policyNotes": [
+        "Nature's cover guidance does not permit generative-AI images.",
+        "Create a text-only art direction and human-illustrator handoff; do not invoke an image generator."
+      ],
+      "disclosure": {
+        "required": false,
+        "template": null
+      },
+      "toolCommercialUseConfirmationRequired": false,
+      "permissionEvidenceRequired": false,
+      "exactJournalProfile": true,
+      "spec": {
+        "physicalWidth": 213,
+        "physicalHeight": 285,
+        "physicalUnit": "mm",
+        "dpi": 300,
+        "minPixels": {
+          "width": 2516,
+          "height": 3366
+        },
+        "acceptedFormats": ["png", "jpeg", "tiff", "psd"],
+        "allowAlpha": false,
+        "colorSpace": "srgb",
+        "safeAreas": []
+      }
+    },
+    {
+      "id": "unverified-manual-review",
+      "publisher": "Unverified",
+      "journal": "Exact journal required",
+      "policyState": "manual_review",
+      "sourceUrls": [],
+      "verifiedAt": "2026-08-29",
+      "reviewAfter": "2026-08-29",
+      "policyNotes": [
+        "Supply and verify the exact journal's official AI and cover-art guidance before finalization."
+      ],
+      "disclosure": {
+        "required": true,
+        "template": "Draft only — replace with wording verified against the target journal's current policy."
+      },
+      "toolCommercialUseConfirmationRequired": true,
+      "permissionEvidenceRequired": false,
+      "exactJournalProfile": false,
+      "spec": null
+    }
+  ]
+}
