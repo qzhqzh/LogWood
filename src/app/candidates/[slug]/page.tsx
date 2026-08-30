@@ -11,6 +11,7 @@ import { EvaluationPanel } from '@/components/evaluation-panel'
 import { ReviewPanel } from '@/components/review-panel'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { candidatePreviewClientUrl } from '@/lib/private-candidate-preview'
 import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 import { candidateStatusLabel, getCandidateBySlug } from '@/modules/candidate'
 import { resolvePromotionDestination } from '@/modules/lifecycle'
@@ -36,7 +37,10 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
   const { slug } = await params
   const session = await getServerSession(authOptions)
   const isAdmin = isAdminSession(session)
-  const candidate = await getCandidateBySlug(slug)
+  const candidate = await getCandidateBySlug(slug, {
+    viewerUserId: session?.user?.id,
+    isAdmin,
+  })
   if (!candidate) notFound()
   const canViewRaw = isAdmin || session?.user?.id === candidate.authorUserId
   const canOrganize = Boolean(
@@ -47,6 +51,8 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
   const promotionDestination = await resolvePromotionDestination(candidate)
   const parentPath = isScrap ? '/scraps' : '/candidates'
   const parentLabel = isScrap ? '废品站' : '找灵感'
+  const previewImageUrl = candidatePreviewClientUrl(candidate.id, candidate.previewImageUrl)
+  const imageUrl = previewImageUrl || candidate.logoUrl
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
@@ -59,7 +65,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
       />
       <SiteNav
         active="candidates"
-        actionLabel={isAdmin ? '管理' : undefined}
+        actionLabel={isAdmin ? 'Manage' : undefined}
         actionHref={isAdmin ? `/candidates/manage?edit=${candidate.id}` : undefined}
       />
 
@@ -111,10 +117,10 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPro
           </section>
         )}
 
-        {(candidate.previewImageUrl || candidate.logoUrl) && (
+        {imageUrl && (
           <div className="relative flex min-h-64 w-full items-center justify-center overflow-hidden rounded-lg border border-divider bg-black/30 mb-8">
             <Image
-              src={candidate.previewImageUrl || candidate.logoUrl || ''}
+              src={imageUrl}
               alt={candidate.title}
               width={1600}
               height={1200}

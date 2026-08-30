@@ -1,302 +1,172 @@
-# LogWood 项目计划书
+# LogWood 项目计划
 
-## 1. 文档目的
+> 最近修订：2026-08-26
+> 产品定位：[`PRODUCT_POSITIONING.md`](./PRODUCT_POSITIONING.md)
+> 发布验收：[`RELEASE_ACCEPTANCE_MATRIX.md`](./RELEASE_ACCEPTANCE_MATRIX.md)
 
-本文件用于快速理解项目现状、执行计划、架构边界、风险和近期变更。
+## 目标
 
-文档职责：
+把历史上不断叠加功能的个人站收口为一个明确产品：**可验证、可比较、可审计的增强版提示词仓库**。保留作者思想、历史数据和旧 URL，但不再让每个历史功能都占据一级产品位置。
 
-- 产品定位、用户价值、内容对象和长期信息架构以 [`PRODUCT_POSITIONING.md`](./PRODUCT_POSITIONING.md) 为唯一权威来源。
-- 正式评测协议以 [`EVALUATION_PROTOCOL_V2.md`](./EVALUATION_PROTOCOL_V2.md) 为准。
-- 本文件只记录当前实现、技术边界、迁移阶段、风险和近期计划。
-- `SPEC.md` 是旧评测 MVP 的历史执行规格，不再定义当前产品。
+唯一运行根是 `/home/zhuqin/star/app/LogWood`。`personal_site`、`personal_site_x` 和 `design-preview` 都是迁移来源，不是运行依赖。
 
-维护规则（强制）：
+## 架构边界
 
-- 涉及功能、架构、数据库 schema、部署策略或数据迁移时，必须同步更新本文件。
-- 代码评审将本文件更新作为必检项。
-- 新成员应依次阅读：`PRODUCT_POSITIONING.md` → 本文件 → 专项协议 / 模块文档。
+- Next.js 14 + TypeScript + Tailwind；
+- Prisma + PostgreSQL；
+- 保持 `src/modules/*/service.ts` 服务边界；
+- `Skill` 是公开 Prompt 主模型；
+- Candidate / Article / App / Target / Review / Evaluation 保留现有表与关系；
+- 旧路由和 slug 保持向后兼容；
+- 本轮不做破坏性 schema 合并，也不删除 migration、volume、上传或来源仓库。
 
-## 2. 项目定位
+## 本轮交付（Phase 0 收口 + 第一阶段 Home / Prompt Workbench）
 
-- 项目名称：**空心树洞**（仓库名保留 `LogWood`）
-- 品牌副标题：**大浪淘沙，找寻灵感**
-- 功能定位：**灵感淘洗与经验沉淀系统**
-- 核心目标：低成本收住随手灵感和外部资源，经由观察、试用和判断，将值得继续的内容收入收藏室，将当前不再继续的内容保存在废品站；同时保存沿途的吐槽、证据、技术小结和深度反思。
+### 0.1 产品与信息架构
 
-当前整理主线收口为：**找灵感 → 淘洗 → 收藏室 / 废品站**；吐槽室和洞笔记是贯穿生命周期的表达与沉淀层。
+- 一级导航收口为 `PROMPT / GALLERY / AWESOME / COMMUNITY / ABOUT`；
+- 原文章与长期沉淀统一由 Community 承载，验证记录和提示档案保留二级直达路由；
+- 收集箱、AI 整理、归档和历史资源降为作者工作台；
+- `/skills` 只查询已发布 Skill，不再聚合 Target/App；
+- `Target.prompt` 放入明确标记的历史兼容区；
+- SEO、副标题、Open Graph 和产品文档改为提示词仓库定位。
 
-1. 灵感是低成本记录的碎片，通过未处理、观察中、已入藏和已淘汰状态及 Tags 淘洗。
-2. 收藏室统一承载 Skill、历史工具和视觉收藏；`/skills` 为主入口，`/tools` 与 `/app` 保留历史兼容。
-3. 废品站由 `/scraps` 承载，第一阶段直接展示 `Candidate.dropped`，不删除来源和历史互动。
-4. 吐槽室承接即时判断，洞笔记承接整理后的长期内容，两者都应能关联生命周期中的对象。
+### 0.2 新界面与对比
 
-详细实施批次和迁移门禁见 [`LIFECYCLE_REFACTOR_PLAN.md`](./LIFECYCLE_REFACTOR_PLAN.md)。
+- 首页：近乎复刻已批准的 1672×941 `PROMPT / PROMPTS, PROVEN. / ENTER` 完整首屏；
+- Prompt 工作台：左 Library、中 Output、右 Recipe；中央优先真实效果或本次模型结果；
+- 提示详情：效果预览在桌面中央、移动端优先；
+- 提示库：分类、搜索、真实效果缩略图和 2–3 条选择；
+- 新增 `/compare/prompts`，逐行并排效果、正文、证据、来源与 AI 归属；
+- 无效果图时显示正文回退，不生产伪效果；
+- ASCII character field 设计系统覆盖公共操作 surface。
 
-整体升级由 GitHub Issue #15 跟踪。
+### 0.3a 第一阶段实时输出契约
 
-## 3. 当前范围
+- 文本 Prompt 只路由到服务器白名单 DeepSeek 模型；
+- 图片 Prompt 只路由到服务器白名单 CPA 生图模型；
+- 文档、视频和特殊用途 Prompt 可在管理页正常收录，但显示 `MANAGED ONLY` 且不可运行；
+- 输出类型以 `output:*` 保留标签兼容存储，由 service 返回 `outputKind`，不做 schema 迁移或历史回写；
+- 所有工作台输出仅存在于当前会话，必须包含 provider、model、非空 modelVersion 与生成时间，不自动保存为证据。
 
-当前已完成产品定位、运行时 Phase 1 和 Evaluation v2 正式评测层。持久化模型仍处于兼容旧结构、逐步演进的阶段。
+### 0.3 人与 AI 的安全门禁
 
-### 3.1 公开能力
+- `createSkill` 默认 `draft`；
+- Candidate 晋升 Skill 默认 `draft`；
+- Forge 默认创建提示词草稿，支持 AI/本地模板与幂等重试；
+- AI attribution 完整保存，部分字段公开告警；
+- Article 内容更新产生新版本、取消旧批准并回到草稿；
+- Article 删除改为归档，保留来源、版本、贡献、评论和 URL 语义。
 
-- 找灵感：`/candidates`
-  - 复用现有 Candidate 模型，作为灵感池。
-  - `watching / evaluating / promoted` 分别展示为未处理 / 观察中 / 已入藏。
-  - 登录用户可通过 `New` 提交文本或图片；文本由 DeepSeek 保守提炼，图片直接保存。
-  - 文本灵感同时保留原始输入和 AI 派生摘要，避免提炼后无法追溯。
-  - 灵感作者或管理员可随时归类、增删 Tags，并按标题、备注和 Tags 搜索。
-- 收藏室：`/skills`
-  - 聚合 Skill、历史 Target 和 App，分别展示为能力、工具和视觉收藏。
-  - 旧 `/tools`、`/app` 列表入口收口到收藏室，所有详情和管理 URL 保持兼容。
-- 废品站：`/scraps`
-  - 第一阶段复用 `Candidate.dropped`，保存已处理但当前不再继续的内容。
-- 正式评测：`/evaluations`
-  - Evaluation v2 聚合与协议筛选。
-  - 详情 `/evaluations/[id]` 展示对象版本、环境、任务、证据、复现级别、维度评分、限制和结论。
-- 吐槽室：`/talk`
-  - 聚合历史 Review 自由记录、提问和吐槽。
-- 洞笔记：`/articles`
-- Agent MCP：`/api/mcp`
-  - 独立 Bearer Token 鉴权，支持灵感记录/整理/晋升、AI 吐槽与文章发布。
-  - AI 内容强制记录 Provider、Model、Version 和生成时间。
-  - 用户回复 AI 内容时，在评论事务内创建低 Token 回复任务。
-- 收藏室历史兼容：`/tools`、`/app`
-  - 列表页进入收藏室对应视图；Target、Editor、Coding、Model、Prompt、App 详情和管理 URL 继续可访问。
-- AI 炼成助手：`/forge`
-  - 确定性本地模板；尚未接入真实模型。
+### 0.4 数据与发布安全
 
-Target、Skill、App、Candidate 详情现在同时展示：
+- `.env*` 排除 Docker build context；
+- 依赖安装使用提交的 `package-lock.json` 与 `npm ci --include=dev`；
+- 备份目录 `0700`，备份文件与 `.env.bak` `0600`；
+- 发布前创建新 PostgreSQL custom dump、上传归档和代码回滚点；
+- 恢复到独立临时 PostgreSQL 实例并做表计数抽样；
+- 只重建/重启 `logwood-web`，不运行会触碰 DB 的全量 Compose 生命周期。
 
-1. Evaluation v2 正式评测；
-2. Review 自由记录 / Quick Take 兼容内容。
+### 0.5 Awesome 收录层
 
-### 3.2 管理能力
+- `/awesome` 保留 Project Radar，`/awesome/skills` 新增 Agent Skill Index，`/awesome/feeds` 集中管理发现源；
+- Project 与 Skill 均使用 Candidate 和现有兴趣分，不新增 schema；分别以 `catalog:project`、`catalog:skill` 隔离查询；
+- Skill 记录 `SKILL.md` 来源、兼容性、权限、许可状态与 `COLLECTED → AUDITED → TRIED → PROVEN` 成熟度；
+- Skill Index 只读、收录和评分，不直接运行或安装；只有绑定已发布 Prompt 时才跳转 Workbench；
+- 同步脚本只创建缺失条目并回填缺失元数据，保留已有正文、标签、评分和 slug 冲突记录。
 
-- 灵感管理：`/candidates/manage`
-- Skill 管理：`/skills/manage`
-- 正式评测工作台：`/evaluations/manage`
-  - 管理员创建、编辑、发布和归档 Evaluation。
-  - 自动根据对象匹配 Skill / 模型 / 软件 / 普通资源协议。
-  - 所有 Evaluation 写操作进入 AdminAuditLog。
-- Article、App、Target、评论和标签原管理能力继续保留。
+## 分期路线
 
-### 3.3 评测语义
+| 阶段 | 时间窗口 | 交付 | 数据门禁 | 验收 |
+|---|---|---|---|---|
+| Phase 0 | 当前发布 | 定位、ASCII 首页/提示库/详情、2–3 条对比、草稿门禁、安全归档 | 无生产 schema 变更；备份+恢复演练 | P0 矩阵全绿 |
+| Phase 1A | 当前增量 | 批准稿 Home / Workbench、文本与图片实时测试、其他输出类型安全管理 | 兼容标签；零 schema 变更；模型结果不落库 | 桌面/移动视觉、真实双模型 smoke、归属完整 |
+| Phase 1C | 当前增量 | Awesome Project / Skill / Feed 三分区、Skill 权限与成熟度审计 | Candidate 标签兼容；幂等同步；不自动安装或执行 | 查询隔离、评分、筛选、来源链接与响应式 UI |
+| Phase 1B | 发布后 1–2 周 | Prompt 版本、结构化输入/输出契约、效果样本集、失败边界 | 只新增表/列；迁移先跑恢复副本 | 版本切换、旧链接、回归样本 |
+| Phase 2 | 2–4 周 | 对比快照、跨模型/跨版本 Evaluation 模板、可复现运行记录 | 证据引用不可级联删除 | 同输入多环境对照 |
+| Phase 3 | 4–6 周 | Candidate → Prompt 更完整的人工整理队列、发布审核 Inbox、批量但可回滚的元数据补齐 | 每批幂等、可重跑、逐批对账 | 失败池与恢复剧本 |
+| Phase 4 | 6–10 周 | VisualAsset 权利审核 UI、合法资产发布、Prompt/App/Article 来源图谱 | `owned/licensed` 才可公开 | hash、权利和来源审计 |
+| Phase 5 | 有数据后评估 | 物理模型简化或历史模型归档 | 只有使用统计、双写和完整回滚后才决定 | RFC + owner approval |
 
-- `Review`：自由记录、第一感受、吐槽、提问和阶段性判断；历史数据完全保留。
-- `Evaluation`：正式、证据优先、协议版本化的评测。
-- 本阶段不将历史 Review 自动迁移为 Evaluation。
+## Phase 1B 详细任务
 
-## 4. 架构与部署
+### PromptVersion
 
-- 技术栈：Next.js 14 + TypeScript + Tailwind + Prisma + PostgreSQL + NextAuth
-- 架构风格：模块化单体（`src/modules`）
-- 部署：Docker Compose；默认 `NODE_ENV=production`，由 entrypoint 执行 build + start。仅本地实时开发显式使用 `NODE_ENV=development`。
-- 数据库更新：一次性 `schema-sync` 使用管理员凭据执行 `prisma db push`，
-  `db-bootstrap` 随后幂等准备非超级用户；Web 与 Worker 必须等待两步成功。正式环境
-  应在执行前审阅 schema diff 和备份策略；旧数据卷先通过本地 Unix socket 执行
-  `scripts/upgrade-db-credentials.sh` 轮换内部凭据，不能只修改环境变量。
-- 回复 Worker：通过 `agent-reply` Compose profile 使用 host network 常驻运行；
-  PostgreSQL 只发布到宿主机回环地址，管理员和应用密码均必须由环境注入，Worker
-  仅使用应用角色。空队列只查询数据库，不调用模型。
+- 建立不可变版本快照；
+- 记录正文、分类、效果引用、来源、AI 归属和 changeSummary；
+- 公开页指向批准版本，不把当前编辑态误当公开版本；
+- 比较页允许固定到具体版本。
 
-Evaluation v2 上线要求：
+### Prompt Contract
+
+- 可选字段：目标、输入要求、输出格式、依赖模型/工具、已知限制；
+- 不强迫历史提示词立即补齐；
+- 管理页提供完成度，而不是在公共页虚构信息。
+
+### Effect Sample
+
+- 一个 Prompt 可保存多条真实结果；
+- 每条结果记录输入变量、环境、模型版本、时间、来源与权利状态；
+- 当前 `effectImageUrl/effectNote` 作为兼容首样本，迁移必须幂等。
+
+## DSH 简化审计结论
+
+本轮已显式调用 `dsh-find-simplifications` 做证据式审计。为降低发布风险，只记录可独立验证的后续候选，不在 UI 重做时顺手大删：
+
+1. 五个上传 API 有约 378 行重复，可抽成共享、带权限测试的上传 handler；
+2. coding/editor、model/prompt 详情存在成对重复，可保留 URL 后共享 renderer；
+3. 多处 JSON 字符串解析应统一为安全 helper；
+4. noindex layout 可共享；
+5. 旧 cyber CSS 在新 surface 稳定后可按真实引用删除；
+6. `emoji-picker.tsx` 目前无生产消费者，但 Emoji 路由/API/数据仍有使用，不能连带删除；
+7. `@tiptap/pm`、历史路由、导入资产和证据链不能按“看起来未用”删除。
+
+每项简化必须单独提交、单独测量行为等价，不和 schema 或发布变更混在一起。
+
+## 验证策略
+
+### 自动化
 
 ```bash
-bun run db:generate
-bun run db:push
-bun run test
-bunx tsc --noEmit
-bun run build
+./node_modules/.bin/vitest run
+./node_modules/.bin/tsc --noEmit
+./node_modules/.bin/next build
+./node_modules/.bin/prisma validate
 ```
 
-## 5. 模块边界
+覆盖重点：
 
-- `identity`：登录和匿名身份
-- `skill`：Skill CRUD、分类、效果图和草稿
-- `candidate`：灵感 / 候选及现有晋升流程
-  - 快速创建采用 Route Handler → Candidate AI Service → Candidate Service；API key 仅由服务端环境变量读取。
-- `mcp`：Agent 工具 schema、Bearer 鉴权、Owner 隔离、内容发布和审计入口。
-- `agent-reply`：本地策略、登录用户触发门禁、线程轮次预算、可续期任务租约、候选幂等、
-  多语言输出安全检查和唯一最终发布。
-- `scripts/reply-worker.ts`：按处理容量逐条领取任务，路由 Totemora 成员并执行退避重试。
-- `target`：历史模型、软件、工具和 Prompt 资源
-- `app`：案例、应用和项目
-- `review`：自由记录，多态关联 Target / Skill / App / Candidate
-- `evaluation`：Evaluation v2 协议、发布门禁、查询和持久化
-- `comment` / `like`：Review 互动
-- `moderation` / `rate-limit`：治理和行为限流
-- `article` / `article-column`：洞笔记
-- `forge`：本地草稿整理
-- `audit`：管理员状态变更审计
-- `src/shared/reviews/subject.ts`：当前多态对象统一展示适配
+- service：Prompt 公开查询、默认 draft、Candidate 晋升、Article 归档与版本门禁；
+- API：鉴权、幂等、恢复性错误、发布冲突、归档；
+- component：真实效果图与无图正文回退；
+- integration：Candidate → Forge → draft、审核/发布、sitemap；
+- UI：桌面 1440px、移动 390px，首页、提示库、详情、对比、Forge。
 
-迁移策略：先用适配层统一公开语义，再设计 Resource、版本和成熟度状态；不得为模型整洁牺牲历史内容、互动或 URL。
+### 数据验收
 
-回复队列的部署与安全约束见 [`agent-reply-coordinator.md`](./agent-reply-coordinator.md)，
-MCP 工具契约见 [`MCP.md`](./MCP.md)。产品 / 服务仍是待建模阶段，不能用 App / 画廊
-条目冒充多 Skill 组合的产品资产。
+- 备份 SHA256；
+- 独立恢复实例可连接；
+- 核心表计数与抽样 ID 一致；
+- 上传归档可列出并校验；
+- 发布前后只读计数无意外差异；
+- 旧 Target/App/Article/Candidate/Review URL 抽样返回 200。
 
-## 6. Evaluation v2 实现约束
+## 已知限制
 
-### 6.1 协议
+- 生产历史 Article 尚未批量回填版本/来源/贡献；不在本轮无依据推断；
+- Evaluation 记录数量可能为零，公共页必须如实显示空态；
+- 现有 Skill 只有单一效果图字段，效果样本集排入 Phase 1；
+- 完整 PromptVersion 尚未实现，公共页不显示虚构 V1；
+- Docker 仍是单阶段镜像，后续可在稳定后拆为构建/运行阶段；
+- 数据库 app role 权限仍需单独最小权限审计。
 
-支持四类协议：
+## 发布判定
 
-- Skill
-- 模型
-- 软件 / 服务
-- 普通资源
+只有下列条件同时满足才能对用户宣告完成：
 
-协议维度和发布规则集中在 `src/modules/evaluation/constants.ts` 与 `docs/EVALUATION_PROTOCOL_V2.md`。修改维度键属于协议变更，必须提升 `protocolVersion` 或提供兼容解释。
-
-### 6.2 发布门禁
-
-Evaluation 只有满足以下条件才能发布：
-
-- 对象存在且协议匹配；
-- 全部协议维度评分已填写，范围 `0-10`；
-- 有可审阅输出或至少一条证据；
-- 复现级别不是 `untested`；
-- 重复 / 独立复现时运行次数至少两次；
-- 标题、任务和结论达到最低完整度。
-
-草稿允许逐步补齐。首期只允许管理员写入，不提供物理删除，使用 `archived` 保留审计历史。
-
-### 6.3 SEO
-
-- `/evaluations` 和已发布详情进入 sitemap。
-- 草稿、归档和管理页面不公开索引。
-- 管理页有 noindex，并在 robots 中 disallow。
-- 暂不输出 ClaimReview / Review JSON-LD，避免在协议和版本关系尚未稳定时作错误结构化声明。
-
-## 7. 质量策略
-
-- 单元测试优先覆盖协议匹配、发布门禁、状态机和数据兼容。
-- API 集成测试应覆盖鉴权、Zod 校验、错误码和数据库写入。
-- 核心 E2E 应覆盖：草稿 → 补证据 → 发布 → 对象详情可见 → sitemap 可见。
-- 数据迁移必须支持 dry-run、数量核对、可重复执行和回滚。
-- Candidate 晋升或 Subject 迁移必须证明 Review、Comment、Like 和 Evaluation 仍可访问。
-
-本阶段新增测试：
-
-- `src/modules/evaluation/service.test.ts`
-- `src/modules/candidate/idea.test.ts`
-- `src/app/sitemap.test.ts` 的 Evaluation 覆盖
-
-仍需补充：
-
-- `/api/evaluations` 集成测试；
-- 管理工作台 E2E；
-- 真实数据库下的 Prisma schema 更新验证。
-
-## 8. 关键风险
-
-### 产品与数据
-
-- Candidate 晋升仍会创建新的 Target / App；Review 与 Evaluation 的历史连续性尚未解决。
-- Target、Skill、App、Candidate 仍是四种持久化对象；统一 Resource 模型尚未落地。
-- Evaluation 当前直接关联对象，不关联明确的 ResourceVersion / SkillVersion；`subjectVersion` 仍是文本。
-- 协议维度由代码常量定义，没有在每条 Evaluation 中保存完整协议快照；未来修改必须严格版本化。
-- Evidence 当前是 JSON 引用，尚无独立附件表、文件完整性、签名和失效检查。
-- 维度综合分暂时等权平均，只用于摘要，不应被解释为官方排名。
-- 正式评测仅管理员可写；开放社区投稿前需要审核、信誉、限流和证据治理。
-
-### 运行与安全
-
-- 生产环境必须正确配置 `NEXTAUTH_URL`、`NEXTAUTH_SECRET` 和 `DATABASE_URL`。
-- Compose 必须注入不同的数据库管理员和应用密码；Web / Worker 不得使用超级用户。
-- 快速灵感功能必须配置服务端 `DEEPSEEK_API_KEY`。
-- Schema 更新前必须备份数据库并审阅新增表、枚举和索引。
-- 上传仍需对象存储、病毒扫描和更严格域名白名单。
-- 当前缺少可执行的 GitHub Actions 门禁；合并前依赖人工静态审查，部署环境必须补跑测试和构建。
-
-## 9. 变更记录
-
-### 2026-08-02：生命周期信息架构重构
-
-- 一级入口收口为找灵感、收藏室、废品站、吐槽室、洞笔记。
-- `/skills` 通过兼容层统一展示 Skill、Target 和 App；旧详情地址及 slug 保持可访问。
-- `Candidate.dropped` 独立进入废品站，`watching`、`evaluating`、`promoted` 分别呈现为未处理、观察中和已入藏。
-- 已入藏对象展示原始灵感与历史评测、评论；有历史记录的对象禁止硬删除。
-- 物理模型合并推迟到数据审计和迁移演练完成后，当前阶段不改线上表结构。
-
-### 2026-07-29：灵感与收藏主线
-
-- 灵感池默认展示未处理内容，并拆分好灵感、不合适、已转化池。
-- 新增标题、备注和 Tags 搜索。
-- 灵感详情支持作者或管理员即时归类和增删 Tags。
-- 工具收藏与 Skill 收口为“收藏室”；`/skills` 为主入口，`/tools` 保留历史数据兼容。
-- App 层保持“画廊”，定义为图片优先的收藏室。
-- 灵感可以收入收藏室或画廊；产品 / 服务保留为未来由多个 Skill 组合形成的结果。
-
-### 2026-07-23：Qwen 快速灵感
-
-- `/candidates` 新增 `New` 快速输入弹窗，支持一句话、关键词、GitHub 仓库和文档链接。
-- 新增登录校验、每日每用户 10 次限流、重复候选复用和服务端 DeepSeek 提炼。
-- 模型只允许保留用户输入中实际出现的 URL；提示词禁止声称访问链接或编造热度、功能和效果。
-- 新增 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL` 和 `DEEPSEEK_IDEA_MODEL` 服务端配置。
-- New 弹窗增加“文本 / 图片”两个独立入口；图片入口不调用 AI，直接保存标题、图片、Tags 和可选备注。
-
-### 2026-07-23：Evaluation v2 + 评测协议
-
-- 新增独立 `Evaluation` 模型，不修改历史 Review。
-- 新增 Skill、模型、软件/服务、普通资源四套协议和维度。
-- 新增草稿、发布、归档状态；结论等级与复现级别。
-- 新增协议匹配、完整评分、证据、复现和重复次数发布门禁。
-- 新增 `/api/evaluations` 公共查询和管理员创建 / 更新。
-- 新增 `/evaluations`、`/evaluations/[id]` 和 `/evaluations/manage`。
-- Target、Skill、App、Candidate 详情接入正式评测面板，并将历史 Review 明确为自由记录。
-- 新增管理员审计、footer 入口、sitemap 和 robots 规则。
-- 新增 `docs/EVALUATION_PROTOCOL_V2.md` 和 SEO 增量记录。
-- 新增 Evaluation 服务测试与 sitemap 测试。
-
-### 2026-07-23：双线生命线运行时 Phase 1
-
-- 副标题、SEO 和首页更新为“**大浪淘沙，找寻灵感**”。
-- 一级导航收口为找灵感 / 收藏室 / 吐槽室 / 洞笔记。
-- Candidate 公共页面改为灵感池语义。
-- 新增 `/talk` 和多态 Subject 展示适配器。
-- Forge Skill 草稿从 `createTarget()` 修复为 `createSkill()`。
-- Published Skill 详情进入 sitemap。
-
-### 2026-07-23：产品定位与 Skill/Candidate 基础
-
-- 新增 `docs/PRODUCT_POSITIONING.md`，确立双线生命线。
-- 新增独立 Skill、Candidate 和多态 Review。
-- 历史 Target 迁至 `/tools`；新增 App 画廊和 Forge 本地模板。
-- 旧 SPEC 标记为 Legacy。
-
-### 2026-05-20：安全、审计与 SEO 基础设施
-
-- 强化鉴权、匿名身份、IP 哈希、响应头、上传签名、输入解析和健康检查。
-- 新增 AdminAuditLog。
-- 建立 metadata、canonical、JSON-LD、sitemap、robots 和 SEO 测试基础。
-
-## 10. 下一阶段
-
-### 10.1 产品与数据
-
-1. 修复 Candidate 晋升导致的 Review / Evaluation 历史割裂。
-2. 设计 Resource / Skill 成熟度状态和状态历史 ADR。
-3. 建立 ResourceVersion / SkillVersion，使 Evaluation 关联明确版本而非文本。
-4. 为自由记录增加持久化 `QuickTake` 类型、关联版本和证据入口。
-5. 扩展 Skill 的输入输出契约、依赖、Quick Start、失败边界和技能包关系。
-6. 编写 Target / Candidate / App / Skill 历史映射与 dry-run 迁移工具。
-7. 在数据模型稳定后接入真实 AI 辅助评测计划、证据整理和总结，并保留来源与人工确认。
-
-### 10.2 工程
-
-1. 在可访问依赖的环境运行 Prisma generate、测试、type-check 和 production build。
-2. 增补 Evaluation API 集成测试与 E2E。
-3. 将 schema 变更切换为可审阅、可回滚的正式 migration。
-4. 增加 CI 门禁和数据库迁移 smoke test。
-5. 为证据链接失效、协议覆盖率和评测发布失败增加可观测指标。
-
-### 10.3 SEO
-
-1. 为正式 Evaluation 评估适当的结构化数据类型。
-2. 为 Resource、Skill 和 Evaluation 详情生成动态 OG 图。
-3. 在 CI 中抓取验证 robots、sitemap、canonical 和 JSON-LD。
-4. 站内搜索完成后补回 `WebSite.SearchAction`。
+1. 全量 Vitest、TypeScript、Prisma validate、production build 通过；
+2. Impeccable 检测与 finish review 无 P0/P1 阻塞；
+3. 桌面/移动真实截图与关键交互通过；
+4. 新数据库备份、上传归档和恢复演练成功；
+5. 发布前后核心数据对账一致；
+6. 线上 `/`、`/skills`、一个提示详情、`/compare/prompts`、`/api/health` 返回成功且无浏览器错误。

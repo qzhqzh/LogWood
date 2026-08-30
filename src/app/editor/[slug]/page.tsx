@@ -109,7 +109,7 @@ export default async function EditorDetailPage({ params }: TargetPageProps) {
 
       <SiteNav
         active="inspiration"
-        actionLabel={isAdmin ? '资源管理' : undefined}
+        actionLabel={isAdmin ? 'Manage Resources' : undefined}
         actionHref={isAdmin ? '/targets/manage/editor' : undefined}
         borderClassName="border-cyan-500/20"
       />

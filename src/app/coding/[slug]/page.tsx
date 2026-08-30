@@ -109,7 +109,7 @@ export default async function CodingDetailPage({ params }: TargetPageProps) {
 
       <SiteNav
         active="inspiration"
-        actionLabel={isAdmin ? '资源管理' : undefined}
+        actionLabel={isAdmin ? 'Manage Resources' : undefined}
         actionHref={isAdmin ? '/targets/manage/coding' : undefined}
         borderClassName="border-purple-500/20"
       />

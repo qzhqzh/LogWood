@@ -1,72 +1,71 @@
 # 空心树洞（LogWood）
 
-> **大浪淘沙，找寻灵感**
+> **可验证的提示词仓库**
 
-空心树洞是一套 **灵感淘洗与经验沉淀系统**：先低成本收住一个念头、一条链接或一张截图，再经过观察、试用和判断，把值得继续的内容收入收藏室，把当前不再继续的内容留在废品站；沿途判断可以随时写成吐槽，整理后再沉淀为洞笔记。
+空心树洞是一个 **可执行、可比较、可审计的增强版提示词仓库**：把 Prompt 正文、真实效果、来源、AI 归属、验证记录和长期笔记放在同一条链上。AI 负责协作整理草稿，人负责审核与公开。
 
-## 产品生命线
+## 提示词生命线
 
 项目围绕同一个灵感或资源建立生命周期和表达沉淀两条互相关联的轨道。
 
 ```mermaid
 flowchart LR
-  I[找灵感] --> O[未处理]
-  O --> T[观察 / 试用 / 判断]
-  T --> C[收藏室]
-  T --> S[废品站]
-  T --> E[Evaluation v2 正式证据]
-  I --> Q[吐槽室]
-  T --> Q
-  C --> Q
-  S --> Q
-  Q --> N[洞笔记]
-  E --> N
+  C[Candidate 收集箱] --> D[人 / AI 协作草稿]
+  D --> P[Prompt Skill draft]
+  P --> G[来源 / 归属 / 真实效果]
+  G --> H[人工发布门禁]
+  H --> L[提示库]
+  L --> E[Evaluation 验证]
+  L --> R[Review 反馈]
+  E --> N[Article 笔记]
+  R --> N
 ```
 
-### 资产进化线
+### Prompt 进化线
 
 ```text
 灵感或资源
-  → 未处理
-  → 观察与真实试用
-  → 收入收藏室 / 进入废品站
-  → 持续验证、重新考虑或归档
+  → 收集箱
+  → 提示词草稿
+  → 人工发布
+  → 真实效果与同类对比
+  → 持续验证、改进或归档
 ```
 
-### 经验沉淀线
+### 证据沉淀线
 
 ```text
-即时吐槽 / 自由记录
-  → 提问、讨论与求证
+真实效果 / 自由反馈
   → 实验记录与失败样本
-  → Evaluation v2 / 技术小结
-  → 前沿观点 / 项目复盘 / 自我反思
+  → Evaluation v2
+  → 比较、复盘与长期笔记
 ```
 
-两条线共享同一个内容对象和来源链。成品不抹掉中间试错，沿途经验也能够反过来推动 Skill 继续改进。
+两条线共享同一个 Prompt 和来源链。公开结果不抹掉中间试错，沿途证据也能反过来推动 Prompt 继续改进。
 
 完整产品定义见 [`docs/PRODUCT_POSITIONING.md`](./docs/PRODUCT_POSITIONING.md)。正式评测规范见 [`docs/EVALUATION_PROTOCOL_V2.md`](./docs/EVALUATION_PROTOCOL_V2.md)。整体升级计划见 [Issue #15](../../issues/15)。
 
 ## 产品结构
 
-核心入口：
+公开核心入口：
 
 | 入口 | 路由 | 作用 |
 |---|---|---|
-| 找灵感 | `/candidates` | 收录模型、软件、服务、仓库、网站、知识资源和一句话灵感，并进入试用生命线 |
-| 收藏室 | `/skills` | 统一浏览能力、历史工具和视觉收藏 |
-| 废品站 | `/scraps` | 保存已处理但当前不再继续的内容和历史判断 |
-| 正式评测 | `/evaluations` | 查看基于版本、环境、任务、证据、复现级别、评分维度和失败边界的 Evaluation v2 |
-| 吐槽室 | `/talk` | 承接自由记录、提问、求证、踩坑、发现和阶段性判断 |
-| 洞笔记 | `/articles` | 沉淀技术小结、前沿观察、项目复盘和自我反思 |
+| 提示库 | `/skills` | 只浏览已公开 Prompt Skill，查看正文、真实效果与证据 |
+| 提示词对比 | `/compare/prompts` | 选择 2–3 条，逐行比较效果、正文、来源、归属和验证 |
+| 验证记录 | `/evaluations` | 查看基于版本、环境、任务、证据、复现性和失败边界的 Evaluation v2 |
+| 笔记 | `/articles` | 沉淀实验、比较、项目复盘和长期判断 |
+| 关于 | `/about` | “秦”“造器，筑界，观心。”与人与 AI 共生创作原则 |
 
-辅助入口：
+作者工作台与历史兼容：
 
-- 历史工具列表：`/tools`，收口到收藏室工具视图
-- 历史画廊列表：`/app`，收口到收藏室视觉视图
-- AI 炼成助手 Beta：`/forge`
+- 收集箱：`/candidates`
+- AI 整理台：`/forge`
+- 归档：`/scraps`
+- 历史工具/视觉/对比：`/tools`、`/app`、`/compare`
+- 历史 Prompt：`/prompt/[slug]`
 
-AI 炼成助手当前只执行确定性的本地模板整理，不替代真实测试，也不生成或伪造证据。
+AI 整理台默认创建提示词草稿，也可选择笔记草稿或确定性本地模板；同一请求可幂等重试。所有模式都只写入草稿，不替代真实测试，也不生成或伪造证据。Article 只有人工批准当前版本后才能发布，内容修改会自动使旧批准失效。
 
 ## Review 与 Evaluation
 
@@ -95,14 +94,17 @@ AI 炼成助手当前只执行确定性的本地模板整理，不替代真实�
 ## 当前实现
 
 - 灵感池：`/candidates` 和 `/candidates/manage`
-- 收藏室：`/skills` 聚合 Skill、Target、App；管理入口继续复用各历史页面
+- 提示库：`/skills` 只展示已公开 Skill；Target.prompt 在折叠兼容区保留
+- 提示词对比：`/compare/prompts`
 - 废品站：`/scraps` 展示 `Candidate.dropped`
 - 正式评测：`/evaluations`、`/evaluations/[id]`、`/evaluations/manage`
 - 吐槽室：`/talk`
 - 历史资源：`/tools` 及 Editor / Coding / Model / Prompt 旧详情路由
 - 视觉收藏详情和管理：`/app/[slug]`、`/app/manage`
-- 洞笔记：`/articles`
-- 本地草稿整理：`/forge`
+- 笔记：`/articles`
+- AI / 本地协作草稿：`/forge`
+- 作者叙事：`/about`
+- 视觉来源与权利：VisualAsset 保存 hash/来源/权利状态，未确认权利的 App 不能发布
 - Agent MCP：`/api/mcp`，支持灵感整理、内容发布和多 Agent 回复协调
 - Review：多态关联 Target、Skill、App 或 Candidate
 - Evaluation：独立模型和协议版本，不修改历史 Review
@@ -130,9 +132,13 @@ MCP 的鉴权、工具参数、AI 来源字段和 Agent 配置方式见 [`docs/M
 
 | 文档 | 责任 |
 |---|---|
+| [`DESIGN.md`](./DESIGN.md) | Impeccable 设计系统、双 surface 规则、响应式与无障碍契约 |
 | [`docs/PRODUCT_POSITIONING.md`](./docs/PRODUCT_POSITIONING.md) | 产品定位、双线生命线、内容对象、迁移原则和衡量方式；产品定义 SSOT |
 | [`docs/EVALUATION_PROTOCOL_V2.md`](./docs/EVALUATION_PROTOCOL_V2.md) | 正式评测协议、维度、字段、发布门禁和权限 |
 | [`docs/PROJECT_PLAN.md`](./docs/PROJECT_PLAN.md) | 当前实现、架构边界、风险、近期变更和执行计划 |
+| [`docs/UNIFIED_SITE_MIGRATION.md`](./docs/UNIFIED_SITE_MIGRATION.md) | 三源审计、兼容边界、视觉资产导入和数据库发布步骤 |
+| [`docs/UNIFIED_ROADMAP.md`](./docs/UNIFIED_ROADMAP.md) | 已完成阶段和后续上线/证据/运营排期 |
+| [`docs/RELEASE_ACCEPTANCE_MATRIX.md`](./docs/RELEASE_ACCEPTANCE_MATRIX.md) | 自动化、UI、数据迁移和发布授权验收矩阵 |
 | [`SPEC.md`](./SPEC.md) | 历史 Review MVP 规格；不再定义当前产品定位 |
 | [`docs/SEO_STRATEGY.md`](./docs/SEO_STRATEGY.md) | SEO 长期策略和变更约束 |
 | [`docs/SEO_CHANGELOG.md`](./docs/SEO_CHANGELOG.md) | 近期 SEO 增量决策 |
@@ -249,7 +255,8 @@ docker compose exec web bun run build
 - `identity`：登录和匿名身份
 - `article` / `article-column`：洞笔记和专栏
 - `app`：案例、应用和项目
-- `forge`：本地草稿整理
+- `forge`：DeepSeek / 本地幂等草稿整理与恢复性错误
+- `prompt-runner`：DeepSeek 文本与 CPA 生图能力路由、服务器白名单和非持久化测试结果
 - `audit`：管理员状态变更审计
 
 Route Handler 调用模块 service；跨模块通过公开契约协作，避免直接访问其他模块的 Prisma 模型。

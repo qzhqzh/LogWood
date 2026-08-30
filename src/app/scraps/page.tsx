@@ -41,7 +41,7 @@ export default async function ScrapsPage({ searchParams }: ScrapsPageProps) {
       />
       <SiteNav
         active="scraps"
-        actionLabel={isAdmin ? '整理废品' : undefined}
+        actionLabel={isAdmin ? 'Triage Inbox' : undefined}
         actionHref={isAdmin ? '/candidates/manage' : undefined}
       />
 

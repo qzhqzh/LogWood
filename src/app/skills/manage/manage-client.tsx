@@ -5,7 +5,14 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { signIn, useSession } from 'next-auth/react'
 import { SiteFooter } from '@/components/site-footer'
-import { SKILL_CATEGORY_LABELS, SKILL_CATEGORY_ORDER } from '@/modules/skill/constants'
+import {
+  PROMPT_OUTPUT_KIND_LABELS,
+  PROMPT_OUTPUT_KINDS,
+  SKILL_CATEGORY_LABELS,
+  SKILL_CATEGORY_ORDER,
+  promptOutputKind,
+} from '@/modules/skill/constants'
+import type { PromptOutputKind } from '@/modules/skill/constants'
 
 type SkillStatus = 'draft' | 'published' | 'archived'
 
@@ -20,6 +27,7 @@ interface SkillItem {
   effectNote?: string | null
   sourceUrl?: string | null
   tags: string[]
+  outputKind?: PromptOutputKind
   status: SkillStatus
   sortOrder: number
 }
@@ -40,6 +48,7 @@ export default function ManageSkillsPage() {
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('frontend')
   const [customCategory, setCustomCategory] = useState('')
+  const [outputKind, setOutputKind] = useState<PromptOutputKind>('text')
   const [summary, setSummary] = useState('')
   const [prompt, setPrompt] = useState('')
   const [effectImageUrl, setEffectImageUrl] = useState('')
@@ -61,6 +70,7 @@ export default function ManageSkillsPage() {
     setTitle('')
     setCategory('frontend')
     setCustomCategory('')
+    setOutputKind('text')
     setSummary('')
     setPrompt('')
     setEffectImageUrl('')
@@ -76,6 +86,10 @@ export default function ManageSkillsPage() {
     const known = CATEGORY_OPTIONS.some((c) => c.value === skill.category)
     setCategory(known ? skill.category : 'other')
     setCustomCategory(known ? '' : skill.category)
+    setOutputKind(skill.outputKind ?? promptOutputKind({
+      category: skill.category,
+      tags: skill.tags,
+    }))
     setSummary(skill.summary || '')
     setPrompt(skill.prompt)
     setEffectImageUrl(skill.effectImageUrl || '')
@@ -148,6 +162,7 @@ export default function ManageSkillsPage() {
           effectNote: effectNote.trim() || undefined,
           sourceUrl: sourceUrl.trim() || undefined,
           tags,
+          outputKind,
           status,
         }),
       })
@@ -248,6 +263,21 @@ export default function ManageSkillsPage() {
                 placeholder="或自定义分类键（优先）"
               />
             </div>
+            <div>
+              <label className="block text-sm mb-2 text-gray-300">输出类型</label>
+              <select
+                value={outputKind}
+                onChange={(e) => setOutputKind(e.target.value as PromptOutputKind)}
+                className="cyber-input w-full rounded-lg px-3 py-2"
+              >
+                {PROMPT_OUTPUT_KINDS.map((kind) => (
+                  <option key={kind} value={kind}>{PROMPT_OUTPUT_KIND_LABELS[kind]}</option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-soft">
+                文本与图片可在第一阶段实时测试；文档、视频和特殊用途只管理，不会误调用模型。
+              </p>
+            </div>
           </div>
 
           <div>
@@ -329,7 +359,7 @@ export default function ManageSkillsPage() {
                 <div>
                   <p className="text-[var(--color-text-strong)] font-medium">{skill.title}</p>
                   <p className="text-xs text-soft mt-1">
-                    {SKILL_CATEGORY_LABELS[skill.category] || skill.category} · {skill.status} · /skills/{skill.slug}
+                    {SKILL_CATEGORY_LABELS[skill.category] || skill.category} · {PROMPT_OUTPUT_KIND_LABELS[skill.outputKind ?? promptOutputKind(skill)]} · {skill.status} · /skills/{skill.slug}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 text-sm">

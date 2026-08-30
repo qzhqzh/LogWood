@@ -16,6 +16,7 @@ import { SiteFooter } from '@/components/site-footer'
 import { JsonLd } from '@/components/json-ld'
 import { Breadcrumbs } from '@/components/breadcrumbs'
 import { AiAttribution } from '@/components/ai-attribution'
+import { ArticleProvenance } from '@/components/article-provenance'
 import {
   buildArticleJsonLd,
   buildBreadcrumbList,
@@ -110,7 +111,7 @@ export default async function ArticleDetailPage({
       <div className="relative">
         <SiteNav
           active="articles"
-          actionLabel={isAdmin ? '文章管理' : undefined}
+          actionLabel={isAdmin ? 'Manage Notes' : undefined}
           actionHref={isAdmin ? '/articles/manage' : undefined}
           borderClassName="border-divider"
         />
@@ -186,6 +187,15 @@ export default async function ArticleDetailPage({
             </div>
           )}
         </article>
+
+        <ArticleProvenance
+          currentVersion={article.currentVersion}
+          approvedVersion={article.approvedVersion}
+          reviewerName={article.reviewer?.name}
+          sources={article.sources}
+          contributions={article.contributions}
+          versions={article.versions}
+        />
 
         <ArticleEngagement articleId={article.id} initialCommentCount={article._count.comments} />
       </div>

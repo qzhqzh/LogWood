@@ -102,6 +102,36 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
           </div>
         </div>
 
+        {app.visualAssets.length > 0 ? (
+          <details className="mt-8 border-y border-divider py-5">
+            <summary className="min-h-11 cursor-pointer list-none text-sm font-semibold text-[var(--color-text-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
+              Inspector / 视觉资产来源与权利
+            </summary>
+            <div className="mt-4 grid gap-5 md:grid-cols-2">
+              {app.visualAssets.map((asset: {
+                id: string
+                sourceCollection: string
+                sourcePath: string
+                originalSha256: string
+                derivedSha256: string
+                width: number
+                height: number
+                mimeType: string
+                rightsStatus: string
+                rightsNote: string | null
+              }) => (
+                <dl key={asset.id} className="space-y-2 text-xs leading-5 text-soft">
+                  <div><dt className="inline text-muted">来源：</dt><dd className="inline">{asset.sourceCollection} / {asset.sourcePath}</dd></div>
+                  <div><dt className="inline text-muted">原始 SHA-256：</dt><dd className="inline break-all">{asset.originalSha256}</dd></div>
+                  <div><dt className="inline text-muted">派生 SHA-256：</dt><dd className="inline break-all">{asset.derivedSha256}</dd></div>
+                  <div><dt className="inline text-muted">格式：</dt><dd className="inline">{asset.width} × {asset.height} · {asset.mimeType}</dd></div>
+                  <div><dt className="inline text-muted">权利：</dt><dd className="inline">{asset.rightsStatus}{asset.rightsNote ? ` · ${asset.rightsNote}` : ''}</dd></div>
+                </dl>
+              ))}
+            </div>
+          </details>
+        ) : null}
+
         <LifecycleOriginHistory subjectType="app" subjectId={app.id} />
         <EvaluationPanel subjectType="app" subjectId={app.id} />
         <ReviewPanel subjectType="app" subjectId={app.id} title="自由记录、提问或吐槽" />

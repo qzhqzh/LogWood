@@ -66,7 +66,7 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
       />
       <SiteNav
         active="candidates"
-        actionLabel={isAdmin ? '管理灵感' : undefined}
+        actionLabel={isAdmin ? 'Manage Inbox' : undefined}
         actionHref={isAdmin ? '/candidates/manage' : undefined}
       />
 

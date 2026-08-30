@@ -38,6 +38,12 @@ interface ArticleItem {
   updatedAt: string
   publishedAt: string | null
   viewCount: number
+  reviewStatus: 'pending' | 'approved' | 'changes_requested'
+  currentVersion: number
+  approvedVersion: number | null
+  reviewRequestedAt: string | null
+  reviewedAt: string | null
+  _count: { sources: number; versions: number; contributions: number }
 }
 
 interface ArticleDetail extends ArticleItem {
@@ -56,7 +62,9 @@ export default function ManageArticlesPage() {
   const [newColumnName, setNewColumnName] = useState('')
   const [creatingColumn, setCreatingColumn] = useState(false)
   const [tags, setTags] = useState<string[]>([])
-  const [status, setStatus] = useState<ArticleStatus>('draft')
+  const [changeSummary, setChangeSummary] = useState('')
+  const [sourceLabel, setSourceLabel] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
   const [articles, setArticles] = useState<ArticleItem[]>([])
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -177,12 +185,32 @@ export default function ManageArticlesPage() {
           columnId: columnId || undefined,
           coverImageUrl: coverImageUrl.trim() || undefined,
           tags,
-          status,
+          status: editingArticleId ? undefined : 'draft',
+          changeSummary: changeSummary.trim() || undefined,
+          sources: !editingArticleId && sourceUrl.trim() ? [{
+            kind: 'reference',
+            label: sourceLabel.trim() || '作者提供的参考来源',
+            sourceUrl: sourceUrl.trim(),
+          }] : undefined,
         }),
       })
       const data = await res.json()
       if (!res.ok) {
         throw new Error(data.error || (editingArticleId ? '编辑失败（请先登录）' : '创建失败（请先登录）'))
+      }
+
+      if (editingArticleId && sourceUrl.trim()) {
+        const sourceRes = await fetch(`/api/articles/${editingArticleId}/sources`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind: 'reference',
+            label: sourceLabel.trim() || '作者提供的参考来源',
+            sourceUrl: sourceUrl.trim(),
+          }),
+        })
+        const sourceData = await sourceRes.json()
+        if (!sourceRes.ok) throw new Error(sourceData.error || '文章已保存，但来源添加失败')
       }
 
       setTitle('')
@@ -192,7 +220,9 @@ export default function ManageArticlesPage() {
       setCoverImageUrl('')
       setColumnId('')
       setTags([])
-      setStatus('draft')
+      setChangeSummary('')
+      setSourceLabel('')
+      setSourceUrl('')
       setEditingArticleId(null)
       await loadArticles()
     } catch (e) {
@@ -210,7 +240,9 @@ export default function ManageArticlesPage() {
     setCoverImageUrl('')
     setColumnId('')
     setTags([])
-    setStatus('draft')
+    setChangeSummary('')
+    setSourceLabel('')
+    setSourceUrl('')
     setEditingArticleId(null)
     setError(null)
   }
@@ -238,7 +270,9 @@ export default function ManageArticlesPage() {
       setCoverImageUrl(detail.coverImageUrl || '')
       setColumnId(detail.columnId || '')
       setTags(detail.tags)
-      setStatus(detail.status)
+      setChangeSummary('')
+      setSourceLabel('')
+      setSourceUrl('')
       setEditingArticleId(detail.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : '加载文章详情失败')
@@ -336,10 +370,33 @@ export default function ManageArticlesPage() {
         body: JSON.stringify({ status: nextStatus }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '更新状态失败')
+      if (!res.ok) {
+        throw new Error(data.error === 'ERR_ARTICLE_REVIEW_REQUIRED'
+          ? '当前版本尚未通过人工审核，不能发布。'
+          : data.error || '更新状态失败')
+      }
       await loadArticles()
     } catch (e) {
       setError(e instanceof Error ? e.message : '更新状态失败')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  async function review(id: string, action: 'request' | 'approve' | 'request_changes') {
+    try {
+      setUpdatingId(id)
+      setError(null)
+      const res = await fetch(`/api/articles/${id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '审核操作失败')
+      await loadArticles()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '审核操作失败')
     } finally {
       setUpdatingId(null)
     }
@@ -349,7 +406,7 @@ export default function ManageArticlesPage() {
     <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
       <SiteNav
         active="articles"
-        actionLabel="文章管理"
+        actionLabel="Manage Notes"
         actionHref="/articles/manage"
         borderClassName="border-cyan-500/20"
       />
@@ -449,16 +506,28 @@ export default function ManageArticlesPage() {
           </div>
 
           <div>
-            <label className="block text-sm mb-2 text-gray-300">状态</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as ArticleStatus)}
-              className="bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
-            >
-              <option value="draft">草稿</option>
-              <option value="published">发布</option>
-            </select>
+            <label className="block text-sm mb-2 text-gray-300">版本说明（可选）</label>
+            <input
+              value={changeSummary}
+              onChange={(e) => setChangeSummary(e.target.value)}
+              maxLength={500}
+              className="w-full bg-[var(--color-surface-1)] border border-cyan-500/30 rounded-lg px-3 py-2 text-[var(--color-text-strong)]"
+              placeholder="例如：补充实验环境和失败边界"
+            />
+            <p className="mt-2 text-xs text-soft">正文变化会自动生成新版本并退回草稿；批准只对当前版本有效。</p>
           </div>
+
+          <fieldset className="grid gap-3 rounded-xl border border-divider p-4 sm:grid-cols-2">
+            <legend className="px-2 text-sm font-semibold text-[var(--color-text-strong)]">补充外部来源（可选）</legend>
+            <label className="text-sm text-soft">
+              来源名称
+              <input value={sourceLabel} onChange={(e) => setSourceLabel(e.target.value)} maxLength={160} className="mt-2 w-full rounded-lg border border-divider bg-[var(--color-surface-1)] px-3 py-2 text-[var(--color-text-strong)]" placeholder="例如：原始实验记录" />
+            </label>
+            <label className="text-sm text-soft">
+              来源 URL
+              <input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} className="mt-2 w-full rounded-lg border border-divider bg-[var(--color-surface-1)] px-3 py-2 text-[var(--color-text-strong)]" placeholder="https://..." />
+            </label>
+          </fieldset>
 
           <div>
             <label className="block text-sm mb-2 text-gray-300">标签</label>
@@ -489,7 +558,10 @@ export default function ManageArticlesPage() {
                 <div>
                   <p className="text-[var(--color-text-strong)]">{item.title}</p>
                   <p className="text-xs text-gray-500">
-                    /articles/{item.slug} · {item.status} · {item.viewCount} 阅读
+                    /articles/{item.slug} · {item.status} · v{item.currentVersion} · {item.reviewStatus} · {item.viewCount} 阅读
+                  </p>
+                  <p className="mt-1 text-xs text-soft">
+                    {item._count.sources} 个来源 · {item._count.contributions} 项贡献 · {item._count.versions} 个版本
                   </p>
                   {item.column && (
                     <p className="text-xs text-cyan-300 mt-1">专栏：{item.column.name}</p>
@@ -503,7 +575,9 @@ export default function ManageArticlesPage() {
                   )}
                 </div>
                 <div className="flex gap-3 items-center">
-                  <Link className="text-cyan-400 hover:text-cyan-300" href={`/articles/${encodeArticleSlug(item.slug)}`}>查看</Link>
+                  {item.status === 'published' ? (
+                    <Link className="text-cyan-400 hover:text-cyan-300" href={`/articles/${encodeArticleSlug(item.slug)}`}>查看</Link>
+                  ) : null}
                   {item.status !== 'archived' && (
                     <button
                       type="button"
@@ -514,14 +588,34 @@ export default function ManageArticlesPage() {
                       {editingId === item.id ? '加载中...' : '编辑'}
                     </button>
                   )}
-                  {item.status === 'draft' && (
+                  {item.status === 'draft' && item.reviewStatus !== 'approved' && !item.reviewRequestedAt && (
+                    <button
+                      type="button"
+                      onClick={() => review(item.id, 'request')}
+                      disabled={updatingId === item.id}
+                      className="text-amber-300 hover:text-amber-200 disabled:opacity-60"
+                    >
+                      {updatingId === item.id ? '提交中...' : '提交审核'}
+                    </button>
+                  )}
+                  {item.status === 'draft' && item.reviewStatus === 'pending' && item.reviewRequestedAt && (
+                    <button
+                      type="button"
+                      onClick={() => review(item.id, 'approve')}
+                      disabled={updatingId === item.id}
+                      className="text-sky-300 hover:text-sky-200 disabled:opacity-60"
+                    >
+                      {updatingId === item.id ? '审核中...' : `批准 v${item.currentVersion}`}
+                    </button>
+                  )}
+                  {item.status === 'draft' && item.reviewStatus === 'approved' && item.approvedVersion === item.currentVersion && (
                     <button
                       type="button"
                       onClick={() => changeStatus(item.id, 'published')}
                       disabled={updatingId === item.id}
                       className="text-emerald-300 hover:text-emerald-200 disabled:opacity-60"
                     >
-                      {updatingId === item.id ? '发布中...' : '发布'}
+                      {updatingId === item.id ? '发布中...' : `发布 v${item.currentVersion}`}
                     </button>
                   )}
                   {item.status === 'published' && (

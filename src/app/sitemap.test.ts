@@ -51,15 +51,21 @@ describe('app/sitemap', () => {
     const urls = result.map((entry) => entry.url)
 
     expect(urls).toContain('https://logwood.test')
+    expect(urls).toContain('https://logwood.test/about')
     expect(urls).toContain('https://logwood.test/candidates')
     expect(urls).toContain('https://logwood.test/skills')
+    expect(urls).toContain('https://logwood.test/workbench')
+    expect(urls).toContain('https://logwood.test/gallery')
     expect(urls).toContain('https://logwood.test/awesome')
+    expect(urls).toContain('https://logwood.test/awesome/skills')
+    expect(urls).toContain('https://logwood.test/awesome/feeds')
     expect(urls).toContain('https://logwood.test/scraps')
     expect(urls).toContain('https://logwood.test/evaluations')
     expect(urls).toContain('https://logwood.test/talk')
     expect(urls).toContain('https://logwood.test/articles')
     expect(urls).toContain('https://logwood.test/forge')
     expect(urls).toContain('https://logwood.test/compare')
+    expect(urls).toContain('https://logwood.test/compare/prompts')
     expect(urls).toContain('https://logwood.test/app')
 
     for (const blocked of ['/submit', '/emojis', '/tags', '/editor', '/coding']) {
@@ -91,6 +97,13 @@ describe('app/sitemap', () => {
     expect(prismaMock.evaluation.findMany).toHaveBeenCalledWith({
       select: { id: true, updatedAt: true },
       where: { status: 'published' },
+    })
+    expect(prismaMock.candidate.findMany).toHaveBeenCalledWith({
+      select: { slug: true, updatedAt: true },
+      where: {
+        status: { in: ['watching', 'evaluating', 'promoted', 'dropped'] },
+        NOT: { tags: { contains: '"visibility:private"' } },
+      },
     })
   })
 

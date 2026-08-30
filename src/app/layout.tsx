@@ -86,11 +86,25 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var stored=localStorage.getItem('logwood-theme');var systemDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var theme=stored||(systemDark?'dark':'light');document.documentElement.dataset.theme=theme;}catch(e){document.documentElement.dataset.theme='dark';}})();`,
+            __html: `(function(){try{var stored=localStorage.getItem('logwood-theme');document.documentElement.dataset.theme=stored==='light'?'light':'dark';}catch(e){document.documentElement.dataset.theme='dark';}})();`,
           }}
         />
       </head>
       <body className="bg-[var(--color-bg)] text-[var(--color-fg)] font-sans transition-colors duration-300">
+        <div
+          aria-hidden="true"
+          className="hidden"
+          dangerouslySetInnerHTML={{
+            __html: `<!--
+THESIS: Prompt is a practiced capability: the recipe and its real model output belong in one inspectable frame, never in a generic content dashboard.
+OWN-WORLD: Near-black phosphor or warm-paper field, fine square rules, restrained green selection, sparse amber evidence, flat panels, and one controlled glitch event.
+STORY: Enter through a complete PROMPT signal field, choose a real record, edit a private test copy, run text or image models, and inspect the centered result.
+FIRST VIEWPORT: Framed KongXin navigation, a dominant glitching PROMPT, PROMPTS, PROVEN., one ENTER control, and a truthful status rail fill the viewport.
+FORM: User-approved comp-led Home and three-region Prompt Workbench, docs/design/phase-1-*-concept.png; text and image run, other outputs remain managed-only.
+FINISH: Unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
+-->`,
+          }}
+        />
         <JsonLd value={buildOrganization()} />
         <Providers>{children}</Providers>
       </body>
