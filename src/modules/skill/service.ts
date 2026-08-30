@@ -1,15 +1,30 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma, SkillStatus } from '@prisma/client'
 import {
+  AiAttributionInput,
+  normalizeAiAttribution,
+} from '@/modules/ai-attribution'
+import {
   SKILL_CATEGORY_ORDER,
+  promptOutputKind,
   skillCategoryLabel,
+  withPromptOutputKind,
+  withoutPromptOutputTag,
 } from './constants'
+import type { PromptOutputKind } from './constants'
 
 export {
   SKILL_CATEGORY_ORDER,
   SKILL_CATEGORY_LABELS,
   SKILL_STATUSES,
+  PROMPT_OUTPUT_KINDS,
+  PROMPT_OUTPUT_KIND_LABELS,
+  isPromptOutputKind,
+  isRunnablePromptOutput,
+  promptOutputKind,
   skillCategoryLabel,
+  withPromptOutputKind,
+  withoutPromptOutputTag,
 } from './constants'
 
 export interface CreateSkillInput {
@@ -21,12 +36,21 @@ export interface CreateSkillInput {
   effectNote?: string
   sourceUrl?: string
   tags?: string[]
+  outputKind?: PromptOutputKind
   status?: SkillStatus
   sortOrder?: number
+  aiAttribution?: AiAttributionInput
 }
 
 export interface UpdateSkillInput extends CreateSkillInput {
   id: string
+}
+
+export interface PromptLibraryQuery {
+  category?: string
+  search?: string
+  slugs?: string[]
+  limit?: number
 }
 
 function slugify(input: string): string {
@@ -63,10 +87,15 @@ function parseTags(tags: string): string[] {
   }
 }
 
-function mapSkill<T extends { tags: string }>(skill: T): Omit<T, 'tags'> & { tags: string[] } {
+function mapSkill<T extends { tags: string; category: string }>(skill: T): Omit<T, 'tags'> & {
+  tags: string[]
+  outputKind: PromptOutputKind
+} {
+  const storedTags = parseTags(skill.tags)
   return {
     ...skill,
-    tags: parseTags(skill.tags),
+    tags: withoutPromptOutputTag(storedTags),
+    outputKind: promptOutputKind({ category: skill.category, tags: storedTags }),
   }
 }
 
@@ -82,6 +111,67 @@ export async function listPublishedSkills(category?: string) {
   })
 
   return skills.map(mapSkill)
+}
+
+export async function listPromptLibrary(query: PromptLibraryQuery = {}) {
+  const category = query.category?.trim()
+  const search = query.search?.trim()
+  const slugs = query.slugs
+    ?.map((slug) => slug.trim())
+    .filter(Boolean)
+    .slice(0, 100)
+
+  if (query.slugs && slugs?.length === 0) return []
+
+  const where: Prisma.SkillWhereInput = {
+    status: SkillStatus.published,
+    ...(category ? { category } : {}),
+    ...(slugs ? { slug: { in: slugs } } : {}),
+    ...(search
+      ? {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { summary: { contains: search, mode: 'insensitive' } },
+            { prompt: { contains: search, mode: 'insensitive' } },
+            { tags: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {}),
+  }
+
+  const skills = await prisma.skill.findMany({
+    where,
+    include: {
+      _count: {
+        select: {
+          reviews: { where: { status: 'published' } },
+          evaluations: { where: { status: 'published' } },
+        },
+      },
+    },
+    orderBy: [{ sortOrder: 'asc' }, { updatedAt: 'desc' }, { title: 'asc' }],
+    ...(query.limit
+      ? { take: Math.max(1, Math.min(Math.floor(query.limit), 100)) }
+      : {}),
+  })
+
+  return skills.map(mapSkill)
+}
+
+export async function getPromptLibrarySkillBySlug(slug: string) {
+  const skill = await prisma.skill.findFirst({
+    where: { slug, status: SkillStatus.published },
+    include: {
+      _count: {
+        select: {
+          reviews: { where: { status: 'published' } },
+          evaluations: { where: { status: 'published' } },
+        },
+      },
+    },
+  })
+
+  return skill ? mapSkill(skill) : null
 }
 
 export async function listSkillsGrouped(category?: string) {
@@ -128,6 +218,11 @@ export async function createSkill(
 ) {
   const slug = await ensureUniqueSlug(slugify(input.title), undefined, db)
   const category = input.category.trim() || 'other'
+  const aiAttribution = normalizeAiAttribution(input.aiAttribution)
+  const outputKind = input.outputKind ?? promptOutputKind({
+    category,
+    tags: input.tags,
+  })
 
   return db.skill.create({
     data: {
@@ -139,10 +234,11 @@ export async function createSkill(
       effectImageUrl: input.effectImageUrl?.trim() || null,
       effectNote: input.effectNote?.trim() || null,
       sourceUrl: input.sourceUrl?.trim() || null,
-      tags: JSON.stringify(input.tags || []),
-      status: input.status ?? SkillStatus.published,
+      tags: JSON.stringify(withPromptOutputKind(input.tags || [], outputKind)),
+      status: input.status ?? SkillStatus.draft,
       sortOrder: input.sortOrder ?? 0,
       authorUserId,
+      ...aiAttribution,
     },
   }).then(mapSkill)
 }
@@ -155,6 +251,14 @@ export async function updateSkill(input: UpdateSkillInput) {
   if (input.title.trim() !== existing.title) {
     slug = await ensureUniqueSlug(slugify(input.title), existing.id)
   }
+  const aiAttribution = input.aiAttribution
+    ? normalizeAiAttribution(input.aiAttribution)
+    : undefined
+  const existingTags = parseTags(existing.tags)
+  const outputKind = input.outputKind ?? promptOutputKind({
+    category: input.category,
+    tags: existingTags,
+  })
 
   return prisma.skill.update({
     where: { id: input.id },
@@ -167,9 +271,32 @@ export async function updateSkill(input: UpdateSkillInput) {
       effectImageUrl: input.effectImageUrl?.trim() || null,
       effectNote: input.effectNote?.trim() || null,
       sourceUrl: input.sourceUrl?.trim() || null,
-      tags: JSON.stringify(input.tags || []),
+      tags: JSON.stringify(withPromptOutputKind(
+        input.tags ?? withoutPromptOutputTag(existingTags),
+        outputKind,
+      )),
       status: input.status ?? existing.status,
       sortOrder: input.sortOrder ?? existing.sortOrder,
+      ...(aiAttribution || {}),
+    },
+  }).then(mapSkill)
+}
+
+export async function updateSkillEffect(input: {
+  id: string
+  effectImageUrl: string
+  effectNote?: string
+}) {
+  const existing = await prisma.skill.findUnique({ where: { id: input.id } })
+  if (!existing) throw new Error('ERR_SKILL_NOT_FOUND')
+
+  return prisma.skill.update({
+    where: { id: input.id },
+    data: {
+      effectImageUrl: input.effectImageUrl.trim(),
+      ...(input.effectNote === undefined
+        ? {}
+        : { effectNote: input.effectNote.trim() || null }),
     },
   }).then(mapSkill)
 }

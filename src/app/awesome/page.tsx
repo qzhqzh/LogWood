@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { AwesomeHubNav } from '@/components/awesome-hub-nav'
 import { AwesomeProjectBoard } from '@/components/awesome-project-board'
 import styles from '@/components/awesome-project-board.module.css'
 import { JsonLd } from '@/components/json-ld'
@@ -10,8 +11,8 @@ import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = buildMetadata({
-  title: 'Awesome Project Queue',
-  description: '值得投入的开源项目与建设方向候选池：连接真实上游、本站能力缺口、最小可交付和集体兴趣评分。',
+  title: 'Awesome — Open-source Project Radar',
+  description: 'A ranked, searchable radar of open-source projects ready for the next block of spare compute.',
   path: '/awesome',
 })
 
@@ -25,6 +26,7 @@ export default async function AwesomePage() {
         { name: 'Awesome', path: '/awesome' },
       ])} />
       <SiteNav active="awesome" />
+      <AwesomeHubNav active="projects" />
       <AwesomeProjectBoard initialProjects={projects} />
       <SiteFooter />
     </main>

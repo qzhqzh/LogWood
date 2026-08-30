@@ -15,33 +15,29 @@ export default function OpengraphImage() {
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
-          backgroundColor: '#0a0e18',
-          backgroundImage:
-            'radial-gradient(circle at 25% 20%, rgba(0, 255, 255, 0.18) 0%, transparent 55%), radial-gradient(circle at 80% 85%, rgba(191, 0, 255, 0.18) 0%, transparent 55%)',
+          backgroundColor: '#020603',
           padding: 80,
-          fontFamily: 'system-ui, sans-serif',
-          color: '#e6f6ff',
+          fontFamily: 'monospace',
+          color: '#dcffdc',
         }}
       >
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 18,
-            padding: '8px 22px',
-            border: '1px solid rgba(0, 255, 255, 0.4)',
-            borderRadius: 999,
-            background: 'rgba(0, 255, 255, 0.06)',
-            color: '#7ee9ff',
+            padding: '10px 18px',
+            border: '1px solid rgba(151, 246, 151, 0.7)',
+            background: '#baffb7',
+            color: '#020603',
             fontSize: 22,
             letterSpacing: 8,
             textTransform: 'uppercase',
             marginBottom: 48,
           }}
         >
-          HOLLOW TREE
+          [:: PROMPT VAULT ::]
         </div>
 
         <div
@@ -49,12 +45,8 @@ export default function OpengraphImage() {
             fontSize: 96,
             fontWeight: 800,
             lineHeight: 1.1,
-            letterSpacing: -2,
-            textAlign: 'center',
-            backgroundImage:
-              'linear-gradient(135deg, #00ffff 0%, #bf00ff 50%, #ff58e5 100%)',
-            backgroundClip: 'text',
-            color: 'transparent',
+            letterSpacing: -5,
+            color: '#dcffdc',
             display: 'flex',
           }}
         >
@@ -66,8 +58,7 @@ export default function OpengraphImage() {
             marginTop: 36,
             fontSize: 36,
             fontWeight: 600,
-            color: '#cfe7ff',
-            textAlign: 'center',
+            color: '#a9dbaa',
             display: 'flex',
           }}
         >
@@ -78,12 +69,11 @@ export default function OpengraphImage() {
           style={{
             marginTop: 16,
             fontSize: 22,
-            color: '#7c93b3',
-            textAlign: 'center',
+            color: '#6f9673',
             display: 'flex',
           }}
         >
-          找灵感 · 收藏室 · 吐槽室 · 洞笔记
+          提示词 · 效果预览 · 同类对比 · 验证记录
         </div>
       </div>
     ),

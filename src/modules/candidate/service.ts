@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
+import { isPrivateCandidatePreview } from '@/lib/private-candidate-preview'
 import {
   CandidatePromoteTo,
   CandidateStatus,
@@ -17,6 +18,9 @@ export {
   candidateStatusLabel,
 } from './constants'
 
+export const CANDIDATE_PRIVATE_TAG = 'visibility:private'
+
+export type CandidateVisibility = 'public' | 'private'
 
 export interface CreateCandidateInput {
   title: string
@@ -28,6 +32,7 @@ export interface CreateCandidateInput {
   logoUrl?: string
   previewImageUrl?: string
   tags?: string[]
+  visibility?: CandidateVisibility
   status?: CandidateStatus
   sortOrder?: number
 }
@@ -87,12 +92,41 @@ function parseTags(tags: string): string[] {
   }
 }
 
+function candidateVisibility(tags: readonly string[]): CandidateVisibility {
+  return tags.includes(CANDIDATE_PRIVATE_TAG) ? 'private' : 'public'
+}
+
+function candidateTagsForStorage(
+  tags: readonly string[],
+  visibility: CandidateVisibility,
+): string[] {
+  const visibleTags = tags.filter((tag) => tag !== CANDIDATE_PRIVATE_TAG)
+  return visibility === 'private'
+    ? [...visibleTags, CANDIDATE_PRIVATE_TAG]
+    : visibleTags
+}
+
+function assertCandidatePreviewVisibility(
+  visibility: CandidateVisibility,
+  previewImageUrl: string | null,
+) {
+  if (
+    visibility === 'private'
+    && previewImageUrl
+    && !isPrivateCandidatePreview(previewImageUrl)
+  ) {
+    throw new Error('ERR_CANDIDATE_PRIVATE_PREVIEW_REQUIRED')
+  }
+}
+
 function mapCandidate<T extends { tags: string }>(
   candidate: T,
-): Omit<T, 'tags'> & { tags: string[] } {
+): Omit<T, 'tags'> & { tags: string[]; visibility: CandidateVisibility } {
+  const storedTags = parseTags(candidate.tags)
   return {
     ...candidate,
-    tags: parseTags(candidate.tags),
+    tags: storedTags.filter((tag) => tag !== CANDIDATE_PRIVATE_TAG),
+    visibility: candidateVisibility(storedTags),
   }
 }
 
@@ -107,6 +141,8 @@ export async function listCandidates(opts?: {
   const where: Prisma.CandidateWhereInput = {}
   if (opts?.authorUserId) {
     where.authorUserId = opts.authorUserId
+  } else {
+    where.NOT = { tags: { contains: `"${CANDIDATE_PRIVATE_TAG}"` } }
   }
   if (opts?.statuses?.length) {
     where.status = { in: opts.statuses }
@@ -166,7 +202,10 @@ export async function listAllCandidatesForAdmin() {
   }))
 }
 
-export async function getCandidateBySlug(slug: string) {
+export async function getCandidateBySlug(
+  slug: string,
+  opts?: { viewerUserId?: string; isAdmin?: boolean },
+) {
   const candidate = await prisma.candidate.findUnique({
     where: { slug },
     include: {
@@ -178,6 +217,15 @@ export async function getCandidateBySlug(slug: string) {
     },
   })
   if (!candidate) return null
+
+  const storedTags = parseTags(candidate.tags)
+  if (
+    candidateVisibility(storedTags) === 'private'
+    && !opts?.isAdmin
+    && opts?.viewerUserId !== candidate.authorUserId
+  ) {
+    return null
+  }
 
   const ratings = candidate.reviews.map((r) => r.rating)
   const avgRating =
@@ -201,9 +249,14 @@ async function updateCandidateFromObservedState(
   id: string,
   observedStatus: CandidateStatus,
   data: Prisma.CandidateUpdateManyMutationInput,
+  observedTags?: string,
 ) {
   const result = await prisma.candidate.updateMany({
-    where: { id, status: observedStatus },
+    where: {
+      id,
+      status: observedStatus,
+      ...(observedTags === undefined ? {} : { tags: observedTags }),
+    },
     data,
   })
   const latest = await prisma.candidate.findUnique({ where: { id } })
@@ -232,10 +285,17 @@ export async function organizeCandidate(input: {
     throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
   }
 
+  const existingTags = parseTags(existing.tags)
+
   return updateCandidateFromObservedState(input.id, existing.status, {
-    ...(input.tags ? { tags: JSON.stringify(input.tags) } : {}),
+    ...(input.tags ? {
+      tags: JSON.stringify(candidateTagsForStorage(
+        input.tags,
+        candidateVisibility(existingTags),
+      )),
+    } : {}),
     ...(input.status ? { status: input.status } : {}),
-  })
+  }, existing.tags)
 }
 
 export async function findCandidateDuplicate(input: {
@@ -274,6 +334,9 @@ export async function createCandidate(input: CreateCandidateInput, authorUserId?
   const slug = input.ideaKey
     ? buildCandidateIdeaSlug(input.ideaKey, authorUserId || 'system')
     : await ensureUniqueSlug(slugify(input.title))
+  const visibility = input.visibility ?? 'public'
+  const previewImageUrl = safeCandidateLink(input.previewImageUrl)
+  assertCandidatePreviewVisibility(visibility, previewImageUrl)
   return prisma.candidate
     .create({
       data: {
@@ -284,8 +347,11 @@ export async function createCandidate(input: CreateCandidateInput, authorUserId?
         websiteUrl: safeCandidateLink(input.websiteUrl),
         sourceUrl: safeCandidateLink(input.sourceUrl),
         logoUrl: safeCandidateLink(input.logoUrl),
-        previewImageUrl: safeCandidateLink(input.previewImageUrl),
-        tags: JSON.stringify(input.tags || []),
+        previewImageUrl,
+        tags: JSON.stringify(candidateTagsForStorage(
+          input.tags || [],
+          visibility,
+        )),
         status: input.status ?? CandidateStatus.watching,
         sortOrder: input.sortOrder ?? 0,
         authorUserId,
@@ -315,20 +381,67 @@ export async function updateCandidate(input: UpdateCandidateInput) {
   if (input.title.trim() !== existing.title && !existing.slug.startsWith('idea-')) {
     slug = await ensureUniqueSlug(slugify(input.title), existing.id)
   }
+  const existingTags = parseTags(existing.tags)
+  const visibility = input.visibility ?? candidateVisibility(existingTags)
+  const previewImageUrl = safeCandidateLink(input.previewImageUrl)
+  assertCandidatePreviewVisibility(visibility, previewImageUrl)
 
   return updateCandidateFromObservedState(input.id, existing.status, {
     title: input.title.trim(),
     slug,
     summary: input.summary?.trim() || null,
-    rawContent: input.rawContent?.trim() || existing.rawContent,
+    rawContent: input.rawContent === undefined
+      ? existing.rawContent
+      : input.rawContent.trim() || null,
     websiteUrl: safeCandidateLink(input.websiteUrl),
     sourceUrl: safeCandidateLink(input.sourceUrl),
     logoUrl: safeCandidateLink(input.logoUrl),
-    previewImageUrl: safeCandidateLink(input.previewImageUrl),
-    tags: JSON.stringify(input.tags || []),
+    previewImageUrl,
+    tags: JSON.stringify(candidateTagsForStorage(
+      input.tags ?? existingTags,
+      visibility,
+    )),
     status: input.status ?? existing.status,
     sortOrder: input.sortOrder ?? existing.sortOrder,
-  })
+  }, existing.tags)
+}
+
+export async function updateCandidatePreview(input: {
+  id: string
+  previewImageUrl: string
+}) {
+  const existing = await prisma.candidate.findUnique({ where: { id: input.id } })
+  if (!existing) throw new Error('ERR_CANDIDATE_NOT_FOUND')
+  if (existing.status === CandidateStatus.promoted) {
+    throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
+  }
+  const previewImageUrl = safeCandidateLink(input.previewImageUrl)
+  assertCandidatePreviewVisibility(
+    candidateVisibility(parseTags(existing.tags)),
+    previewImageUrl,
+  )
+
+  return updateCandidateFromObservedState(input.id, existing.status, {
+    previewImageUrl,
+  }, existing.tags)
+}
+
+export async function updateCandidateDraftContent(input: {
+  id: string
+  rawContent: string
+}) {
+  const existing = await prisma.candidate.findUnique({ where: { id: input.id } })
+  if (!existing) throw new Error('ERR_CANDIDATE_NOT_FOUND')
+  if (existing.status === CandidateStatus.promoted) {
+    throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
+  }
+  if (candidateVisibility(parseTags(existing.tags)) !== 'private') {
+    throw new Error('ERR_CANDIDATE_PRIVATE_DRAFT_REQUIRED')
+  }
+
+  return updateCandidateFromObservedState(input.id, existing.status, {
+    rawContent: input.rawContent.trim() || null,
+  }, existing.tags)
 }
 
 export async function deleteCandidate(
@@ -355,6 +468,9 @@ export async function promoteCandidate(input: PromoteCandidateInput) {
   if (!candidate) throw new Error('ERR_CANDIDATE_NOT_FOUND')
   if (candidate.status === CandidateStatus.promoted) {
     throw new Error('ERR_CANDIDATE_ALREADY_PROMOTED')
+  }
+  if (candidateVisibility(parseTags(candidate.tags)) === 'private') {
+    throw new Error('ERR_CANDIDATE_PRIVATE_DRAFT')
   }
 
   if (input.to === 'tool') {
@@ -394,7 +510,7 @@ export async function promoteCandidate(input: PromoteCandidateInput) {
         effectImageUrl: candidate.previewImageUrl || candidate.logoUrl || undefined,
         sourceUrl: sourceUrl || undefined,
         tags: parseTags(candidate.tags),
-        status: 'published',
+        status: 'draft',
       }
       const skill = await createSkill(skillInput, candidate.authorUserId || undefined, tx)
 

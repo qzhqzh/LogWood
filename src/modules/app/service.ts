@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
+import { AssetRightsStatus } from '@prisma/client'
 
 export const APP_STATUSES = ['draft', 'published', 'archived'] as const
 
@@ -181,6 +182,21 @@ export async function listAllAppsForManage() {
       tags: true,
       status: true,
       updatedAt: true,
+      visualAssets: {
+        select: {
+          id: true,
+          sourceCollection: true,
+          sourcePath: true,
+          originalSha256: true,
+          derivedSha256: true,
+          width: true,
+          height: true,
+          mimeType: true,
+          rightsStatus: true,
+          rightsNote: true,
+          importedAt: true,
+        },
+      },
     },
   })
 
@@ -206,6 +222,21 @@ export async function getAppBySlug(slug: string) {
       status: true,
       createdAt: true,
       updatedAt: true,
+      visualAssets: {
+        select: {
+          id: true,
+          sourceCollection: true,
+          sourcePath: true,
+          originalSha256: true,
+          derivedSha256: true,
+          width: true,
+          height: true,
+          mimeType: true,
+          rightsStatus: true,
+          rightsNote: true,
+          importedAt: true,
+        },
+      },
     },
   })
 
@@ -259,6 +290,22 @@ export async function updateApp(input: UpdateAppInput) {
 
   if (!existing) {
     throw new Error('ERR_APP_NOT_FOUND')
+  }
+
+  if (input.status === 'published') {
+    const blockedAssets = await appModel.count({
+      where: {
+        id: input.id,
+        visualAssets: {
+          some: {
+            rightsStatus: {
+              notIn: [AssetRightsStatus.owned, AssetRightsStatus.licensed],
+            },
+          },
+        },
+      },
+    })
+    if (blockedAssets > 0) throw new Error('ERR_APP_RIGHTS_REVIEW_REQUIRED')
   }
 
   let nextSlug: string | undefined

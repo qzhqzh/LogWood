@@ -23,12 +23,11 @@ RUN set -eux; \
 		apt-get install -y --no-install-recommends openssl wget; \
 		rm -rf /var/lib/apt/lists/*
 
-# Install dependencies first to maximize layer cache reuse.
-# Copy only package.json and .npmrc; explicitly delete any npm lockfile
-# that may leak in via build context to prevent bun from migrating it
-# (which causes IntegrityCheckFailed when using a mirror registry).
-COPY package.json .npmrc ./
-RUN rm -f package-lock.json bun.lockb bun.lock && bun install
+# Install the exact dependency graph captured in the committed npm lockfile.
+# Development packages are needed for `next build`; the runtime image remains
+# single-stage for compatibility with the existing bind-mounted deployment.
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --include=dev
 
 # Copy source code (needed for production builds).
 # In dev mode, bind mount overrides this COPY.

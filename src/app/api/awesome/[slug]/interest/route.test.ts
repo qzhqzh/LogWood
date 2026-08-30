@@ -49,6 +49,7 @@ describe('POST /api/awesome/[slug]/interest', () => {
       anonymousUserId: 'anon-1',
     }))
     expect(revalidatePathMock).toHaveBeenCalledWith('/awesome')
+    expect(revalidatePathMock).toHaveBeenCalledWith('/awesome/skills')
   })
 
   it('rejects an out-of-range score before resolving an actor', async () => {

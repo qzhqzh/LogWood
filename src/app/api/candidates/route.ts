@@ -12,6 +12,7 @@ import {
   listAllCandidatesForAdmin,
   listCandidates,
   updateCandidate,
+  updateCandidateDraftContent,
 } from '@/modules/candidate'
 
 export const dynamic = 'force-dynamic'
@@ -36,16 +37,23 @@ const optionalUrl = z.preprocess((value) => {
 const candidateBodySchema = z.object({
   title: z.string().min(2).max(120),
   summary: z.string().max(1000).optional(),
+  rawContent: z.string().max(50000).optional(),
   websiteUrl: optionalUrl,
   sourceUrl: optionalUrl,
   logoUrl: optionalUrl,
   previewImageUrl: optionalUrl,
   tags: z.array(z.string().min(1).max(30)).optional(),
+  visibility: z.enum(['public', 'private']).optional(),
   status: z.nativeEnum(CandidateStatus).optional(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
 })
 
 const updateSchema = candidateBodySchema.extend({ id: z.string().min(1) })
+const draftContentSchema = z.object({
+  action: z.literal('draft-content'),
+  id: z.string().min(1),
+  rawContent: z.string().max(50000),
+})
 const deleteSchema = z.object({ id: z.string().min(1) })
 
 export async function GET(request: NextRequest) {
@@ -89,13 +97,20 @@ export async function POST(request: NextRequest) {
     const candidate = await createCandidate(validated, session.user.id)
     revalidatePath('/candidates')
     revalidatePath('/scraps')
+    revalidatePath('/workbench')
     revalidatePath('/')
     return NextResponse.json({ candidate }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'ERR_CANDIDATE_VALIDATION', details: error.errors }, { status: 400 })
     }
-    if (error instanceof Error && error.message === 'ERR_CANDIDATE_PROMOTION_REQUIRED') {
+    if (
+      error instanceof Error
+      && [
+        'ERR_CANDIDATE_PROMOTION_REQUIRED',
+        'ERR_CANDIDATE_PRIVATE_PREVIEW_REQUIRED',
+      ].includes(error.message)
+    ) {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }
     console.error('POST /api/candidates error:', error)
@@ -113,11 +128,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
     }
 
-    const validated = updateSchema.parse(await request.json())
-    const candidate = await updateCandidate(validated)
+    const body = await request.json()
+    const candidate = body?.action === 'draft-content'
+      ? await updateCandidateDraftContent(draftContentSchema.parse(body))
+      : await updateCandidate(updateSchema.parse(body))
     revalidatePath('/candidates')
     revalidatePath('/scraps')
     revalidatePath('/skills')
+    revalidatePath('/workbench')
     revalidatePath(`/candidates/${candidate.slug}`)
     revalidatePath('/')
     return NextResponse.json({ candidate })
@@ -133,6 +151,8 @@ export async function PATCH(request: NextRequest) {
       && [
         'ERR_CANDIDATE_PROMOTION_REQUIRED',
         'ERR_CANDIDATE_ALREADY_PROMOTED',
+        'ERR_CANDIDATE_PRIVATE_DRAFT_REQUIRED',
+        'ERR_CANDIDATE_PRIVATE_PREVIEW_REQUIRED',
         'ERR_CANDIDATE_STATE_CONFLICT',
       ].includes(error.message)
     ) {

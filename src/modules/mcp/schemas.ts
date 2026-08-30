@@ -1,6 +1,7 @@
 import {
   AgentReplyAttitude,
   AgentReplyStrategy,
+  ArticleSourceKind,
   ArticleStatus,
   CandidateStatus,
   SkillStatus,
@@ -105,6 +106,17 @@ export const publishArticleSchema = z.object({
   coverImageUrl: optionalAssetUrl,
   status: z.nativeEnum(ArticleStatus).optional(),
   aiAttribution: aiAttributionSchema,
+  sources: z.array(z.object({
+    kind: z.nativeEnum(ArticleSourceKind),
+    label: z.string().trim().min(1).max(160),
+    candidateId: z.string().min(1).optional(),
+    skillId: z.string().min(1).optional(),
+    targetId: z.string().min(1).optional(),
+    appId: z.string().min(1).optional(),
+    evaluationId: z.string().min(1).optional(),
+    reviewId: z.string().min(1).optional(),
+    sourceUrl: optionalHttpUrl,
+  })).max(24).optional(),
 })
 
 export const replyInboxClaimSchema = z.object({

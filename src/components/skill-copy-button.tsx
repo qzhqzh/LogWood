@@ -1,21 +1,23 @@
 'use client'
 
 import { useState } from 'react'
+import { Copy } from 'lucide-react'
 
 interface SkillCopyButtonProps {
   text: string
 }
 
 export function SkillCopyButton({ text }: SkillCopyButtonProps) {
-  const [copied, setCopied] = useState(false)
+  const [state, setState] = useState<'idle' | 'copied' | 'error'>('idle')
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(text)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1600)
+      setState('copied')
+      window.setTimeout(() => setState('idle'), 1600)
     } catch {
-      setCopied(false)
+      setState('error')
+      window.setTimeout(() => setState('idle'), 2400)
     }
   }
 
@@ -23,9 +25,11 @@ export function SkillCopyButton({ text }: SkillCopyButtonProps) {
     <button
       type="button"
       onClick={handleCopy}
-      className="text-[0.65rem] tracking-[0.12em] text-cyan-300/80 hover:text-cyan-200 transition-colors"
+      className="ascii-button"
+      aria-live="polite"
     >
-      {copied ? 'COPIED' : 'COPY'}
+      <Copy className="h-4 w-4" aria-hidden />
+      {state === 'copied' ? '已复制' : state === 'error' ? '复制失败' : '复制提示词'}
     </button>
   )
 }

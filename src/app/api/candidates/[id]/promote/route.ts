@@ -40,6 +40,7 @@ export async function POST(
     revalidatePath('/skills')
     revalidatePath('/app')
     revalidatePath('/scraps')
+    revalidatePath('/workbench')
     revalidatePath(`/candidates/${result.candidate.slug}`)
     revalidatePath('/')
 
@@ -52,6 +53,7 @@ export async function POST(
       if (
         error.message === 'ERR_CANDIDATE_NOT_FOUND' ||
         error.message === 'ERR_CANDIDATE_ALREADY_PROMOTED' ||
+        error.message === 'ERR_CANDIDATE_PRIVATE_DRAFT' ||
         error.message === 'ERR_CANDIDATE_IMAGE_REQUIRED'
       ) {
         return NextResponse.json(

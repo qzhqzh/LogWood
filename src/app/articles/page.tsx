@@ -3,176 +3,133 @@ import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { encodeArticleSlug, listArticles } from '@/modules/article'
-import { SiteNav } from '@/components/site-nav'
-import { SiteFooter } from '@/components/site-footer'
-import { JsonLd } from '@/components/json-ld'
+import { ArrowRight, NotebookPen } from 'lucide-react'
 import { AiAttribution } from '@/components/ai-attribution'
+import { JsonLd } from '@/components/json-ld'
+import { SiteFooter } from '@/components/site-footer'
+import { SiteNav } from '@/components/site-nav'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
+import { encodeArticleSlug, listArticles } from '@/modules/article'
 import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 
 export const revalidate = 120
 
 export const metadata: Metadata = buildMetadata({
-  title: '洞笔记',
-  description: '空心树洞里的长文与生长记录——实践、对比与重新选择的笔记',
+  title: '笔记',
+  description: '提示词、实验、比较与重新选择留下的长期记录；公开内容保留创作来源和 AI 归属。',
   path: '/articles',
 })
 
 interface ArticlesPageProps {
-  searchParams?: {
-    column?: string
-  }
+  searchParams?: { column?: string }
 }
 
 export default async function ArticlesPage({ searchParams }: ArticlesPageProps) {
-  const session = await getServerSession(authOptions)
+  const [session, articleResult] = await Promise.all([
+    getServerSession(authOptions),
+    listArticles({ page: 1, pageSize: 24 }),
+  ])
   const isAdmin = isAdminSession(session)
-  const { articles } = await listArticles({
-    page: 1,
-    pageSize: 24,
-  })
   const selectedColumn = searchParams?.column?.trim() || 'all'
+  const groupedArticles = new Map<string, { label: string; items: typeof articleResult.articles }>()
 
-  const groupedArticles = new Map<string, { label: string; items: (typeof articles) }>()
-
-  for (const article of articles) {
+  for (const article of articleResult.articles) {
     const key = article.column?.id || 'unassigned'
     const label = article.column?.name || '未归入专栏'
     const group = groupedArticles.get(key)
-    if (!group) {
-      groupedArticles.set(key, { label, items: [article] })
-    } else {
-      group.items.push(article)
-    }
+    if (group) group.items.push(article)
+    else groupedArticles.set(key, { label, items: [article] })
   }
 
-  const groups = Array.from(groupedArticles.entries()).map(([key, group]) => ({
-    key,
-    label: group.label,
-    items: group.items,
-  }))
-
-  const totalCount = articles.length
-  const visibleGroups = selectedColumn === 'all'
-    ? groups
-    : groups.filter((group) => group.key === selectedColumn)
-
+  const groups = Array.from(groupedArticles.entries()).map(([key, group]) => ({ key, ...group }))
+  const visibleGroups = selectedColumn === 'all' ? groups : groups.filter((group) => group.key === selectedColumn)
   const visibleCount = visibleGroups.reduce((sum, group) => sum + group.items.length, 0)
 
   return (
-    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
-      <JsonLd
-        value={buildBreadcrumbList([
-          { name: '首页', path: '/' },
-          { name: '洞笔记', path: '/articles' },
-        ])}
-      />
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
-      </div>
-
+    <main className="ascii-app">
+      <JsonLd value={buildBreadcrumbList([
+        { name: '首页', path: '/' },
+        { name: '笔记', path: '/articles' },
+      ])} />
       <SiteNav
         active="articles"
-        actionLabel={isAdmin ? '笔记管理' : undefined}
+        actionLabel={isAdmin ? 'Manage Notes' : undefined}
         actionHref={isAdmin ? '/articles/manage' : undefined}
       />
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
-        <div className="mb-12">
-          <div className="inline-block mb-4 px-4 py-1 border border-[var(--color-danger-border)] rounded-full bg-[var(--color-danger-bg)]">
-            <span className="text-[var(--color-danger-text)] text-sm tracking-widest uppercase">HOLLOW NOTES</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">洞笔记</h1>
-          <p className="text-muted text-lg max-w-2xl">放下执念之后写下的实践、对比与重新生长的记录。</p>
+      <header className="ascii-page-header ascii-record-header">
+        <div>
+          <p className="ascii-kicker">[:: NOTES / HUMAN-VERIFIED RECORDS ::]</p>
+          <h1>笔记</h1>
+          <p>把提示词、实验、比较和失败写成长记录。AI 可以参与草稿，公开版本仍由人审核。</p>
         </div>
+        <dl className="ascii-page-stats">
+          <div><dt>公开笔记</dt><dd>{articleResult.total}</dd></div>
+          <div><dt>当前显示</dt><dd>{visibleCount}</dd></div>
+          <div><dt>专栏</dt><dd>{groups.length}</dd></div>
+        </dl>
+      </header>
 
-        {articles.length > 0 && (
-          <section className="mb-10 cyber-card rounded-2xl p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-              <div>
-                <p className="text-xs tracking-[0.28em] text-article uppercase mb-2">专栏统计</p>
-                <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">按专栏筛选文章</h2>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold font-['Orbitron'] text-article">{visibleCount}</div>
-                <div className="text-xs text-soft">当前显示 / 总计 {totalCount}</div>
-              </div>
+      {articleResult.articles.length > 0 ? (
+        <nav className="ascii-column-filter" aria-label="按专栏筛选笔记">
+          <Link href="/articles" className={selectedColumn === 'all' ? 'is-active' : ''}>全部 · {articleResult.total}</Link>
+          {groups.map((group) => (
+            <Link
+              key={group.key}
+              href={`/articles?column=${encodeURIComponent(group.key)}`}
+              className={selectedColumn === group.key ? 'is-active' : ''}
+            >
+              {group.label} · {group.items.length}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+
+      <div className="ascii-article-groups">
+        {visibleGroups.map((group, groupIndex) => (
+          <section key={group.key} className="ascii-article-group" aria-labelledby={`article-group-${groupIndex}`}>
+            <div className="ascii-panel__heading">
+              <h2 id={`article-group-${groupIndex}`}>[:: {group.label} ::]</h2>
+              <span>{group.items.length} 篇</span>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/articles"
-                className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
-                  selectedColumn === 'all'
-                    ? 'status-danger'
-                    : 'border-divider text-muted hover:border-[var(--color-danger-border)] hover:text-[var(--color-danger-text)]'
-                }`}
-              >
-                全部 · {totalCount}
-              </Link>
-              {groups.map((group) => (
-                <Link
-                  key={group.key}
-                  href={`/articles?column=${encodeURIComponent(group.key)}`}
-                  className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
-                    selectedColumn === group.key
-                      ? 'status-danger'
-                      : 'border-divider text-muted hover:border-[var(--color-danger-border)] hover:text-[var(--color-danger-text)]'
-                  }`}
-                >
-                  {group.label} · {group.items.length}
+            <div className="ascii-article-list">
+              {group.items.map((article, index) => (
+                <Link key={article.id} href={`/articles/${encodeArticleSlug(article.slug)}`}>
+                  <span className="ascii-article-index">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="ascii-article-copy">
+                    <strong>{article.title}</strong>
+                    <small>{article.excerpt || '打开查看完整记录与创作来源。'}</small>
+                    <AiAttribution
+                      provider={article.aiProvider}
+                      model={article.aiModel}
+                      modelVersion={article.aiModelVersion}
+                      generatedAt={article.aiGeneratedAt}
+                    />
+                  </span>
+                  <span className="ascii-article-meta">
+                    <time dateTime={(article.publishedAt || article.createdAt).toISOString()}>
+                      {formatDistanceToNow(new Date(article.publishedAt || article.createdAt), { addSuffix: true, locale: zhCN })}
+                    </time>
+                    <small>{article.viewCount} 次阅读</small>
+                  </span>
+                  <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               ))}
             </div>
           </section>
-        )}
+        ))}
 
-        {articles.length === 0 ? (
-          <div className="cyber-card rounded-2xl p-10 text-center text-muted">暂无文章，先去创建第一篇吧。</div>
-        ) : (
-          <div className="space-y-10">
-            {visibleGroups.length === 0 && (
-              <div className="cyber-card rounded-2xl p-10 text-center text-muted">当前筛选专栏暂无文章。</div>
-            )}
-            {visibleGroups.map((group) => (
-              <section key={group.key}>
-                <h2 className="text-xl font-semibold text-article mb-4">专栏：{group.label}</h2>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {group.items.map((article: (typeof articles)[number]) => (
-                    <Link
-                      key={article.id}
-                      href={`/articles/${encodeArticleSlug(article.slug)}`}
-                      className="cyber-card rounded-2xl p-6 hover:scale-[1.01] transition-transform"
-                    >
-                      <h3 className="text-2xl font-semibold text-[var(--color-text-strong)] mb-3">{article.title}</h3>
-                      {article.excerpt && <p className="text-muted mb-4 line-clamp-5">{article.excerpt}</p>}
-                      <AiAttribution
-                        provider={article.aiProvider}
-                        model={article.aiModel}
-                        modelVersion={article.aiModelVersion}
-                        generatedAt={article.aiGeneratedAt}
-                        className="mb-3"
-                      />
-                      <div className="flex items-center justify-between text-sm text-soft">
-                        <span>
-                          {formatDistanceToNow(new Date(article.publishedAt || article.createdAt), {
-                            addSuffix: true,
-                            locale: zhCN,
-                          })}
-                        </span>
-                        <span>{article.viewCount} 次阅读</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            ))}
+        {articleResult.articles.length === 0 || visibleGroups.length === 0 ? (
+          <div className="ascii-panel ascii-empty-state">
+            <NotebookPen className="h-8 w-8" aria-hidden />
+            <h2>{articleResult.articles.length === 0 ? '还没有公开笔记' : '当前专栏没有公开笔记'}</h2>
+            <p>草稿和未通过审核的版本不会出现在这里。</p>
+            {visibleGroups.length === 0 && articleResult.articles.length > 0 ? <Link href="/articles" className="ascii-button">查看全部</Link> : null}
           </div>
-        )}
-      </section>
+        ) : null}
+      </div>
+
       <SiteFooter />
     </main>
   )

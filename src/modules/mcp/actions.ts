@@ -10,7 +10,8 @@ import {
 import { prisma } from '@/lib/prisma'
 import { AiAttributionInput } from '@/modules/ai-attribution'
 import { CreateAppInput } from '@/modules/app'
-import { createArticle } from '@/modules/article'
+import { ArticleSourceInput, createArticle } from '@/modules/article'
+import { getAiCapabilities } from '@/modules/ai-runtime'
 import {
   createCandidate,
   findCandidateDuplicate,
@@ -100,6 +101,7 @@ export interface CreateMcpArticleInput {
   coverImageUrl?: string
   status?: ArticleStatus
   aiAttribution: AiAttributionInput
+  sources?: ArticleSourceInput[]
 }
 
 export interface McpReplyPlanInput {
@@ -426,6 +428,9 @@ export async function createMcpArticle(
     coverImageUrl: input.coverImageUrl,
     status: input.status ?? ArticleStatus.draft,
     aiAttribution: input.aiAttribution,
+    sources: input.sources,
+    contributionRole: 'MCP AI author',
+    changeSummary: 'MCP article draft',
   }, authorUserId)
   await recordAdminAction({
     actorUserId: authorUserId,
@@ -439,6 +444,24 @@ export async function createMcpArticle(
     },
   })
   return article
+}
+
+export async function getMcpCapabilities(authorUserId: string) {
+  return {
+    protocolVersion: '2026-08-12',
+    capabilities: getAiCapabilities(),
+    policies: {
+      aiContentDefaultsToDraft: true,
+      articlePublicationRequiresApprovedCurrentVersion: true,
+      aiAttributionRequired: true,
+      agentIdentityBoundToCredential: true,
+      idempotency: {
+        inspirationRecord: 'optional key or stable content hash',
+        replyContribution: 'required key',
+      },
+    },
+    replyInbox: await getReplyInboxStatus(authorUserId),
+  }
 }
 
 export async function getMcpReplyInboxStatus(authorUserId: string) {

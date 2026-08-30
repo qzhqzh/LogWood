@@ -3,90 +3,48 @@ import { FooterAdminLinks } from '@/components/footer-admin-links'
 import { FooterAuthEntry } from '@/components/footer-auth-entry'
 import { SITE_NAME, SITE_TAGLINE } from '@/shared/seo'
 
-const sections = [
-  {
-    title: '找灵感',
-    href: '/candidates',
-    colorClass: 'hover:text-amber-200',
-  },
-  {
-    title: '收藏室',
-    href: '/skills',
-    colorClass: 'hover-text-coding',
-  },
-  {
-    title: '废品站',
-    href: '/scraps',
-    colorClass: 'hover:text-rose-200',
-  },
-  {
-    title: '正式评测',
-    href: '/evaluations',
-    colorClass: 'hover:text-emerald-200',
-  },
-  {
-    title: '吐槽室',
-    href: '/talk',
-    colorClass: 'hover-text-app',
-  },
-  {
-    title: '洞笔记',
-    href: '/articles',
-    colorClass: 'hover-text-article',
-  },
-  {
-    title: 'AI 炼成助手',
-    href: '/forge',
-    colorClass: 'hover-text-article',
-  },
+const publicLinks = [
+  { label: 'Prompt', href: '/workbench' },
+  { label: 'Gallery', href: '/gallery' },
+  { label: 'Awesome', href: '/awesome' },
+  { label: '验证记录', href: '/evaluations' },
+  { label: '笔记', href: '/articles' },
+  { label: '关于秦', href: '/about' },
+] as const
+
+const workbenchLinks = [
+  { label: '收集箱', href: '/candidates' },
+  { label: 'AI 整理', href: '/forge' },
+  { label: '归档', href: '/scraps' },
+  { label: '历史资源', href: '/tools' },
 ] as const
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-divider py-12 px-4 mt-16">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">空</span>
-              </div>
-              <span className="text-xl font-bold font-['Orbitron'] gradient-text">{SITE_NAME}</span>
-            </div>
-            <p className="text-muted text-sm pl-10">{SITE_TAGLINE}</p>
-          </div>
+    <footer className="ascii-footer">
+      <div className="ascii-signal-rule" aria-hidden="true">::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::</div>
+      <div className="ascii-footer__grid">
+        <div>
+          <p className="ascii-footer__brand">[ {SITE_NAME} ]</p>
+          <p className="ascii-footer__tagline">{SITE_TAGLINE}</p>
+          <p className="ascii-footer__copyright">© 2026 {SITE_NAME} · 鄂ICP备2026011298号-1</p>
+        </div>
 
-          <div className="text-center md:text-left">
-            <p className="text-muted text-sm">© 2026 {SITE_NAME}</p>
-            <p className="text-muted text-xs mt-1">鄂ICP备2026011298号-1</p>
-            <a
-              href="https://github.com/qzhqzh/LogWood"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-muted hover-text-coding transition-colors mt-2"
-              aria-label={`查看 ${SITE_NAME} GitHub 仓库`}
-            >
-              GitHub 仓库
-              <span aria-hidden="true">↗</span>
-            </a>
-          </div>
+        <nav aria-label="公开内容" className="ascii-footer__links">
+          <p>[:: 公开内容 ::]</p>
+          {publicLinks.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
+        </nav>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm min-w-[280px]">
-            {sections.map((item) => (
-              <div key={item.title} className="text-center md:text-left">
-                <Link href={item.href} className={`text-muted transition-colors ${item.colorClass}`}>
-                  {item.title}
-                </Link>
-              </div>
-            ))}
-          </div>
+        <nav aria-label="作者工作台" className="ascii-footer__links">
+          <p>[:: 作者工作台 ::]</p>
+          {workbenchLinks.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
+        </nav>
 
-          <div className="text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-4 text-sm whitespace-nowrap">
-              <FooterAdminLinks />
-              <FooterAuthEntry />
-            </div>
-          </div>
+        <div className="ascii-footer__account">
+          <p>[:: 连接 ::]</p>
+          <a href="https://github.com/qzhqzh/LogWood" target="_blank" rel="noopener noreferrer">GitHub 仓库 ↗</a>
+          <FooterAdminLinks />
+          <FooterAuthEntry />
         </div>
       </div>
     </footer>

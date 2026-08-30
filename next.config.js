@@ -13,8 +13,6 @@
 // days of clean reports, the header name should be flipped to
 // `Content-Security-Policy` (enforce mode) and `'unsafe-inline'` for scripts
 // should be replaced with a per-request nonce.
-const isProd = process.env.NODE_ENV === 'production'
-
 const cspDirectives = [
   "default-src 'self'",
   // 'unsafe-inline' covers the theme bootstrap script and JSON-LD blocks.
@@ -34,7 +32,6 @@ const cspDirectives = [
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
-  ...(isProd ? ['upgrade-insecure-requests'] : []),
 ].join('; ')
 
 const securityHeaders = [
@@ -82,6 +79,9 @@ const securityHeaders = [
 ]
 
 const nextConfig = {
+  // Verification builds use an isolated directory so they cannot invalidate
+  // the bind-mounted production server's `.next` output.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,
   reactStrictMode: true,
   images: {

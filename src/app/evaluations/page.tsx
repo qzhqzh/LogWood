@@ -2,23 +2,21 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { EvaluationProtocol } from '@prisma/client'
+import { FileCheck2 } from 'lucide-react'
+import { EvaluationCard } from '@/components/evaluation-card'
+import { JsonLd } from '@/components/json-ld'
+import { SiteFooter } from '@/components/site-footer'
+import { SiteNav } from '@/components/site-nav'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
-import { SiteNav } from '@/components/site-nav'
-import { SiteFooter } from '@/components/site-footer'
-import { JsonLd } from '@/components/json-ld'
-import { EvaluationCard } from '@/components/evaluation-card'
-import {
-  EVALUATION_PROTOCOLS,
-  listEvaluations,
-} from '@/modules/evaluation'
+import { EVALUATION_PROTOCOLS, listEvaluations } from '@/modules/evaluation'
 import { buildBreadcrumbList, buildMetadata } from '@/shared/seo'
 
 export const revalidate = 60
 
 export const metadata: Metadata = buildMetadata({
-  title: '正式评测',
-  description: '基于版本、环境、任务、证据、维度评分和失败边界的 Evaluation v2 正式评测。',
+  title: '验证记录',
+  description: '按明确协议保存版本、环境、任务、证据、复现情况、限制与结论。',
   path: '/evaluations',
 })
 
@@ -32,89 +30,77 @@ export default async function EvaluationsPage({ searchParams }: EvaluationsPageP
     ? params.protocol as EvaluationProtocol
     : undefined
   const page = Math.max(Number.parseInt(params.page || '1', 10) || 1, 1)
-  const session = await getServerSession(authOptions)
+  const [session, result] = await Promise.all([
+    getServerSession(authOptions),
+    listEvaluations({ protocol, page, pageSize: 18 }),
+  ])
   const isAdmin = isAdminSession(session)
-  const { evaluations, total } = await listEvaluations({ protocol, page, pageSize: 18 })
 
   return (
-    <main className="min-h-screen bg-[var(--color-bg)] grid-bg relative">
-      <JsonLd
-        value={buildBreadcrumbList([
-          { name: '首页', path: '/' },
-          { name: '正式评测', path: '/evaluations' },
-        ])}
+    <main className="ascii-app">
+      <JsonLd value={buildBreadcrumbList([
+        { name: '首页', path: '/' },
+        { name: '验证记录', path: '/evaluations' },
+      ])} />
+      <SiteNav
+        active="evaluations"
+        actionLabel={isAdmin ? 'Manage Evidence' : undefined}
+        actionHref={isAdmin ? '/evaluations/manage' : undefined}
       />
-      <SiteNav active="inspiration" />
 
-      <header className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
-        <p className="text-xs tracking-[0.28em] text-emerald-300 uppercase mb-3">EVALUATION V2 · EVIDENCE FIRST</p>
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold font-['Orbitron'] gradient-text mb-4">正式评测</h1>
-            <p className="text-lg text-muted max-w-3xl leading-relaxed">
-              自由记录用于保留真实感受；正式评测则必须说明版本、环境、任务、证据、复现情况、维度评分、限制和结论。
-            </p>
-          </div>
-          {isAdmin && (
-            <Link href="/evaluations/manage" className="cyber-button px-5 py-2 rounded-lg font-semibold">
-              管理正式评测
-            </Link>
-          )}
+      <header className="ascii-page-header ascii-record-header">
+        <div>
+          <p className="ascii-kicker">[:: EVIDENCE / EVALUATION V2 ::]</p>
+          <h1>验证记录</h1>
+          <p>不靠印象宣布有效。每份公开记录都应说明版本、环境、任务、证据、复现情况、限制与结论。</p>
         </div>
-
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3 mt-8">
-          {Object.values(EVALUATION_PROTOCOLS).map((definition) => (
-            <Link
-              key={definition.key}
-              href={`/evaluations?protocol=${definition.key}`}
-              className={`cyber-card rounded-xl p-4 transition-colors ${
-                protocol === definition.key ? 'border-emerald-400/60' : 'hover:border-emerald-500/30'
-              }`}
-            >
-              <h2 className="font-semibold text-[var(--color-text-strong)]">{definition.label}</h2>
-              <p className="text-xs text-soft mt-2 line-clamp-3">{definition.description}</p>
-            </Link>
-          ))}
-        </div>
-
-        <div className="mt-6 flex items-center gap-3 text-sm">
-          <Link
-            href="/evaluations"
-            className={`px-3 py-1.5 rounded-full border ${!protocol ? 'status-info' : 'border-divider text-muted'}`}
-          >
-            全部 · {total}
-          </Link>
-          <Link href="/talk" className="text-soft hover:text-purple-200 ml-auto">
-            查看自由记录 / 吐槽室 →
-          </Link>
-        </div>
+        <dl className="ascii-page-stats">
+          <div><dt>当前公开</dt><dd>{result.total}</dd></div>
+          <div><dt>协议版本</dt><dd>2</dd></div>
+          <div><dt>当前页</dt><dd>{page}</dd></div>
+        </dl>
       </header>
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        {evaluations.length === 0 ? (
-          <div className="cyber-card rounded-2xl p-12 text-center">
-            <p className="text-xl text-[var(--color-text-strong)] mb-2">还没有正式评测</p>
-            <p className="text-muted">先保留真实使用记录，再按协议补齐证据和结论。</p>
-          </div>
-        ) : (
-          <div className="grid lg:grid-cols-2 gap-5">
-            {evaluations.map((evaluation) => (
-              <EvaluationCard key={evaluation.id} evaluation={evaluation} />
-            ))}
-          </div>
-        )}
-
-        {total > page * 18 && (
-          <div className="mt-8 text-center">
-            <Link
-              href={`/evaluations?page=${page + 1}${protocol ? `&protocol=${protocol}` : ''}`}
-              className="cyber-button px-6 py-2 rounded-lg inline-block"
-            >
-              下一页
-            </Link>
-          </div>
-        )}
+      <section className="ascii-protocol-strip" aria-label="评测协议筛选">
+        <Link href="/evaluations" className={!protocol ? 'is-active' : ''}>
+          <span>00</span><strong>全部协议</strong><small>查看所有已公开验证</small>
+        </Link>
+        {Object.values(EVALUATION_PROTOCOLS).map((definition, index) => (
+          <Link
+            key={definition.key}
+            href={`/evaluations?protocol=${definition.key}`}
+            className={protocol === definition.key ? 'is-active' : ''}
+          >
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <strong>{definition.label}</strong>
+            <small>{definition.description}</small>
+          </Link>
+        ))}
       </section>
+
+      <div className="ascii-record-toolbar">
+        <p>{protocol ? `当前协议：${EVALUATION_PROTOCOLS[protocol].label}` : '当前显示：全部公开验证'}</p>
+        <Link href="/talk">查看历史自由反馈</Link>
+      </div>
+
+      <section className="ascii-record-grid" aria-label="已公开验证记录">
+        {result.evaluations.map((evaluation) => (
+          <EvaluationCard key={evaluation.id} evaluation={evaluation} />
+        ))}
+        {result.evaluations.length === 0 ? (
+          <div className="ascii-panel ascii-empty-state">
+            <FileCheck2 className="h-8 w-8" aria-hidden />
+            <h2>还没有符合条件的公开验证</h2>
+            <p>先保留真实使用结果，再按协议补齐证据和结论。</p>
+          </div>
+        ) : null}
+      </section>
+
+      {result.total > page * 18 ? (
+        <nav className="ascii-pagination" aria-label="验证记录分页">
+          <Link href={`/evaluations?page=${page + 1}${protocol ? `&protocol=${protocol}` : ''}`} className="ascii-button">下一页</Link>
+        </nav>
+      ) : null}
 
       <SiteFooter />
     </main>

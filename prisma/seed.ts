@@ -4,6 +4,11 @@ import {
   awesomeCandidateTags,
   awesomeDossierJson,
 } from '../src/content/awesome-projects'
+import {
+  AWESOME_SKILLS,
+  awesomeSkillCandidateTags,
+  awesomeSkillDossierJson,
+} from '../src/content/awesome-skills'
 
 const prisma = new PrismaClient()
 
@@ -385,6 +390,23 @@ aspect 4:5, high detail bark texture`,
       tags: JSON.stringify(awesomeCandidateTags(project)),
       status: 'watching' as const,
       sortOrder: project.sortOrder,
+    })),
+    skipDuplicates: true,
+  })
+
+  console.log('Seeding AWESOME skill candidates...')
+
+  await prisma.candidate.createMany({
+    data: AWESOME_SKILLS.map((skill) => ({
+      title: skill.title,
+      slug: skill.slug,
+      summary: skill.summary,
+      rawContent: awesomeSkillDossierJson(skill),
+      websiteUrl: skill.websiteUrl,
+      sourceUrl: skill.sourceUrl,
+      tags: JSON.stringify(awesomeSkillCandidateTags(skill)),
+      status: 'watching' as const,
+      sortOrder: skill.sortOrder,
     })),
     skipDuplicates: true,
   })

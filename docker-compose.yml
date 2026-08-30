@@ -82,8 +82,20 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
       DEEPSEEK_IDEA_MODEL: ${DEEPSEEK_IDEA_MODEL:-deepseek-v4-pro}
+      DEEPSEEK_FORGE_MODEL: ${DEEPSEEK_FORGE_MODEL:-deepseek-v4-pro}
+      DEEPSEEK_FORGE_MODEL_VERSION: ${DEEPSEEK_FORGE_MODEL_VERSION:-deepseek-v4-pro}
+      DEEPSEEK_WORKBENCH_MODELS: ${DEEPSEEK_WORKBENCH_MODELS:-}
+      DEEPSEEK_WORKBENCH_MODEL_VERSION: ${DEEPSEEK_WORKBENCH_MODEL_VERSION:-}
+      CPA_API_KEY: ${CPA_API_KEY:-}
+      CPA_CONFIG_FILE: /run/secrets/cpa-config.yaml
+      CPA_BASE_URL: ${CPA_BASE_URL:-http://192.168.124.2:31000/v1}
+      CPA_HTTP_ALLOWED_HOSTS: ${CPA_HTTP_ALLOWED_HOSTS:-192.168.124.2}
+      CPA_IMAGE_MODELS: ${CPA_IMAGE_MODELS:-gemini-3.1-flash-image}
+      CPA_IMAGE_MODEL_VERSION: ${CPA_IMAGE_MODEL_VERSION:-gemini-3.1-flash-image}
       LOGWOOD_MCP_API_KEY: ${LOGWOOD_MCP_API_KEY:-}
       LOGWOOD_MCP_USER_EMAIL: ${LOGWOOD_MCP_USER_EMAIL:-}
+      LOGWOOD_MCP_AGENT_ID: ${LOGWOOD_MCP_AGENT_ID:-codex}
+      LOGWOOD_MCP_CREDENTIALS_JSON: ${LOGWOOD_MCP_CREDENTIALS_JSON:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
@@ -98,6 +110,7 @@ services:
     volumes:
       - .:/app
       - node_modules:/app/node_modules
+      - ${CPA_CONFIG_FILE_HOST:-/data/03_serve/cpa/config.yaml}:/run/secrets/cpa-config.yaml:ro
     command: sh /app/scripts/entrypoint.sh
 
   reply-worker:

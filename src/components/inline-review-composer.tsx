@@ -72,7 +72,7 @@ export function InlineReviewComposer({
               key={item}
               type="button"
               onClick={() => setRating(item)}
-              className={`w-8 h-8 rounded text-sm transition-colors ${
+              className={`h-10 w-10 rounded text-sm transition-colors ${
                 item <= rating ? 'bg-yellow-500/20 text-yellow-300' : 'bg-gray-800 text-gray-500 hover:text-yellow-300'
               }`}
               aria-label={`评分 ${item}`}

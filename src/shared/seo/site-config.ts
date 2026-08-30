@@ -12,27 +12,27 @@
 
 export const SITE_NAME = '空心树洞'
 
-export const SITE_TAGLINE = '大浪淘沙，找寻灵感'
+export const SITE_TAGLINE = '可验证的提示词仓库'
 
 export const SITE_DESCRIPTION =
-  '空心树洞是灵感淘洗与经验沉淀系统：收住零散灵感，经过观察和判断进入收藏室或废品站，同时保存吐槽、证据和长期笔记。'
+  '空心树洞保存可执行提示词、真实效果、来源、AI 归属与验证记录；AI 负责协作草稿，人负责公开门禁。'
 
 export const SITE_KEYWORDS: string[] = [
   '空心树洞',
   'AI Skill',
-  '收藏室',
-  '废品站',
+  '提示词仓库',
+  'Prompt Library',
   '提示词',
   'Prompt',
   'AI 工作流',
   '模型评测',
   '软件评测',
   '资源评测',
-  '灵感池',
-  '吐槽室',
+  '提示词对比',
+  '可审计创作',
   '技术小结',
   '可复用模板',
-  'AI 实践社区',
+  '人机协作',
 ]
 
 export const SITE_LOCALE = 'zh_CN'

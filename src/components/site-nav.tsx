@@ -1,5 +1,6 @@
+import React from 'react'
 import Link from 'next/link'
-import { SITE_NAME } from '@/shared/seo'
+import { ThemeToggle } from './theme-toggle'
 
 type NavSection =
   | 'home'
@@ -8,6 +9,8 @@ type NavSection =
   | 'scraps'
   | 'talk'
   | 'articles'
+  | 'evaluations'
+  | 'about'
   | 'gallery'
   | 'awesome'
   | 'forge'
@@ -15,147 +18,96 @@ type NavSection =
   | 'coding'
   | 'app'
 
-type NavLinkSection = 'inspiration' | 'skills' | 'scraps' | 'talk' | 'articles' | 'awesome'
-type NormalizedNavSection = 'home' | NavLinkSection
+type PublicSection = 'skills' | 'gallery' | 'awesome' | 'articles' | 'about'
 
 interface SiteNavItem {
   href: string
   label: string
   shortLabel?: string
-  className: string
+  className?: string
 }
 
 interface SiteNavProps {
   active?: NavSection
   actionLabel?: string
+  actionShortLabel?: string
   actionHref?: string
   navItems?: SiteNavItem[]
   borderClassName?: string
 }
 
-function normalizeActive(active: NavSection): NormalizedNavSection {
-  if (active === 'awesome') return active
-  if (active === 'skills' || active === 'scraps' || active === 'talk' || active === 'articles') return active
+function normalizeActive(active: NavSection): PublicSection | 'home' {
   if (
-    active === 'inspiration' ||
-    active === 'candidates'
+    active === 'skills'
+    || active === 'gallery'
+    || active === 'awesome'
+    || active === 'articles'
+    || active === 'about'
   ) {
-    return 'inspiration'
+    return active
   }
-  if (active === 'coding' || active === 'gallery' || active === 'app') return 'skills'
+  if (active === 'coding' || active === 'forge') {
+    return 'skills'
+  }
+  if (active === 'app') return 'gallery'
+  if (active === 'evaluations' || active === 'talk' || active === 'scraps') return 'articles'
   return 'home'
 }
 
-function navBarTintClass(): string {
-  return 'border-divider'
-}
-
-function navLinkClass(section: NavLinkSection, active: NormalizedNavSection): string {
-  const base = 'text-sm sm:text-base transition-colors font-semibold whitespace-nowrap shrink-0'
-  const isActive = section === active
-
-  if (section === 'inspiration') {
-    return `${base} ${isActive ? 'text-amber-300' : 'text-muted hover:text-amber-200'}`
-  }
-  if (section === 'skills') {
-    return `${base} ${isActive ? 'text-coding' : 'text-muted hover-text-coding'}`
-  }
-  if (section === 'scraps') {
-    return `${base} ${isActive ? 'text-rose-300' : 'text-muted hover:text-rose-200'}`
-  }
-  if (section === 'talk') {
-    return `${base} ${isActive ? 'text-app' : 'text-muted hover-text-app'}`
-  }
-  if (section === 'awesome') {
-    return `${base} ${isActive ? 'text-emerald-300' : 'text-muted hover:text-emerald-200'}`
-  }
-  return `${base} ${isActive ? 'text-article' : 'text-muted hover-text-article'}`
-}
-
-function defaultNavItems(active: NormalizedNavSection): SiteNavItem[] {
-  return [
-    {
-      href: '/candidates',
-      label: '找灵感',
-      shortLabel: '灵感',
-      className: navLinkClass('inspiration', active),
-    },
-    {
-      href: '/skills',
-      label: '收藏室',
-      shortLabel: '收藏',
-      className: navLinkClass('skills', active),
-    },
-    {
-      href: '/awesome',
-      label: 'AWESOME',
-      shortLabel: 'AWESOME',
-      className: navLinkClass('awesome', active),
-    },
-    {
-      href: '/scraps',
-      label: '废品站',
-      shortLabel: '废品',
-      className: navLinkClass('scraps', active),
-    },
-    {
-      href: '/talk',
-      label: '吐槽室',
-      shortLabel: '吐槽',
-      className: navLinkClass('talk', active),
-    },
-    {
-      href: '/articles',
-      label: '洞笔记',
-      shortLabel: '笔记',
-      className: navLinkClass('articles', active),
-    },
-  ]
-}
+const PUBLIC_NAV: Array<{ href: string; label: string; shortLabel: string; section: PublicSection }> = [
+  { href: '/workbench', label: 'PROMPT', shortLabel: 'PROMPT', section: 'skills' },
+  { href: '/gallery', label: 'GALLERY', shortLabel: 'GALLERY', section: 'gallery' },
+  { href: '/awesome', label: 'AWESOME', shortLabel: 'AWESOME', section: 'awesome' },
+  { href: '/articles', label: 'COMMUNITY', shortLabel: 'COMM.', section: 'articles' },
+  { href: '/about', label: 'ABOUT', shortLabel: 'ABOUT', section: 'about' },
+]
 
 export function SiteNav({
   active = 'home',
   actionLabel,
+  actionShortLabel,
   actionHref,
   navItems,
   borderClassName,
 }: SiteNavProps) {
   const normalized = normalizeActive(active)
-  const items = navItems ?? defaultNavItems(normalized)
+  const items = navItems ?? PUBLIC_NAV.map((item) => ({
+    href: item.href,
+    label: item.label,
+    shortLabel: item.shortLabel,
+    className: normalized === item.section ? 'is-active' : '',
+  }))
 
   return (
-    <nav className={`border-b ${borderClassName ?? navBarTintClass()} bg-[color:var(--color-nav-bg)] backdrop-blur-xl sticky top-0 z-50`}>
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center gap-2 sm:gap-3">
-          <Link href="/" className="flex items-center gap-2 min-w-0 shrink-0">
-            <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-[var(--color-accent-coding)] to-[var(--color-accent-app)] rounded-lg flex items-center justify-center">
-              <span className="text-[var(--color-bg)] font-bold text-sm">空</span>
-            </div>
-            <span className="hidden md:block text-xl sm:text-2xl font-bold font-['Orbitron'] text-[var(--color-text-strong)] truncate">
-              {SITE_NAME}
-            </span>
-          </Link>
+    <nav className={`ascii-nav ${borderClassName ?? ''}`} aria-label="Primary navigation">
+      <div className="ascii-nav__inner">
+        <Link href="/" className="ascii-nav__brand" aria-label="KongXin home">
+          <strong>KongXin</strong>
+        </Link>
 
-          <div className="flex items-center justify-end gap-1.5 sm:gap-5 min-w-0">
+        <div className="ascii-nav__links">
+          <div className="ascii-nav__routes">
             {items.map((item) => (
-              <Link key={`${item.href}:${item.label}`} href={item.href} className={item.className}>
+              <Link
+                key={`${item.href}:${item.label}`}
+                href={item.href}
+                className={`ascii-nav__link ${item.className ?? ''}`}
+              >
                 <span className="sm:hidden">{item.shortLabel || item.label}</span>
                 <span className="hidden sm:inline">{item.label}</span>
               </Link>
             ))}
-            {actionLabel && actionHref && (
-              <Link
-                href={actionHref}
-                className="cyber-button shrink-0 text-center px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold"
-                title={actionLabel}
-              >
-                <span className="sm:hidden">管理</span>
+            {actionLabel && actionHref ? (
+              <Link href={actionHref} className="ascii-nav__action" title={actionLabel}>
+                <span className="sm:hidden">{actionShortLabel ?? 'Admin'}</span>
                 <span className="hidden sm:inline">{actionLabel}</span>
               </Link>
-            )}
+            ) : null}
           </div>
+          <ThemeToggle />
         </div>
       </div>
+      <div className="ascii-signal-rule" aria-hidden="true">::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::</div>
     </nav>
   )
 }

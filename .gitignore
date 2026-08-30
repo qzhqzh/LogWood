@@ -7,8 +7,14 @@
 # testing
 /coverage
 
+# local design, generation, and import workspaces
+/.impeccable/
+/artifacts/
+/imports/
+
 # next.js
 /.next/
+/.next-verify/
 /out/
 
 # production

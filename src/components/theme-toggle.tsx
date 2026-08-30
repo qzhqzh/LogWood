@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { Moon, Sun } from 'lucide-react'
 
 type Theme = 'dark' | 'light'
 
@@ -26,21 +27,21 @@ export function ThemeToggle() {
     window.setTimeout(() => setIsAnimating(false), 240)
   }
 
-  const label = theme === 'dark' ? '当前：黑夜' : '当前：白天'
+  const nextThemeLabel = theme === 'dark' ? 'PAPER' : 'DARK'
 
   return (
     <button
       type="button"
       className={`theme-toggle ${isAnimating ? 'theme-toggle-animating' : ''}`}
       onClick={handleToggle}
-      aria-label="白天/黑夜 切换"
-      title="白天/黑夜 切换"
+      aria-label={`Switch to ${nextThemeLabel} theme`}
+      aria-pressed={theme === 'light'}
+      title={`Switch to ${nextThemeLabel} theme`}
     >
-      <span className="theme-toggle-icon" aria-hidden="true">{theme === 'dark' ? '🌙' : '☀️'}</span>
-      <span className="theme-toggle-copy">
-        <span>白天/黑夜</span>
-        <span className="theme-toggle-state">{label}</span>
-      </span>
+      {theme === 'dark'
+        ? <Sun className="theme-toggle-icon" aria-hidden="true" />
+        : <Moon className="theme-toggle-icon" aria-hidden="true" />}
+      <span className="theme-toggle-copy">{nextThemeLabel}</span>
     </button>
   )
 }

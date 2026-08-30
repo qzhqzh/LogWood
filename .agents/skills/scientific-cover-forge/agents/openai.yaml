@@ -1,0 +1,7 @@
+interface:
+  display_name: "科研封面精工"
+  short_description: "生成可追溯、期刊政策感知并经过审查的科研封面概念图"
+  default_prompt: "Use $scientific-cover-forge to turn my redacted research brief into a policy-aware journal cover candidate pack."
+
+policy:
+  allow_implicit_invocation: true

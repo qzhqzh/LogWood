@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
+import { CANDIDATE_PRIVATE_TAG } from '@/modules/candidate'
 import { canonicalFor } from '@/shared/seo'
 
 // The sitemap reflects database content and must not require PostgreSQL while
@@ -15,7 +16,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: canonicalFor('/'), lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: canonicalFor('/candidates'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: canonicalFor('/skills'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { url: canonicalFor('/workbench'), lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: canonicalFor('/gallery'), lastModified: now, changeFrequency: 'weekly', priority: 0.85 },
     { url: canonicalFor('/awesome'), lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: canonicalFor('/awesome/skills'), lastModified: now, changeFrequency: 'weekly', priority: 0.75 },
+    { url: canonicalFor('/awesome/feeds'), lastModified: now, changeFrequency: 'weekly', priority: 0.65 },
     { url: canonicalFor('/scraps'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: canonicalFor('/evaluations'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: canonicalFor('/talk'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
@@ -23,7 +28,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: canonicalFor('/tools'), lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: canonicalFor('/app'), lastModified: now, changeFrequency: 'weekly', priority: 0.65 },
     { url: canonicalFor('/forge'), lastModified: now, changeFrequency: 'weekly', priority: 0.5 },
+    { url: canonicalFor('/about'), lastModified: now, changeFrequency: 'monthly', priority: 0.65 },
     { url: canonicalFor('/compare'), lastModified: now, changeFrequency: 'weekly', priority: 0.6 },
+    { url: canonicalFor('/compare/prompts'), lastModified: now, changeFrequency: 'weekly', priority: 0.75 },
   ]
 
   const [targets, articles, apps, candidates, skills, evaluations] = await Promise.all([
@@ -40,7 +47,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
     prisma.candidate.findMany({
       select: { slug: true, updatedAt: true },
-      where: { status: { in: ['watching', 'evaluating', 'promoted', 'dropped'] } },
+      where: {
+        status: { in: ['watching', 'evaluating', 'promoted', 'dropped'] },
+        NOT: { tags: { contains: `"${CANDIDATE_PRIVATE_TAG}"` } },
+      },
     }),
     prisma.skill.findMany({
       select: { slug: true, updatedAt: true },
