@@ -4,7 +4,10 @@ import { TargetType } from '@prisma/client'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
-import { createForgeDraft } from '@/modules/forge'
+import {
+  createIdempotentForgeDraft,
+  forgeErrorDetails,
+} from '@/modules/forge'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +19,8 @@ const forgeDraftSchema = z.object({
   /** Backward compatibility for clients deployed before independent Skill drafts. */
   type: z.nativeEnum(TargetType).optional(),
   sourceUrl: z.string().url().optional(),
+  sourceCandidateId: z.string().min(1).optional(),
+  mode: z.enum(['ai', 'local']).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -30,7 +35,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const validated = forgeDraftSchema.parse(body)
-    const result = await createForgeDraft(validated, session.user.id)
+    const idempotencyKey = request.headers.get('idempotency-key') || undefined
+    const result = await createIdempotentForgeDraft(
+      validated,
+      session.user.id,
+      idempotencyKey,
+    )
 
     return NextResponse.json(result, { status: 201 })
   } catch (error) {
@@ -40,8 +50,19 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
-    if (error instanceof Error && error.message === 'ERR_FORGE_PROMPT_TOO_SHORT') {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+    const details = forgeErrorDetails(error)
+    if (details.code !== 'ERR_FORGE_FAILED') {
+      const status = details.code === 'ERR_FORGE_IN_PROGRESS'
+        ? 409
+        : details.code === 'ERR_FORGE_AI_AUTH'
+          ? 502
+          : details.retryable
+            ? 503
+            : 400
+      return NextResponse.json(
+        { error: details.code, retryable: details.retryable },
+        { status },
+      )
     }
 
     console.error('POST /api/forge/draft error:', error)

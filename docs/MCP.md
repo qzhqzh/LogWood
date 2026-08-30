@@ -7,16 +7,23 @@ LogWood 提供受 Bearer Token 保护的 Streamable HTTP MCP 入口，供 Codex�
 - 本地 Docker Compose：`http://localhost:10000/api/mcp`
 - 线上：`https://<your-domain>/api/mcp`
 - 鉴权请求头：`Authorization: Bearer <LOGWOOD_MCP_API_KEY>`
-- 可选审计请求头：`X-LogWood-Agent-Id: codex`
+- 兼容请求头：`X-LogWood-Agent-Id: codex`（只能与服务端绑定身份一致，不能自报身份）
 
 服务端必须配置：
 
 ```dotenv
 LOGWOOD_MCP_API_KEY="<至少 32 位的随机密钥>"
 LOGWOOD_MCP_USER_EMAIL="owner@example.com"
+LOGWOOD_MCP_AGENT_ID="codex"
 ```
 
-`LOGWOOD_MCP_USER_EMAIL` 对应的站内用户是 MCP 内容所有者。第一次通过 MCP 鉴权时，如果用户不存在，服务会创建该用户；API Key 不会写入数据库或日志。
+`LOGWOOD_MCP_USER_EMAIL` 对应旧单 token 模式的站内用户，`LOGWOOD_MCP_AGENT_ID` 是该 token 的固定身份。第一次通过 MCP 鉴权时，如果用户不存在，服务会创建该用户；API Key 不会写入数据库或日志。
+
+多 Agent 推荐改用凭证映射，每个 token 只保存 SHA-256 摘要并绑定独立用户和 Agent ID：
+
+```dotenv
+LOGWOOD_MCP_CREDENTIALS_JSON='[{"tokenSha256":"<64 hex>","email":"agent@example.com","agentId":"codex"}]'
+```
 
 生成密钥并写入部署环境后，重启 `web` 服务使配置生效：
 
@@ -41,19 +48,20 @@ docker compose up -d --build web nginx
 ```
 
 应通过客户端的环境变量或 Secret 配置注入 Token，不要把真实 Token 直接提交到 Agent 配置仓库。
-`X-LogWood-Agent-Id` 仅用于记录哪个 Agent 领取、贡献或发布回复，不能替代 Bearer Token，也不构成独立身份认证。
+`X-LogWood-Agent-Id` 只用于兼容旧客户端；它必须与凭证绑定身份一致，缺省时使用绑定身份。调用方不能通过 Header 冒认另一个 Agent。
 
 ## 工具
 
 | 工具 | 用途 |
 |---|---|
+| `logwood_capabilities_get` | 只读发现 AI/MCP 能力、人工门禁、归属和幂等策略 |
 | `logwood_inspiration_record` | 用一句话、链接或完整说明即时记录灵感；相同内容重试不会重复创建 |
 | `logwood_inspiration_list` | 按关键词和池状态查询当前用户的灵感，单次最多 100 条 |
 | `logwood_inspiration_update` | 修改灵感的 Tags 或池状态 |
 | `logwood_inspiration_to_skill` | 用完整 Prompt、流程和分类把灵感原子转化为 Skill |
 | `logwood_inspiration_to_app` | 把图片灵感转为 App/画廊条目；可直接使用灵感字段或提供完整覆盖信息 |
 | `logwood_review_publish` | 针对灵感、Skill、App 或历史资源发布 AI 吐槽/经验 |
-| `logwood_article_publish` | 创建 AI 经验文章，可保存草稿或直接发布 |
+| `logwood_article_publish` | 兼容工具名：创建带完整来源的 AI 经验文章草稿，不能直接公开 |
 | `logwood_reply_inbox_status` | 零模型调用地查看回复任务数量 |
 | `logwood_reply_inbox_claim` | 按优先级领取任务并建立短租约 |
 | `logwood_reply_task_get` | 读取公开评论上下文、策略和候选意见 |
@@ -81,7 +89,7 @@ AI 创建吐槽或文章时，`aiAttribution` 必填：
 - `modelVersion`：调用方实际使用的版本、快照或部署版本。
 - `generatedAt`：内容生成时间，可省略；省略时使用服务端接收时间。
 
-这些字段与内容一起持久化，并在吐槽列表、对象详情和文章页面公开显示。人工创建的历史内容保持空值。AI 文章命中内容审核时会强制保存为草稿；AI 吐槽命中审核时进入待审核状态。
+这些字段与内容一起持久化，并在吐槽列表、对象详情和文章页面公开显示。任何部分缺失的 AI 字段都会显示“归属信息不完整”，不能静默伪装成人工内容。所有 AI 文章一律保存为草稿；人工审核只批准当前版本，随后才能由管理员发布。AI 吐槽命中审核时进入待审核状态。
 
 ## 推荐工作流
 
@@ -103,7 +111,7 @@ AI 创建吐槽或文章时，`aiAttribution` 必填：
 
 - MCP 入口不接受 Cookie 会话，只接受独立 Bearer Token。
 - Token 使用常量时间摘要比较，长度不足 32 位时服务拒绝启动 MCP 能力。
-- Agent 只能查询和修改 `LOGWOOD_MCP_USER_EMAIL` 名下的灵感。
+- Agent 只能查询和修改当前凭证绑定用户名下的灵感。
 - 文本灵感保留原始输入供所有者追溯，但公开列表不返回该字段。
 - 回复任务、租约和候选意见同样按 `LOGWOOD_MCP_USER_EMAIL` 隔离。
 - `plan`、`renew`、`finalize`、`ignore` 必须携带领取时返回且不出现在任务详情中的随机

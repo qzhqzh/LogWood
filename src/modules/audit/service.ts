@@ -22,6 +22,7 @@ export type AuditTargetType =
   | 'skill'
   | 'target'
   | 'app'
+  | 'visual_asset'
   | 'tag'
   | 'emoji'
   | 'agent_reply_task'

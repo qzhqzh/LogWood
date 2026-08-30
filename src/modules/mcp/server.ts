@@ -5,6 +5,7 @@ import {
   createMcpArticle,
   createMcpReview,
   finalizeMcpReplyTask,
+  getMcpCapabilities,
   getMcpReplyInboxStatus,
   getMcpReplyTask,
   ignoreMcpReplyTask,
@@ -71,6 +72,17 @@ export function createLogWoodMcpServer(
     name: 'logwood',
     version: '0.1.0',
   })
+
+  server.registerTool('logwood_capabilities_get', {
+    title: '发现 LogWood 能力',
+    description: '读取当前 AI/MCP 能力、人工门禁、归属与幂等策略；不会调用模型。',
+    inputSchema: {},
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+    },
+  }, () => runTool(() => getMcpCapabilities(authorUserId)))
 
   server.registerTool('logwood_inspiration_record', {
     title: '记录灵感',
@@ -139,8 +151,8 @@ export function createLogWoodMcpServer(
   }, (input) => runTool(() => createMcpReview(input, authorUserId)))
 
   server.registerTool('logwood_article_publish', {
-    title: '发表经验文章',
-    description: '创建 AI 生成的经验文章；必须记录模型归属，默认保存为草稿。',
+    title: '创建经验文章草稿',
+    description: '兼容旧工具名：创建带完整模型归属的 AI 经验文章草稿；不能直接公开。',
     inputSchema: publishArticleSchema.shape,
     annotations: {
       readOnlyHint: false,

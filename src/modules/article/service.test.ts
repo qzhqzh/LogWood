@@ -1,7 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  ArticleContributionKind,
+  ArticleReviewStatus,
+  ArticleSourceKind,
+  ArticleStatus,
+} from '@prisma/client'
 
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
+const prismaMock = vi.hoisted(() => {
+  const tx = {
+    article: {
+      create: vi.fn(),
+      update: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+    },
+    articleVersion: { create: vi.fn() },
+    articleContribution: { create: vi.fn() },
+    articleSource: { createMany: vi.fn() },
+  }
+  return {
+    tx,
     article: {
       findUnique: vi.fn(),
       create: vi.fn(),
@@ -9,98 +26,180 @@ vi.mock('@/lib/prisma', () => ({
       findMany: vi.fn(),
       count: vi.fn(),
     },
-  },
-}))
+    articleSource: { findFirst: vi.fn(), create: vi.fn() },
+    $transaction: vi.fn(async (operation: (client: typeof tx) => unknown) => operation(tx)),
+  }
+})
 
+vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/modules/like', () => ({
   assessContent: vi.fn(() => ({ flagged: false })),
 }))
 
-import { createArticle, listArticles, updateArticle } from './service'
-import { ArticleStatus } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
-
-const prismaMock = prisma as unknown as {
-  article: {
-    findUnique: ReturnType<typeof vi.fn>
-    create: ReturnType<typeof vi.fn>
-    update: ReturnType<typeof vi.fn>
-    findMany: ReturnType<typeof vi.fn>
-    count: ReturnType<typeof vi.fn>
-  }
-}
+import {
+  createArticle,
+  listArticles,
+  reviewArticle,
+  updateArticle,
+} from './service'
 
 describe('article/service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('creates article with unique slug suffix when collision exists', async () => {
-    prismaMock.article.findUnique
-      .mockResolvedValueOnce({ id: 'existing-id', slug: 'hello-world' })
-      .mockResolvedValueOnce(null)
-
-    prismaMock.article.create.mockResolvedValue({
+  it('creates version, contribution and source records while keeping the article in draft', async () => {
+    prismaMock.article.findUnique.mockResolvedValue(null)
+    prismaMock.tx.article.create.mockResolvedValue({
       id: 'a1',
-      title: 'Hello World',
-      slug: 'hello-world-2',
-      status: ArticleStatus.draft,
-      publishedAt: null,
-      createdAt: new Date('2026-03-10T00:00:00.000Z'),
+      title: 'Agent 实践复盘',
+      excerpt: '协作摘要',
+      content: '<p>协作内容</p>',
+      tags: '["Agent"]',
+      coverImageUrl: null,
     })
+    prismaMock.tx.articleVersion.create.mockResolvedValue({ id: 'v1' })
+    prismaMock.tx.article.findUniqueOrThrow.mockResolvedValue({
+      id: 'a1',
+      slug: 'agent-实践复盘',
+      status: ArticleStatus.draft,
+      reviewStatus: ArticleReviewStatus.pending,
+      currentVersion: 1,
+    })
+    const generatedAt = new Date('2026-07-29T11:55:00.000Z')
 
-    const result = await createArticle(
-      {
-        title: 'Hello World',
-        content: 'This is a test article body with enough content for validation.',
+    const result = await createArticle({
+      title: 'Agent 实践复盘',
+      excerpt: '协作摘要',
+      content: '<p>协作内容</p>',
+      status: ArticleStatus.published,
+      tags: ['Agent', 'Agent'],
+      sources: [{
+        kind: ArticleSourceKind.inspiration,
+        label: '原始灵感',
+        candidateId: 'candidate-1',
+      }],
+      aiAttribution: {
+        provider: 'DeepSeek',
+        model: 'deepseek-v4-pro',
+        modelVersion: '2026-07',
+        generatedAt,
       },
-      'user-1'
-    )
+    }, 'user-1')
 
-    expect(prismaMock.article.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          slug: 'hello-world-2',
-          authorUserId: 'user-1',
-        }),
-      })
-    )
-    expect(result.slug).toBe('hello-world-2')
+    expect(prismaMock.tx.article.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        status: ArticleStatus.draft,
+        reviewStatus: ArticleReviewStatus.pending,
+        currentVersion: 1,
+        approvedVersion: null,
+        tags: '["Agent"]',
+        aiProvider: 'DeepSeek',
+      }),
+    })
+    expect(prismaMock.tx.articleVersion.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ articleId: 'a1', version: 1 }),
+    })
+    expect(prismaMock.tx.articleContribution.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        articleId: 'a1',
+        articleVersionId: 'v1',
+        kind: ArticleContributionKind.ai,
+      }),
+    })
+    expect(prismaMock.tx.articleSource.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({
+        articleId: 'a1',
+        candidateId: 'candidate-1',
+      })],
+    })
+    expect(result.status).toBe(ArticleStatus.draft)
   })
 
-  it('updates publishedAt when moving from draft to published', async () => {
-    prismaMock.article.findUnique
-      .mockResolvedValueOnce({
-        id: 'a1',
-        title: 'Draft title',
-        status: ArticleStatus.draft,
-        publishedAt: null,
-      })
-      .mockResolvedValueOnce(null)
-
-    prismaMock.article.update.mockResolvedValue({
-      id: 'a1',
-      title: 'Published title',
-      slug: 'published-title',
+  it('rejects direct human publication before creating a record', async () => {
+    prismaMock.article.findUnique.mockResolvedValue(null)
+    await expect(createArticle({
+      title: '人工稿',
+      content: '这是一篇尚未审核的人工内容。',
       status: ArticleStatus.published,
-      publishedAt: new Date('2026-03-10T00:00:00.000Z'),
-      updatedAt: new Date('2026-03-10T00:00:00.000Z'),
+    }, 'user-1')).rejects.toThrow('ERR_ARTICLE_REVIEW_REQUIRED')
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+  })
+
+  it('invalidates approval and creates a new version after content changes', async () => {
+    prismaMock.article.findUnique.mockResolvedValue({
+      id: 'a1',
+      title: '已发布文章',
+      excerpt: null,
+      content: '<p>旧内容</p>',
+      tags: '[]',
+      coverImageUrl: null,
+      status: ArticleStatus.published,
+      reviewStatus: ArticleReviewStatus.approved,
+      currentVersion: 2,
+      approvedVersion: 2,
+      publishedAt: new Date('2026-08-01T00:00:00Z'),
+    })
+    prismaMock.tx.article.update.mockResolvedValue({
+      id: 'a1',
+      title: '已发布文章',
+      excerpt: null,
+      content: '<p>新内容</p>',
+      tags: '[]',
+      coverImageUrl: null,
+    })
+    prismaMock.tx.articleVersion.create.mockResolvedValue({ id: 'v3' })
+    prismaMock.tx.article.findUniqueOrThrow.mockResolvedValue({
+      id: 'a1',
+      status: ArticleStatus.draft,
+      reviewStatus: ArticleReviewStatus.pending,
+      currentVersion: 3,
+      approvedVersion: null,
     })
 
     await updateArticle('a1', {
-      title: 'Published title',
-      status: ArticleStatus.published,
+      content: '<p>新内容</p>',
+      changeSummary: '补充验证结果',
+    }, 'editor-1')
+
+    expect(prismaMock.tx.article.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: ArticleStatus.draft,
+        reviewStatus: ArticleReviewStatus.pending,
+        currentVersion: 3,
+        approvedVersion: null,
+        reviewerUserId: null,
+      }),
+    }))
+    expect(prismaMock.tx.articleVersion.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ version: 3, changeSummary: '补充验证结果' }),
+    })
+  })
+
+  it('approves exactly the current version without publishing it', async () => {
+    prismaMock.article.findUnique.mockResolvedValue({
+      id: 'a1',
+      currentVersion: 4,
+      reviewRequestedAt: new Date('2026-08-10T00:00:00Z'),
+    })
+    prismaMock.article.update.mockResolvedValue({
+      id: 'a1',
+      status: ArticleStatus.draft,
+      reviewStatus: ArticleReviewStatus.approved,
+      currentVersion: 4,
+      approvedVersion: 4,
     })
 
-    expect(prismaMock.article.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          status: ArticleStatus.published,
-          publishedAt: expect.any(Date),
-          slug: 'published-title',
-        }),
-      })
-    )
+    await reviewArticle({ id: 'a1', reviewerUserId: 'reviewer-1', action: 'approve' })
+
+    expect(prismaMock.article.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: ArticleStatus.draft,
+        reviewStatus: ArticleReviewStatus.approved,
+        reviewerUserId: 'reviewer-1',
+        approvedVersion: 4,
+      }),
+    }))
   })
 
   it('lists published articles by default', async () => {
@@ -109,83 +208,9 @@ describe('article/service', () => {
 
     const result = await listArticles({})
 
-    expect(prismaMock.article.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { status: ArticleStatus.published },
-      })
-    )
+    expect(prismaMock.article.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { status: ArticleStatus.published },
+    }))
     expect(result.total).toBe(0)
-  })
-
-  it('records complete AI attribution for an AI-authored article', async () => {
-    prismaMock.article.findUnique.mockResolvedValue(null)
-    prismaMock.article.create.mockResolvedValue({
-      id: 'a1',
-      title: 'Agent 实践复盘',
-      slug: 'agent-实践复盘',
-      status: ArticleStatus.draft,
-      publishedAt: null,
-      createdAt: new Date('2026-07-29T12:00:00.000Z'),
-    })
-    const generatedAt = new Date('2026-07-29T11:55:00.000Z')
-
-    await createArticle({
-      title: 'Agent 实践复盘',
-      content: '这是一篇由 Agent 整理并提交的经验文章，包含足够完整的实践上下文。',
-      aiAttribution: {
-        provider: 'OpenAI',
-        model: 'gpt-5.4',
-        modelVersion: '2026-06-01',
-        generatedAt,
-      },
-    }, 'user-1')
-
-    expect(prismaMock.article.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          aiProvider: 'OpenAI',
-          aiModel: 'gpt-5.4',
-          aiModelVersion: '2026-06-01',
-          aiGeneratedAt: generatedAt,
-        }),
-      }),
-    )
-  })
-
-  it('keeps flagged AI content as a draft', async () => {
-    const { assessContent } = await import('@/modules/like')
-    vi.mocked(assessContent).mockReturnValueOnce({
-      flagged: true,
-      reason: 'sensitive_word',
-    })
-    prismaMock.article.findUnique.mockResolvedValue(null)
-    prismaMock.article.create.mockResolvedValue({
-      id: 'a1',
-      title: 'Agent 文章',
-      slug: 'agent-文章',
-      status: ArticleStatus.draft,
-      publishedAt: null,
-      createdAt: new Date('2026-07-29T12:00:00.000Z'),
-    })
-
-    await createArticle({
-      title: 'Agent 文章',
-      content: '这是一篇由 Agent 整理并提交的经验文章，包含足够完整的实践上下文。',
-      status: ArticleStatus.published,
-      aiAttribution: {
-        provider: 'OpenAI',
-        model: 'gpt-5.4',
-        modelVersion: '2026-06-01',
-      },
-    }, 'user-1')
-
-    expect(prismaMock.article.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          status: ArticleStatus.draft,
-          publishedAt: null,
-        }),
-      }),
-    )
   })
 })

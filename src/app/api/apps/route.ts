@@ -134,6 +134,9 @@ export async function PATCH(request: NextRequest) {
     if (error instanceof Error && error.message === 'ERR_APP_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
+    if (error instanceof Error && error.message === 'ERR_APP_RIGHTS_REVIEW_REQUIRED') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
 
     console.error('PATCH /api/apps error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

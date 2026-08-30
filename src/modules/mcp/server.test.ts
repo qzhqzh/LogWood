@@ -8,6 +8,7 @@ const actionMocks = vi.hoisted(() => ({
   createMcpArticle: vi.fn(),
   createMcpReview: vi.fn(),
   finalizeMcpReplyTask: vi.fn(),
+  getMcpCapabilities: vi.fn(),
   getMcpReplyInboxStatus: vi.fn(),
   getMcpReplyTask: vi.fn(),
   ignoreMcpReplyTask: vi.fn(),
@@ -16,6 +17,7 @@ const actionMocks = vi.hoisted(() => ({
   promoteMcpInspirationToApp: vi.fn(),
   promoteMcpInspirationToSkill: vi.fn(),
   recordMcpInspiration: vi.fn(),
+  renewMcpReplyTask: vi.fn(),
   updateMcpInspiration: vi.fn(),
 }))
 
@@ -49,6 +51,7 @@ describe('mcp/server', () => {
     const result = await client.listTools()
 
     expect(result.tools.map((tool) => tool.name)).toEqual([
+      'logwood_capabilities_get',
       'logwood_inspiration_record',
       'logwood_inspiration_list',
       'logwood_inspiration_update',

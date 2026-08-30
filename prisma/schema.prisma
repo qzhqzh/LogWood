@@ -119,6 +119,38 @@ enum ArticleStatus {
   archived
 }
 
+enum ArticleReviewStatus {
+  pending
+  approved
+  changes_requested
+}
+
+enum ArticleSourceKind {
+  inspiration
+  reference
+  evidence
+  review
+  evaluation
+}
+
+enum ArticleContributionKind {
+  human
+  ai
+}
+
+enum AssetRightsStatus {
+  review_required
+  owned
+  licensed
+  restricted
+}
+
+enum ForgeRequestStatus {
+  processing
+  completed
+  failed
+}
+
 enum ReportTargetType {
   review
   comment
@@ -150,114 +182,121 @@ enum ActorType {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
+  id            String    @id @default(cuid())
+  email         String    @unique
   name          String?
   image         String?
   avatarUrl     String?
   emailVerified DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  reviews       Review[]
-  evaluations   Evaluation[]
-  comments      Comment[]
-  reviewLikes   ReviewLike[]
-  commentLikes  CommentLike[]
-  articleLikes  ArticleLike[]
-  reports       Report[]
-  articles      Article[]
-  apps          App[]
-  skills        Skill[]
-  candidates    Candidate[]
-  articleComments ArticleComment[]
-  accounts      Account[]
-  sessions      Session[]
-  adminAuditLogs AdminAuditLog[]
-  agentReplyTasks AgentReplyTask[]
-  candidateInterests CandidateInterest[]
+  reviews              Review[]
+  evaluations          Evaluation[]
+  comments             Comment[]
+  reviewLikes          ReviewLike[]
+  commentLikes         CommentLike[]
+  articleLikes         ArticleLike[]
+  reports              Report[]
+  articles             Article[]
+  apps                 App[]
+  skills               Skill[]
+  candidates           Candidate[]
+  articleComments      ArticleComment[]
+  accounts             Account[]
+  sessions             Session[]
+  adminAuditLogs       AdminAuditLog[]
+  agentReplyTasks      AgentReplyTask[]
+  reviewedArticles     Article[]             @relation("ArticleReviewer")
+  articleVersions      ArticleVersion[]      @relation("ArticleVersionEditor")
+  articleContributions ArticleContribution[] @relation("ArticleContributionActor")
+  forgeDraftRequests   ForgeDraftRequest[]
+  candidateInterests   CandidateInterest[]
 
   @@map("users")
 }
 
 model AnonymousUser {
-  id                  String   @id @default(cuid())
-  deviceFingerprint   String   @unique
-  displayName         String
-  sequenceNumber      Int      @unique
-  riskLevel           Int      @default(0)
-  lastSeenAt          DateTime @default(now())
-  createdAt           DateTime @default(now())
+  id                String   @id @default(cuid())
+  deviceFingerprint String   @unique
+  displayName       String
+  sequenceNumber    Int      @unique
+  riskLevel         Int      @default(0)
+  lastSeenAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
 
-  reviews             Review[]
-  comments            Comment[]
-  reviewLikes         ReviewLike[]
-  commentLikes        CommentLike[]
-  articleLikes        ArticleLike[]
-  reports             Report[]
-  articleComments     ArticleComment[]
-  candidateInterests  CandidateInterest[]
+  reviews         Review[]
+  comments        Comment[]
+  reviewLikes     ReviewLike[]
+  commentLikes    CommentLike[]
+  articleLikes    ArticleLike[]
+  reports         Report[]
+  articleComments ArticleComment[]
+  candidateInterests CandidateInterest[]
 
   @@map("anonymous_users")
 }
 
 model Target {
-  id               String       @id @default(cuid())
-  name             String
-  slug             String       @unique
-  type             TargetType
-  logoUrl          String?
-  description      String?
-  websiteUrl       String?
-  developer        String?
-  features         String
+  id              String     @id @default(cuid())
+  name            String
+  slug            String     @unique
+  type            TargetType
+  logoUrl         String?
+  description     String?
+  websiteUrl      String?
+  developer       String?
+  features        String
   // Skill 室扩展字段（可空，兼容历史行）
-  previewImageUrl  String?
-  sourceUrl        String?
-  compareGroup     String?
-  createdAt        DateTime     @default(now())
+  previewImageUrl String?
+  sourceUrl       String?
+  compareGroup    String?
+  createdAt       DateTime   @default(now())
   // Default to now() so existing rows get a non-null value during the
   // additive `prisma db push`. Auto-updates on every write thereafter.
-  updatedAt        DateTime     @default(now()) @updatedAt
+  updatedAt       DateTime   @default(now()) @updatedAt
 
-  reviews          Review[]
-  evaluations      Evaluation[]
+  reviews            Review[]
+  evaluations        Evaluation[]
+  promotedCandidates Candidate[]     @relation("CandidatePromotedTarget")
+  articleSources     ArticleSource[]
 
   @@index([compareGroup])
   @@map("targets")
 }
 
 model Review {
-  id               String        @id @default(cuid())
-  userId           String?
-  anonymousUserId  String?
+  id              String       @id @default(cuid())
+  userId          String?
+  anonymousUserId String?
   /// Exactly one of targetId / skillId / appId / candidateId should be set (enforced in service).
-  targetId         String?
-  skillId          String?
-  appId            String?
-  candidateId      String?
-  content          String
-  rating           Int
-  language         String        @default("zh")
-  status           ReviewStatus  @default(published)
+  targetId        String?
+  skillId         String?
+  appId           String?
+  candidateId     String?
+  content         String
+  rating          Int
+  language        String       @default("zh")
+  status          ReviewStatus @default(published)
   aiProvider      String?
   aiModel         String?
   aiModelVersion  String?
   aiGeneratedAt   DateTime?
-  qualityScore     Int           @default(0)
-  likesCount       Int           @default(0)
-  reportsCount     Int           @default(0)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  qualityScore    Int          @default(0)
+  likesCount      Int          @default(0)
+  reportsCount    Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  user             User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  anonymousUser    AnonymousUser? @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
-  target           Target?       @relation(fields: [targetId], references: [id], onDelete: Cascade)
-  skill            Skill?        @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  app              App?          @relation(fields: [appId], references: [id], onDelete: Cascade)
-  candidate        Candidate?    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  likes            ReviewLike[]
-  comments         Comment[]
+  user           User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anonymousUser  AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  target         Target?         @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  skill          Skill?          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  app            App?            @relation(fields: [appId], references: [id], onDelete: Cascade)
+  candidate      Candidate?      @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  likes          ReviewLike[]
+  comments       Comment[]
+  articleSources ArticleSource[]
 
   @@index([targetId])
   @@index([skillId])
@@ -276,40 +315,41 @@ model Review {
 /// Subject deletion is restricted so formal evidence cannot disappear through
 /// a cascading delete; archive/migrate the Evaluation explicitly first.
 model Evaluation {
-  id                String                     @id @default(cuid())
-  authorUserId      String?
-  targetId          String?
-  skillId           String?
-  appId             String?
-  candidateId       String?
-  title             String
-  protocol          EvaluationProtocol
-  protocolVersion   Int                        @default(2)
-  status            EvaluationStatus           @default(draft)
-  verdict           EvaluationVerdict          @default(inconclusive)
-  reproducibility   EvaluationReproducibility  @default(untested)
-  subjectVersion    String?
-  task              String
-  environment       Json?
-  input              String?
-  procedure          String?
-  output             String?
-  evidence           Json?
-  scores             Json?
-  strengths          String?
-  limitations        String?
-  conclusion         String
-  repeatCount        Int                        @default(1)
-  testedAt           DateTime                   @default(now())
-  publishedAt        DateTime?
-  createdAt          DateTime                   @default(now())
-  updatedAt          DateTime                   @updatedAt
+  id              String                    @id @default(cuid())
+  authorUserId    String?
+  targetId        String?
+  skillId         String?
+  appId           String?
+  candidateId     String?
+  title           String
+  protocol        EvaluationProtocol
+  protocolVersion Int                       @default(2)
+  status          EvaluationStatus          @default(draft)
+  verdict         EvaluationVerdict         @default(inconclusive)
+  reproducibility EvaluationReproducibility @default(untested)
+  subjectVersion  String?
+  task            String
+  environment     Json?
+  input           String?
+  procedure       String?
+  output          String?
+  evidence        Json?
+  scores          Json?
+  strengths       String?
+  limitations     String?
+  conclusion      String
+  repeatCount     Int                       @default(1)
+  testedAt        DateTime                  @default(now())
+  publishedAt     DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
 
-  author             User?                      @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
-  target             Target?                    @relation(fields: [targetId], references: [id], onDelete: Restrict)
-  skill              Skill?                     @relation(fields: [skillId], references: [id], onDelete: Restrict)
-  app                App?                       @relation(fields: [appId], references: [id], onDelete: Restrict)
-  candidate          Candidate?                 @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+  author         User?           @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  target         Target?         @relation(fields: [targetId], references: [id], onDelete: Restrict)
+  skill          Skill?          @relation(fields: [skillId], references: [id], onDelete: Restrict)
+  app            App?            @relation(fields: [appId], references: [id], onDelete: Restrict)
+  candidate      Candidate?      @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+  articleSources ArticleSource[]
 
   @@index([targetId])
   @@index([skillId])
@@ -322,15 +362,15 @@ model Evaluation {
 }
 
 model ReviewLike {
-  id               String        @id @default(cuid())
-  reviewId         String
-  userId           String?
-  anonymousUserId  String?
-  createdAt        DateTime      @default(now())
+  id              String   @id @default(cuid())
+  reviewId        String
+  userId          String?
+  anonymousUserId String?
+  createdAt       DateTime @default(now())
 
-  review           Review        @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  user             User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  anonymousUser    AnonymousUser? @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  review        Review         @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anonymousUser AnonymousUser? @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, userId])
   @@unique([reviewId, anonymousUserId])
@@ -339,32 +379,32 @@ model ReviewLike {
 }
 
 model Comment {
-  id               String          @id @default(cuid())
-  reviewId         String
-  userId           String?
-  anonymousUserId  String?
+  id              String        @id @default(cuid())
+  reviewId        String
+  userId          String?
+  anonymousUserId String?
   parentId        String?
   threadRootId    String?
-  content          String
-  language         String          @default("zh")
-  status           CommentStatus   @default(published)
+  content         String
+  language        String        @default("zh")
+  status          CommentStatus @default(published)
   aiProvider      String?
   aiModel         String?
   aiModelVersion  String?
   aiGeneratedAt   DateTime?
   aiAgentId       String?
-  likesCount       Int             @default(0)
-  reportsCount     Int             @default(0)
-  createdAt        DateTime        @default(now())
+  likesCount      Int           @default(0)
+  reportsCount    Int           @default(0)
+  createdAt       DateTime      @default(now())
 
-  review           Review          @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  anonymousUser    AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  review            Review          @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user              User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anonymousUser     AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
   parent            Comment?        @relation("ReviewCommentThread", fields: [parentId], references: [id], onDelete: SetNull)
   replies           Comment[]       @relation("ReviewCommentThread")
   incomingReplyTask AgentReplyTask? @relation("ReviewReplyIncoming")
   outgoingReplyTask AgentReplyTask? @relation("ReviewReplyOutgoing")
-  likes            CommentLike[]
+  likes             CommentLike[]
 
   @@index([reviewId])
   @@index([parentId])
@@ -374,15 +414,15 @@ model Comment {
 }
 
 model CommentLike {
-  id               String          @id @default(cuid())
-  commentId        String
-  userId           String?
-  anonymousUserId  String?
-  createdAt        DateTime        @default(now())
+  id              String   @id @default(cuid())
+  commentId       String
+  userId          String?
+  anonymousUserId String?
+  createdAt       DateTime @default(now())
 
-  comment          Comment         @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  anonymousUser    AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  comment       Comment        @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anonymousUser AnonymousUser? @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
 
   @@unique([commentId, userId])
   @@unique([commentId, anonymousUserId])
@@ -391,44 +431,140 @@ model CommentLike {
 }
 
 model Article {
-  id            String        @id @default(cuid())
-  title         String
-  slug          String        @unique
-  columnId      String?
-  excerpt       String?
-  content       String
-  tags          String        @default("[]")
-  coverImageUrl String?
-  status        ArticleStatus @default(draft)
-  authorUserId  String?
-  aiProvider     String?
-  aiModel        String?
-  aiModelVersion String?
-  aiGeneratedAt  DateTime?
-  publishedAt   DateTime?
-  viewCount     Int           @default(0)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                String              @id @default(cuid())
+  title             String
+  slug              String              @unique
+  columnId          String?
+  excerpt           String?
+  content           String
+  tags              String              @default("[]")
+  coverImageUrl     String?
+  status            ArticleStatus       @default(draft)
+  reviewStatus      ArticleReviewStatus @default(pending)
+  currentVersion    Int                 @default(1)
+  approvedVersion   Int?
+  authorUserId      String?
+  reviewerUserId    String?
+  aiProvider        String?
+  aiModel           String?
+  aiModelVersion    String?
+  aiGeneratedAt     DateTime?
+  reviewRequestedAt DateTime?
+  reviewedAt        DateTime?
+  publishedAt       DateTime?
+  viewCount         Int                 @default(0)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 
-  author        User?         @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
-  column        ArticleColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
-  comments      ArticleComment[]
-  likes         ArticleLike[]
+  author             User?                 @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  reviewer           User?                 @relation("ArticleReviewer", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+  column             ArticleColumn?        @relation(fields: [columnId], references: [id], onDelete: SetNull)
+  comments           ArticleComment[]
+  likes              ArticleLike[]
+  sources            ArticleSource[]
+  versions           ArticleVersion[]
+  contributions      ArticleContribution[]
+  forgeDraftRequests ForgeDraftRequest[]
 
   @@index([columnId])
   @@index([status, publishedAt])
+  @@index([reviewStatus, updatedAt])
+  @@index([reviewerUserId])
   @@index([createdAt])
   @@map("articles")
 }
 
-model ArticleColumn {
-  id        String    @id @default(cuid())
-  name      String
-  slug      String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+model ArticleSource {
+  id             String            @id @default(cuid())
+  articleId      String
+  kind           ArticleSourceKind
+  label          String
+  candidateId    String?
+  skillId        String?
+  targetId       String?
+  appId          String?
+  evaluationId   String?
+  reviewId       String?
+  sourceUrl      String?
+  sourceSnapshot Json?
+  createdAt      DateTime          @default(now())
 
-  articles  Article[]
+  article    Article     @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  candidate  Candidate?  @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+  skill      Skill?      @relation(fields: [skillId], references: [id], onDelete: Restrict)
+  target     Target?     @relation(fields: [targetId], references: [id], onDelete: Restrict)
+  app        App?        @relation(fields: [appId], references: [id], onDelete: Restrict)
+  evaluation Evaluation? @relation(fields: [evaluationId], references: [id], onDelete: Restrict)
+  review     Review?     @relation(fields: [reviewId], references: [id], onDelete: Restrict)
+
+  @@index([articleId, kind])
+  @@index([candidateId])
+  @@index([skillId])
+  @@index([targetId])
+  @@index([appId])
+  @@index([evaluationId])
+  @@index([reviewId])
+  @@map("article_sources")
+}
+
+model ArticleVersion {
+  id             String    @id @default(cuid())
+  articleId      String
+  version        Int
+  title          String
+  excerpt        String?
+  content        String
+  tags           String    @default("[]")
+  coverImageUrl  String?
+  editorUserId   String?
+  aiProvider     String?
+  aiModel        String?
+  aiModelVersion String?
+  aiGeneratedAt  DateTime?
+  changeSummary  String?
+  createdAt      DateTime  @default(now())
+
+  article       Article               @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  editor        User?                 @relation("ArticleVersionEditor", fields: [editorUserId], references: [id], onDelete: SetNull)
+  contributions ArticleContribution[]
+
+  @@unique([articleId, version])
+  @@index([editorUserId])
+  @@map("article_versions")
+}
+
+model ArticleContribution {
+  id               String                  @id @default(cuid())
+  articleId        String
+  articleVersionId String?
+  actorUserId      String?
+  kind             ArticleContributionKind
+  role             String
+  summary          String?
+  aiProvider       String?
+  aiModel          String?
+  aiModelVersion   String?
+  aiGeneratedAt    DateTime?
+  createdAt        DateTime                @default(now())
+
+  article        Article         @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleVersion ArticleVersion? @relation(fields: [articleVersionId], references: [id], onDelete: SetNull)
+  actor          User?           @relation("ArticleContributionActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([articleId, createdAt])
+  @@index([articleVersionId])
+  @@index([actorUserId])
+  @@map("article_contributions")
+}
+
+model ArticleColumn {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  articles Article[]
 
   @@map("article_columns")
 }
@@ -479,14 +615,20 @@ model Skill {
   tags           String      @default("[]")
   status         SkillStatus @default(published)
   authorUserId   String?
+  aiProvider     String?
+  aiModel        String?
+  aiModelVersion String?
+  aiGeneratedAt  DateTime?
   sortOrder      Int         @default(0)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  author         User?       @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
-  reviews        Review[]
-  evaluations    Evaluation[]
-  promotedCandidates Candidate[] @relation("CandidatePromotedSkill")
+  author             User?               @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  reviews            Review[]
+  evaluations        Evaluation[]
+  promotedCandidates Candidate[]         @relation("CandidatePromotedSkill")
+  articleSources     ArticleSource[]
+  forgeDraftRequests ForgeDraftRequest[]
 
   @@index([status, category, sortOrder])
   @@index([status, updatedAt])
@@ -494,35 +636,41 @@ model Skill {
 }
 
 model Candidate {
-  id                String               @id @default(cuid())
-  title             String
-  slug              String               @unique
-  summary           String?
-  rawContent        String?
-  websiteUrl        String?
-  sourceUrl         String?
-  logoUrl           String?
-  previewImageUrl   String?
-  tags              String               @default("[]")
-  status            CandidateStatus      @default(watching)
-  sortOrder         Int                  @default(0)
-  promotedTo        CandidatePromoteTo?
-  promotedTargetId  String?
-  promotedSkillId   String?
-  promotedAppId     String?
-  authorUserId      String?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  id               String              @id @default(cuid())
+  title            String
+  slug             String              @unique
+  summary          String?
+  rawContent       String?
+  websiteUrl       String?
+  sourceUrl        String?
+  logoUrl          String?
+  previewImageUrl  String?
+  tags             String              @default("[]")
+  status           CandidateStatus     @default(watching)
+  sortOrder        Int                 @default(0)
+  promotedTo       CandidatePromoteTo?
+  promotedTargetId String?
+  promotedSkillId  String?
+  promotedAppId    String?
+  authorUserId     String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
-  author            User?                @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
-  promotedSkill     Skill?               @relation("CandidatePromotedSkill", fields: [promotedSkillId], references: [id], onDelete: Restrict)
-  reviews           Review[]
-  evaluations       Evaluation[]
-  interests         CandidateInterest[]
+  author         User?           @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  promotedTarget Target?         @relation("CandidatePromotedTarget", fields: [promotedTargetId], references: [id], onDelete: Restrict)
+  promotedSkill  Skill?          @relation("CandidatePromotedSkill", fields: [promotedSkillId], references: [id], onDelete: Restrict)
+  promotedApp    App?            @relation("CandidatePromotedApp", fields: [promotedAppId], references: [id], onDelete: Restrict)
+  reviews        Review[]
+  evaluations    Evaluation[]
+  articleSources ArticleSource[]
+  visualAssets   VisualAsset[]
+  interests      CandidateInterest[]
 
   @@index([status, sortOrder])
   @@index([status, updatedAt])
+  @@index([promotedTargetId])
   @@index([promotedSkillId])
+  @@index([promotedAppId])
   @@map("candidates")
 }
 
@@ -567,36 +715,96 @@ model App {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  author          User?     @relation(fields: [authorUserId], references: [id])
-  reviews         Review[]
-  evaluations     Evaluation[]
+  author             User?           @relation(fields: [authorUserId], references: [id])
+  reviews            Review[]
+  evaluations        Evaluation[]
+  promotedCandidates Candidate[]     @relation("CandidatePromotedApp")
+  articleSources     ArticleSource[]
+  visualAssets       VisualAsset[]
 
   @@index([status, createdAt])
   @@map("apps")
 }
 
+model VisualAsset {
+  id               String            @id @default(cuid())
+  candidateId      String?
+  appId            String?
+  sourceCollection String
+  sourcePath       String
+  storageUrl       String
+  originalSha256   String            @unique
+  derivedSha256    String
+  perceptualHash   String?
+  width            Int
+  height           Int
+  mimeType         String
+  rightsStatus     AssetRightsStatus @default(review_required)
+  rightsNote       String?
+  importedAt       DateTime          @default(now())
+
+  candidate Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+  app       App?       @relation(fields: [appId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId])
+  @@index([appId])
+  @@index([rightsStatus])
+  @@map("visual_assets")
+}
+
+model ForgeDraftRequest {
+  id              String             @id @default(cuid())
+  ownerUserId     String
+  idempotencyKey  String
+  inputHash       String
+  kind            String
+  mode            String
+  status          ForgeRequestStatus @default(processing)
+  attempts        Int                @default(1)
+  resultArticleId String?
+  resultSkillId   String?
+  resultPayload   Json?
+  aiProvider      String?
+  aiModel         String?
+  aiModelVersion  String?
+  aiGeneratedAt   DateTime?
+  errorCode       String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  owner         User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  resultArticle Article? @relation(fields: [resultArticleId], references: [id], onDelete: SetNull)
+  resultSkill   Skill?   @relation(fields: [resultSkillId], references: [id], onDelete: SetNull)
+
+  @@unique([ownerUserId, idempotencyKey])
+  @@index([status, updatedAt])
+  @@index([resultArticleId])
+  @@index([resultSkillId])
+  @@map("forge_draft_requests")
+}
+
 model ArticleComment {
-  id               String          @id @default(cuid())
-  articleId        String
-  userId           String?
-  anonymousUserId  String?
+  id              String        @id @default(cuid())
+  articleId       String
+  userId          String?
+  anonymousUserId String?
   parentId        String?
   threadRootId    String?
-  content          String
-  language         String          @default("zh")
-  status           CommentStatus   @default(published)
+  content         String
+  language        String        @default("zh")
+  status          CommentStatus @default(published)
   aiProvider      String?
   aiModel         String?
   aiModelVersion  String?
   aiGeneratedAt   DateTime?
   aiAgentId       String?
-  likesCount       Int             @default(0)
-  reportsCount     Int             @default(0)
-  createdAt        DateTime        @default(now())
+  likesCount      Int           @default(0)
+  reportsCount    Int           @default(0)
+  createdAt       DateTime      @default(now())
 
-  article          Article         @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  anonymousUser    AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  article           Article          @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user              User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anonymousUser     AnonymousUser?   @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
   parent            ArticleComment?  @relation("ArticleCommentThread", fields: [parentId], references: [id], onDelete: SetNull)
   replies           ArticleComment[] @relation("ArticleCommentThread")
   incomingReplyTask AgentReplyTask?  @relation("ArticleReplyIncoming")
@@ -672,15 +880,15 @@ model AgentReplyContribution {
 }
 
 model ArticleLike {
-  id               String          @id @default(cuid())
-  articleId        String
-  userId           String?
-  anonymousUserId  String?
-  createdAt        DateTime        @default(now())
+  id              String   @id @default(cuid())
+  articleId       String
+  userId          String?
+  anonymousUserId String?
+  createdAt       DateTime @default(now())
 
-  article          Article         @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  anonymousUser    AnonymousUser?  @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  article       Article        @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anonymousUser AnonymousUser? @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
 
   @@unique([articleId, userId])
   @@unique([articleId, anonymousUserId])
@@ -689,18 +897,18 @@ model ArticleLike {
 }
 
 model Report {
-  id                    String              @id @default(cuid())
-  targetType            ReportTargetType
-  targetId              String
-  reason                String
-  reporterUserId        String?
-  reporterAnonymousId   String?
-  status                ReportStatus        @default(open)
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  id                  String           @id @default(cuid())
+  targetType          ReportTargetType
+  targetId            String
+  reason              String
+  reporterUserId      String?
+  reporterAnonymousId String?
+  status              ReportStatus     @default(open)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
-  user                  User?               @relation(fields: [reporterUserId], references: [id], onDelete: Cascade)
-  anonymousUser         AnonymousUser?      @relation(fields: [reporterAnonymousId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [reporterUserId], references: [id], onDelete: Cascade)
+  anonymousUser AnonymousUser? @relation(fields: [reporterAnonymousId], references: [id], onDelete: Cascade)
 
   @@index([targetType, targetId])
   @@index([status])
@@ -708,13 +916,13 @@ model Report {
 }
 
 model RateLimit {
-  id          String          @id @default(cuid())
-  action      RateLimitAction
-  actorType   ActorType
-  actorKey    String
-  windowDate  DateTime
-  count       Int             @default(0)
-  updatedAt   DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  action     RateLimitAction
+  actorType  ActorType
+  actorKey   String
+  windowDate DateTime
+  count      Int             @default(0)
+  updatedAt  DateTime        @updatedAt
 
   @@unique([action, actorType, actorKey, windowDate])
   @@index([action, actorType, actorKey])
@@ -727,13 +935,13 @@ model RateLimit {
 model AdminAuditLog {
   id          String   @id @default(cuid())
   actorUserId String
-  action      String   // e.g. 'article.delete', 'comment.hide', 'target.delete', 'evaluation.update'
-  targetType  String   // 'article' | 'comment' | 'review' | 'evaluation' | 'target' | 'app' | 'tag' | 'emoji'
+  action      String // e.g. 'article.delete', 'comment.hide', 'target.delete', 'evaluation.update'
+  targetType  String // 'article' | 'comment' | 'review' | 'evaluation' | 'target' | 'app' | 'tag' | 'emoji'
   targetId    String
-  metadata    String?  // JSON-encoded extra context
+  metadata    String? // JSON-encoded extra context
   createdAt   DateTime @default(now())
 
-  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
 
   @@index([targetType, targetId])
   @@index([actorUserId, createdAt])
@@ -752,7 +960,7 @@ model VerificationToken {
 }
 
 model Account {
-  id                String  @id @default(cuid())
+  id                String   @id @default(cuid())
   userId            String
   type              String
   provider          String
@@ -767,7 +975,7 @@ model Account {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -782,7 +990,7 @@ model Session {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")

@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { isAdminSession } from '@/lib/authz'
 import { deleteSubjectWithHistoryGuard } from '@/modules/evaluation'
+import { PROMPT_OUTPUT_KINDS } from '@/modules/skill/constants'
 import {
   createSkill,
   deleteSkill,
@@ -43,6 +44,7 @@ const skillBodySchema = z.object({
   effectNote: z.string().max(500).optional(),
   sourceUrl: optionalHttpUrl,
   tags: z.array(z.string().min(1).max(30)).optional(),
+  outputKind: z.enum(PROMPT_OUTPUT_KINDS).optional(),
   status: z.nativeEnum(SkillStatus).optional(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
 })

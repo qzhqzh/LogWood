@@ -9,6 +9,10 @@ import * as z from 'zod'
 import { authOptions } from '@/lib/auth'
 import { fileMatchesMime } from '@/lib/file-signature'
 import { logger } from '@/lib/logger'
+import {
+  candidatePreviewClientUrl,
+  persistPrivateCandidatePreview,
+} from '@/lib/private-candidate-preview'
 import { createCandidate } from '@/modules/candidate'
 import { assessContent } from '@/modules/like'
 import { checkAndConsume } from '@/modules/rate-limit'
@@ -27,6 +31,8 @@ const EXTENSION_BY_MIME: Record<string, string> = {
 const fieldsSchema = z.object({
   title: z.string().trim().min(2).max(120),
   note: z.string().trim().max(1000).optional(),
+  prompt: z.string().trim().max(50000).optional(),
+  privateDraft: z.enum(['0', '1']).default('0').transform((value) => value === '1'),
   tags: z.string().transform((value, context) => {
     const tags = Array.from(new Set(
       value
@@ -79,9 +85,16 @@ export async function POST(request: Request) {
     const fields = fieldsSchema.parse({
       title: form.get('title'),
       note: form.get('note') || undefined,
+      prompt: form.get('prompt') || undefined,
+      privateDraft: form.get('privateDraft') || '0',
       tags: form.get('tags') || '',
     })
-    if (assessContent([fields.title, fields.note, ...fields.tags].join('\n')).flagged) {
+    if (assessContent([
+      fields.title,
+      fields.note,
+      fields.prompt,
+      ...fields.tags,
+    ].filter(Boolean).join('\n')).flagged) {
       return NextResponse.json({ error: 'ERR_IMAGE_CONTENT_REJECTED' }, { status: 400 })
     }
     const limit = await checkAndConsume('candidate_idea_create', {
@@ -121,20 +134,39 @@ export async function POST(request: Request) {
     }
 
     const fileName = `${Date.now()}-${randomUUID()}.${ext}`
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'candidates')
-    absolutePath = path.join(uploadDir, fileName)
-    await mkdir(uploadDir, { recursive: true })
-    await writeFile(absolutePath, safeBuffer)
+    let previewImageUrl: string
+    if (fields.privateDraft) {
+      const location = await persistPrivateCandidatePreview({ fileName, buffer: safeBuffer })
+      absolutePath = location.absolutePath
+      previewImageUrl = location.reference
+    } else {
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'candidates')
+      absolutePath = path.join(uploadDir, fileName)
+      await mkdir(uploadDir, { recursive: true })
+      await writeFile(absolutePath, safeBuffer)
+      previewImageUrl = `/uploads/candidates/${fileName}`
+    }
 
     const candidate = await createCandidate({
       title: fields.title,
       summary: fields.note,
-      previewImageUrl: `/uploads/candidates/${fileName}`,
+      rawContent: fields.prompt,
+      previewImageUrl,
       tags: fields.tags,
+      visibility: fields.privateDraft ? 'private' : 'public',
     }, session.user.id)
+    // Once the database points at this file, rollback must stop. Revalidation
+    // failures must never leave an existing Candidate with a missing preview.
+    absolutePath = undefined
 
     revalidatePath('/candidates')
-    return NextResponse.json({ candidate }, { status: 201 })
+    revalidatePath('/workbench')
+    return NextResponse.json({
+      candidate: {
+        ...candidate,
+        previewImageUrl: candidatePreviewClientUrl(candidate.id, candidate.previewImageUrl),
+      },
+    }, { status: 201 })
   } catch (error) {
     if (absolutePath) {
       await unlink(absolutePath).catch(() => undefined)

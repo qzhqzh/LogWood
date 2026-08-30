@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { ArticleStatus } from '@prisma/client'
+import { ArticleSourceKind, ArticleStatus } from '@prisma/client'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
@@ -23,6 +23,18 @@ const createArticleSchema = z.object({
     z.string().url().optional()
   ),
   status: z.nativeEnum(ArticleStatus).optional(),
+  sources: z.array(z.object({
+    kind: z.nativeEnum(ArticleSourceKind),
+    label: z.string().trim().min(1).max(160),
+    candidateId: z.string().min(1).optional(),
+    skillId: z.string().min(1).optional(),
+    targetId: z.string().min(1).optional(),
+    appId: z.string().min(1).optional(),
+    evaluationId: z.string().min(1).optional(),
+    reviewId: z.string().min(1).optional(),
+    sourceUrl: z.string().url().optional(),
+  })).max(24).optional(),
+  changeSummary: z.string().trim().max(500).optional(),
 })
 
 export async function GET(request: NextRequest) {
@@ -85,7 +97,6 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
-
     const body = await request.json()
     const validated = createArticleSchema.parse(body)
 
@@ -99,6 +110,12 @@ export async function POST(request: NextRequest) {
         { error: 'ERR_ARTICLE_VALIDATION', details: error.errors },
         { status: 400 }
       )
+    }
+    if (error instanceof Error && error.message === 'ERR_ARTICLE_REVIEW_REQUIRED') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+    if (error instanceof Error && error.message === 'ERR_ARTICLE_SOURCE_INVALID') {
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
     console.error('POST /api/articles error:', error)

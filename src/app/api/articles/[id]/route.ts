@@ -4,7 +4,7 @@ import { ArticleStatus } from '@prisma/client'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
-import { deleteArticle, getArticleByIdForManage, updateArticle } from '@/modules/article'
+import { archiveArticle, getArticleByIdForManage, updateArticle } from '@/modules/article'
 import { isAdminSession } from '@/lib/authz'
 import { recordAdminAction } from '@/modules/audit'
 
@@ -23,6 +23,7 @@ const updateSchema = z.object({
     z.string().url().optional()
   ),
   status: z.nativeEnum(ArticleStatus).optional(),
+  changeSummary: z.string().trim().max(500).optional(),
 })
 
 export async function GET(
@@ -66,7 +67,7 @@ export async function PATCH(
     const body = await request.json()
     const validated = updateSchema.parse(body)
 
-    const result = await updateArticle(params.id, validated)
+    const result = await updateArticle(params.id, validated, session.user.id)
     if (!result) {
       return NextResponse.json({ error: 'ERR_ARTICLE_NOT_FOUND' }, { status: 404 })
     }
@@ -94,6 +95,9 @@ export async function PATCH(
         { status: 400 }
       )
     }
+    if (error instanceof Error && error.message === 'ERR_ARTICLE_REVIEW_REQUIRED') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
 
     console.error('PATCH /api/articles/:id error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -113,21 +117,21 @@ export async function DELETE(
       return NextResponse.json({ error: 'ERR_FORBIDDEN' }, { status: 403 })
     }
 
-    const result = await deleteArticle(params.id)
+    const result = await archiveArticle(params.id)
     if (!result) {
       return NextResponse.json({ error: 'ERR_ARTICLE_NOT_FOUND' }, { status: 404 })
     }
 
     await recordAdminAction({
       actorUserId: session.user.id,
-      action: 'article.delete',
+      action: 'article.archive',
       targetType: 'article',
       targetId: params.id,
     })
 
     revalidatePath('/articles')
     revalidatePath('/')
-    return NextResponse.json(result)
+    return NextResponse.json({ id: result.id })
   } catch (error) {
     console.error('DELETE /api/articles/:id error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
