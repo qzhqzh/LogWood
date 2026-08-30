@@ -5,9 +5,8 @@ node_modules
 npm-debug.log
 Dockerfile*
 docker-compose*.yml
-.env
-.env.local
-package-lock.json
+.env*
+!.env.example
 bun.lockb
 bun.lock
 data
