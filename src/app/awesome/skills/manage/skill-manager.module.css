@@ -1,0 +1,353 @@
+.page {
+  min-height: 100vh;
+  color: var(--color-fg);
+  background: var(--color-bg);
+}
+
+.shell {
+  border-top: 1px solid var(--color-border-strong);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding: clamp(1.25rem, 3vw, 3rem);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.header p,
+.access p {
+  margin: 0 0 0.6rem;
+  color: var(--color-accent-1);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+}
+
+.header h1,
+.access h1 {
+  margin: 0 0 0.75rem;
+  color: var(--color-text-strong);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.12;
+}
+
+.header span {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.headerLinks,
+.access > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.headerLinks a,
+.access a {
+  color: var(--color-accent-1);
+  font-size: 0.76rem;
+  text-decoration: none;
+}
+
+.headerLinks a:hover,
+.access a:hover {
+  text-decoration: underline;
+}
+
+.stats {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border-strong);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stats span {
+  padding: 0.8rem 1.3rem;
+  border-right: 1px solid var(--color-divider);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(17rem, 28%) minmax(0, 1fr);
+  min-height: 70vh;
+}
+
+.inventory {
+  border-right: 1px solid var(--color-border-strong);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 4rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--color-border-strong);
+  background: var(--color-surface-panel);
+}
+
+.sectionTitle h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 1rem;
+}
+
+.sectionTitle span {
+  color: var(--color-text-soft);
+  font-size: 0.68rem;
+}
+
+.sectionTitle button,
+.rowActions button,
+.actions button {
+  cursor: pointer;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0;
+  background: var(--color-surface-2);
+  color: var(--color-accent-1);
+  font: inherit;
+  font-size: 0.73rem;
+}
+
+.sectionTitle button {
+  padding: 0.55rem 0.7rem;
+}
+
+.inventoryControls {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+
+.inventoryControls label:not(:first-child) {
+  margin-top: 0.6rem;
+}
+
+.inventoryControls input,
+.inventoryControls select,
+.form input:not([type='checkbox']),
+.form select,
+.form textarea {
+  width: 100%;
+  min-height: 2.45rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0;
+  background: var(--color-bg);
+  color: var(--color-text-strong);
+  font: inherit;
+  font-size: 0.79rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.inventoryList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 67rem;
+  overflow-y: auto;
+}
+
+.inventoryList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 0.7rem;
+  padding: 0.95rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.inventoryList li.selected {
+  border-left: 3px solid var(--color-accent-1);
+  padding-left: calc(1.25rem - 3px);
+  background: var(--color-surface-panel);
+}
+
+.inventoryList li > div:first-child {
+  min-width: 0;
+}
+
+.inventoryList strong,
+.inventoryList small,
+.inventoryList span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.inventoryList strong {
+  color: var(--color-text-strong);
+  font-size: 0.84rem;
+}
+
+.inventoryList small {
+  margin: 0.35rem 0;
+  color: var(--color-text-muted);
+  font-size: 0.66rem;
+}
+
+.inventoryList span {
+  color: var(--color-text-soft);
+  font-size: 0.62rem;
+}
+
+.rowActions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: end;
+}
+
+.rowActions button {
+  padding: 0.35rem 0.55rem;
+}
+
+.rowActions a {
+  color: var(--color-text-muted);
+  font-size: 0.67rem;
+  text-decoration: none;
+}
+
+.inventoryList li.empty {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.form {
+  display: grid;
+  gap: 1.3rem;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.formGrid label,
+.notes label {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
+.formGrid .full {
+  grid-column: 1 / -1;
+}
+
+.notes {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.notes textarea {
+  resize: vertical;
+  min-height: 6rem;
+  line-height: 1.55;
+}
+
+.choiceGroup {
+  border: 1px solid var(--color-border-strong);
+  padding: 0.75rem 0.9rem 0.85rem;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+
+.choiceGroup legend {
+  padding: 0 0.3rem;
+}
+
+.choiceGroup > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+}
+
+.choiceGroup label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.choiceGroup input {
+  accent-color: var(--color-accent-1);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.actions button {
+  min-height: 2.55rem;
+  padding: 0.5rem 1rem;
+}
+
+.actions button:first-child {
+  color: var(--color-bg);
+  background: var(--color-accent-1);
+}
+
+.actions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.actions span {
+  color: var(--color-text-soft);
+  font-size: 0.69rem;
+}
+
+.error,
+.success {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.error { color: #f59b92; }
+.success { color: var(--color-accent-1); }
+
+.access {
+  min-height: 65vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  padding: clamp(1.5rem, 5vw, 5rem);
+}
+
+.page :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-accent-1);
+  outline-offset: 2px;
+}
+
+@media (max-width: 56rem) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+  .inventory { border-right: 0; border-bottom: 1px solid var(--color-border-strong); }
+  .inventoryList { max-height: 24rem; }
+}
+
+@media (max-width: 37rem) {
+  .formGrid { grid-template-columns: minmax(0, 1fr); }
+  .formGrid .full { grid-column: auto; }
+  .headerLinks { width: 100%; }
+}

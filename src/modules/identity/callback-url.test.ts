@@ -17,4 +17,11 @@ describe('identity/sanitizeCallbackUrl', () => {
   it('blocks localhost callback and falls back', () => {
     expect(sanitizeCallbackUrl('http://localhost:3000/articles/manage', '/articles/manage')).toBe('/articles/manage')
   })
+
+  it('does not allow protocol-relative or non-HTTP login redirects', () => {
+    expect(sanitizeCallbackUrl('//outside.example/steal', '/awesome/skills/hub')).toBe('/awesome/skills/hub')
+    expect(sanitizeCallbackUrl('/\\outside.example/steal', '/awesome/skills/hub')).toBe('/awesome/skills/hub')
+    expect(sanitizeCallbackUrl('https://outside.example//other.example', '/awesome/skills/hub')).toBe('/awesome/skills/hub')
+    expect(sanitizeCallbackUrl('javascript:alert(1)', '/awesome/skills/hub')).toBe('/awesome/skills/hub')
+  })
 })

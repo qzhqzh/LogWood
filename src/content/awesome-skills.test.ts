@@ -79,6 +79,14 @@ describe('AWESOME skill research seed', () => {
     expect(tags).toContain('user:kept')
     expect(tags).toContain('awesome')
     expect(tags).toContain(`maturity:${skill.dossier.maturity}`)
+    const edited = JSON.parse(backfillAwesomeSkillTags(
+      '["awesome","catalog:skill","maturity:proven","skill-kind:scripts","user:kept"]',
+      skill,
+    )!) as string[]
+    expect(edited).toContain('maturity:proven')
+    expect(edited).toContain('skill-kind:scripts')
+    expect(edited).not.toContain(`maturity:${skill.dossier.maturity}`)
+    expect(edited).not.toContain(`skill-kind:${skill.dossier.kinds[0]}`)
     expect(backfillAwesomeSkillTags('{broken', skill)).toBeNull()
   })
 })

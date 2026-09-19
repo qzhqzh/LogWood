@@ -24,12 +24,7 @@ export default function SignInPage() {
   const [adminPassword, setAdminPassword] = useState('')
   const [adminSubmitting, setAdminSubmitting] = useState(false)
   const [adminError, setAdminError] = useState('')
-
-  const callbackUrl = useMemo(() => {
-    if (typeof window === 'undefined') return '/'
-    const url = new URL(window.location.href)
-    return sanitizeCallbackUrl(url.searchParams.get('callbackUrl'), '/')
-  }, [])
+  const [callbackUrl, setCallbackUrl] = useState('/')
 
   useEffect(() => {
     fetch('/api/auth/providers', { cache: 'no-store' })
@@ -38,6 +33,7 @@ export default function SignInPage() {
       .catch(() => setProviders({}))
 
     const url = new URL(window.location.href)
+    setCallbackUrl(sanitizeCallbackUrl(url.searchParams.get('callbackUrl'), '/'))
     const errorCode = url.searchParams.get('error') || ''
     if (errorCode) {
       setAuthError(authErrorMessages[errorCode] || authErrorMessages.Default)
