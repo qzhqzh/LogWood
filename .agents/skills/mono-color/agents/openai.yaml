@@ -1,0 +1,7 @@
+interface:
+  display_name: "单双色编辑视觉"
+  short_description: "生成原创的一色或受控双色编辑海报、封面与视觉观察图"
+  default_prompt: "Use $mono-color to turn my theme, text, or reference image into an original one-ink or controlled two-ink editorial image."
+
+policy:
+  allow_implicit_invocation: true

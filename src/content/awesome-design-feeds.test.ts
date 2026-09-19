@@ -7,10 +7,15 @@ import {
 
 describe('AWESOME design source register', () => {
   it('keeps the curated interface and motion sources distinct and linkable', () => {
-    expect(AWESOME_INTERFACE_FEEDS).toHaveLength(5)
+    expect(AWESOME_INTERFACE_FEEDS).toHaveLength(6)
     expect(AWESOME_MOTION_FEEDS).toHaveLength(5)
-    expect(AWESOME_DESIGN_FEEDS).toHaveLength(10)
-    expect(new Set(AWESOME_DESIGN_FEEDS.map((feed) => feed.url)).size).toBe(10)
+    expect(AWESOME_DESIGN_FEEDS).toHaveLength(11)
+    expect(new Set(AWESOME_DESIGN_FEEDS.map((feed) => feed.url)).size).toBe(11)
+    expect(AWESOME_INTERFACE_FEEDS).toContainEqual({
+      name: 'B2TF',
+      scope: 'VINTAGE MOBILE UI CASES · REFERENCE ONLY',
+      url: 'https://www.b2tf.app/',
+    })
 
     for (const feed of AWESOME_DESIGN_FEEDS) {
       expect(feed.name.length).toBeGreaterThan(2)

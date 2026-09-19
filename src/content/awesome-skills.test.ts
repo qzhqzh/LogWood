@@ -17,10 +17,20 @@ import {
 
 describe('AWESOME skill research seed', () => {
   it('keeps a unique, source-backed and risk-described skill set', () => {
-    expect(AWESOME_SKILLS).toHaveLength(46)
-    expect(new Set(AWESOME_SKILLS.map((skill) => skill.slug)).size).toBe(46)
-    expect(new Set(AWESOME_SKILLS.map((skill) => skill.dossier.skillUrl)).size).toBe(46)
-    expect(new Set(AWESOME_SKILLS.map((skill) => skill.sortOrder)).size).toBe(46)
+    expect(AWESOME_SKILLS).toHaveLength(49)
+    expect(new Set(AWESOME_SKILLS.map((skill) => skill.slug)).size).toBe(49)
+    expect(new Set(AWESOME_SKILLS.map((skill) => skill.dossier.skillUrl)).size).toBe(49)
+    expect(new Set(AWESOME_SKILLS.map((skill) => skill.sortOrder)).size).toBe(49)
+
+    expect(AWESOME_SKILLS).toContainEqual(expect.objectContaining({
+      title: 'Sepia',
+      slug: 'awesome-skill-nanako0129-sepia',
+      dossier: expect.objectContaining({
+        maturity: 'audited',
+        license: 'MIT',
+        permissions: ['read-only', 'filesystem'],
+      }),
+    }))
 
     for (const category of AWESOME_SKILL_CATEGORIES) {
       expect(AWESOME_SKILLS.filter((skill) => skill.dossier.category === category.id).length)

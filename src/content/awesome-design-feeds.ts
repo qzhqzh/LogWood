@@ -30,6 +30,11 @@ export const AWESOME_INTERFACE_FEEDS: readonly AwesomeDesignFeed[] = [
     scope: 'AI-NATIVE PRIMITIVES · MIT',
     url: 'https://www.beautifului.dev/',
   },
+  {
+    name: 'B2TF',
+    scope: 'VINTAGE MOBILE UI CASES · REFERENCE ONLY',
+    url: 'https://www.b2tf.app/',
+  },
 ] as const
 
 export const AWESOME_MOTION_FEEDS: readonly AwesomeDesignFeed[] = [
