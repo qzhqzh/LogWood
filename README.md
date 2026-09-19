@@ -60,12 +60,12 @@ flowchart LR
 作者工作台与历史兼容：
 
 - 收集箱：`/candidates`
-- AI 整理台：`/forge`
+- 思想工作台：`/forge`
 - 归档：`/scraps`
 - 历史工具/视觉/对比：`/tools`、`/app`、`/compare`
 - 历史 Prompt：`/prompt/[slug]`
 
-AI 整理台默认创建提示词草稿，也可选择笔记草稿或确定性本地模板；同一请求可幂等重试。所有模式都只写入草稿，不替代真实测试，也不生成或伪造证据。Article 只有人工批准当前版本后才能发布，内容修改会自动使旧批准失效。
+思想工作台把每次讨论自动保存为私有 Candidate，可继续追问、只记录，或把完整讨论幂等地整理为同一篇 Article 的新版本。作者在预览区明确确认当前版本后才会公开；后续讨论更新正文时，文章会自动退回草稿。原有提示词草稿和确定性本地模板保留在同页的结构化整理工具中。
 
 ## Review 与 Evaluation
 
@@ -102,10 +102,11 @@ AI 整理台默认创建提示词草稿，也可选择笔记草稿或确定性�
 - 历史资源：`/tools` 及 Editor / Coding / Model / Prompt 旧详情路由
 - 视觉收藏详情和管理：`/app/[slug]`、`/app/manage`
 - 笔记：`/articles`
-- AI / 本地协作草稿：`/forge`
+- 思想讨论、文章成稿与 AI / 本地结构化草稿：`/forge`
 - 作者叙事：`/about`
 - 视觉来源与权利：VisualAsset 保存 hash/来源/权利状态，未确认权利的 App 不能发布
 - Agent MCP：`/api/mcp`，支持灵感整理、内容发布和多 Agent 回复协调
+- 聊天发表：`.agents/skills/logwood-article-publisher` 将当前 AI 对话整理为审阅稿，只有作者明确确认后才通过 MCP 发表精确文章版本；公众号稿默认只生成、不代发
 - Review：多态关联 Target、Skill、App 或 Candidate
 - Evaluation：独立模型和协议版本，不修改历史 Review
 - 社区互动：匿名或登录发布、评论、点赞、举报

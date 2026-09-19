@@ -20,15 +20,20 @@ const candidateMocks = vi.hoisted(() => ({
 }))
 const createReviewMock = vi.hoisted(() => vi.fn())
 const createArticleMock = vi.hoisted(() => vi.fn())
+const approveAndPublishArticleMock = vi.hoisted(() => vi.fn())
 const recordAdminActionMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/modules/candidate', () => candidateMocks)
 vi.mock('@/modules/review', () => ({ createReview: createReviewMock }))
-vi.mock('@/modules/article', () => ({ createArticle: createArticleMock }))
+vi.mock('@/modules/article', () => ({
+  approveAndPublishArticle: approveAndPublishArticleMock,
+  createArticle: createArticleMock,
+}))
 vi.mock('@/modules/audit', () => ({ recordAdminAction: recordAdminActionMock }))
 
 import {
+  confirmMcpArticlePublication,
   createMcpArticle,
   createMcpReview,
   listMcpInspirations,
@@ -70,6 +75,28 @@ describe('mcp/actions', () => {
     expect(result.created).toBe(true)
   })
 
+  it('records an archived article topic as private', async () => {
+    candidateMocks.findCandidateDuplicate.mockResolvedValue(null)
+    candidateMocks.createCandidate.mockResolvedValue({
+      id: 'candidate-private',
+      visibility: 'private',
+    })
+
+    await recordMcpInspiration({
+      content: '归档一个待打磨的文章选题。',
+      tags: ['article-topic'],
+      visibility: 'private',
+    }, 'user-1')
+
+    expect(candidateMocks.createCandidate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tags: ['article-topic'],
+        visibility: 'private',
+      }),
+      'user-1',
+    )
+  })
+
   it('scopes search and updates to the MCP user', async () => {
     candidateMocks.listCandidates.mockResolvedValue([])
     await listMcpInspirations({
@@ -97,6 +124,26 @@ describe('mcp/actions', () => {
       candidateId: 'candidate-1',
     }, 'user-1')).rejects.toThrow('ERR_MCP_UPDATE_REQUIRED')
     expect(prismaMock.candidate.findFirst).not.toHaveBeenCalled()
+  })
+
+  it('updates inspiration visibility without requiring tag changes', async () => {
+    prismaMock.candidate.findFirst.mockResolvedValue({ id: 'candidate-1' })
+    candidateMocks.organizeCandidate.mockResolvedValue({
+      id: 'candidate-1',
+      visibility: 'private',
+    })
+
+    await updateMcpInspiration({
+      candidateId: 'candidate-1',
+      visibility: 'private',
+    }, 'user-1')
+
+    expect(candidateMocks.organizeCandidate).toHaveBeenCalledWith({
+      id: 'candidate-1',
+      tags: undefined,
+      status: undefined,
+      visibility: 'private',
+    })
   })
 
   it('passes a complete reusable Skill into the atomic promotion service', async () => {
@@ -211,5 +258,48 @@ describe('mcp/actions', () => {
       }),
       'user-1',
     )
+  })
+
+  it('publishes only the owned article version explicitly confirmed by the author', async () => {
+    approveAndPublishArticleMock.mockResolvedValue({
+      id: 'article-1',
+      title: 'Agent 实践复盘',
+      slug: 'agent-retrospective',
+      status: ArticleStatus.published,
+      reviewStatus: 'approved',
+      currentVersion: 2,
+      approvedVersion: 2,
+      reviewedAt: new Date('2026-08-30T12:00:00.000Z'),
+      publishedAt: new Date('2026-08-30T12:00:00.000Z'),
+    })
+
+    const result = await confirmMcpArticlePublication({
+      articleId: 'article-1',
+      expectedVersion: 2,
+      confirmation: 'CONFIRM_PUBLISH_CURRENT_VERSION',
+    }, 'user-1')
+
+    expect(approveAndPublishArticleMock).toHaveBeenCalledWith({
+      id: 'article-1',
+      expectedVersion: 2,
+      reviewerUserId: 'user-1',
+      authorUserId: 'user-1',
+    })
+    expect(recordAdminActionMock).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'mcp.article.publish_confirmed',
+      targetId: 'article-1',
+    }))
+    expect(result.href).toBe('/articles/agent-retrospective')
+  })
+
+  it('does not publish an article outside the authenticated owner scope', async () => {
+    approveAndPublishArticleMock.mockResolvedValue(null)
+
+    await expect(confirmMcpArticlePublication({
+      articleId: 'someone-else-article',
+      expectedVersion: 1,
+      confirmation: 'CONFIRM_PUBLISH_CURRENT_VERSION',
+    }, 'user-1')).rejects.toThrow('ERR_ARTICLE_NOT_FOUND')
+    expect(recordAdminActionMock).not.toHaveBeenCalled()
   })
 })

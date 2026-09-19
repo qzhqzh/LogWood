@@ -1,0 +1,4 @@
+interface:
+  display_name: "LogWood 文章发表"
+  short_description: "将当前对话整理成文章，经作者确认后发表到 LogWood"
+  default_prompt: "Use $logwood-article-publisher to turn this discussion into a reviewable LogWood article and publish it only after my explicit confirmation."

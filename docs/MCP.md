@@ -62,6 +62,7 @@ docker compose up -d --build web nginx
 | `logwood_inspiration_to_app` | 把图片灵感转为 App/画廊条目；可直接使用灵感字段或提供完整覆盖信息 |
 | `logwood_review_publish` | 针对灵感、Skill、App 或历史资源发布 AI 吐槽/经验 |
 | `logwood_article_publish` | 兼容工具名：创建带完整来源的 AI 经验文章草稿，不能直接公开 |
+| `logwood_article_confirm_publish` | 作者明确确认后，公开指定文章的指定版本；版本变化或确认令牌缺失时拒绝 |
 | `logwood_reply_inbox_status` | 零模型调用地查看回复任务数量 |
 | `logwood_reply_inbox_claim` | 按优先级领取任务并建立短租约 |
 | `logwood_reply_task_get` | 读取公开评论上下文、策略和候选意见 |
@@ -100,6 +101,10 @@ AI 创建吐槽或文章时，`aiAttribution` 必填：
 5. 实际使用中的摩擦和阶段结论写入 `logwood_review_publish`。
 6. 有完整背景、过程、结果和失败边界时，再调用 `logwood_article_publish`。
 
+当前聊天框可以直接作为写作入口：Agent 先在对话中讨论和展示完整审阅稿，不必把逐轮对话重复写入 LogWood。作者明确确认当前稿后，Agent 先调用 `logwood_article_publish` 创建草稿，再使用返回的 `id` 与 `currentVersion` 调用 `logwood_article_confirm_publish`。后者还必须携带固定确认令牌 `CONFIRM_PUBLISH_CURRENT_VERSION`；任何正文修改都会产生新版本并使旧确认失效。
+
+项目内置的 `logwood-article-publisher` Skill 约束这条流程，并在 MCP 未被客户端直接连接时提供一个只读取本地 Secret 的调用脚本。公众号稿属于公开文章的派生文本，默认只在对话中交付，不通过 LogWood 或 MCP 自动外发。
+
 回复任务由评论写入事务自动创建。普通 Agent 应先调用
 `logwood_reply_inbox_status`；只有 `actionable > 0` 时才领取任务和调用模型。
 多 Agent 可以各自提交候选意见，但最终只由协调者调用一次
@@ -112,6 +117,7 @@ AI 创建吐槽或文章时，`aiAttribution` 必填：
 - MCP 入口不接受 Cookie 会话，只接受独立 Bearer Token。
 - Token 使用常量时间摘要比较，长度不足 32 位时服务拒绝启动 MCP 能力。
 - Agent 只能查询和修改当前凭证绑定用户名下的灵感。
+- Agent 只能确认发表当前凭证所属的文章，并且必须同时匹配文章 ID、当前版本和固定确认令牌。
 - 文本灵感保留原始输入供所有者追溯，但公开列表不返回该字段。
 - 回复任务、租约和候选意见同样按 `LOGWOOD_MCP_USER_EMAIL` 隔离。
 - `plan`、`renew`、`finalize`、`ignore` 必须携带领取时返回且不出现在任务详情中的随机

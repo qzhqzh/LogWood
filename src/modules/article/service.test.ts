@@ -11,6 +11,7 @@ const prismaMock = vi.hoisted(() => {
     article: {
       create: vi.fn(),
       update: vi.fn(),
+      findFirst: vi.fn(),
       findUniqueOrThrow: vi.fn(),
     },
     articleVersion: { create: vi.fn() },
@@ -38,6 +39,7 @@ vi.mock('@/modules/like', () => ({
 
 import {
   createArticle,
+  approveAndPublishArticle,
   listArticles,
   reviewArticle,
   updateArticle,
@@ -200,6 +202,58 @@ describe('article/service', () => {
         approvedVersion: 4,
       }),
     }))
+  })
+
+  it('publishes exactly the version the author confirmed', async () => {
+    prismaMock.tx.article.findFirst.mockResolvedValue({
+      id: 'a1',
+      authorUserId: 'user-1',
+      status: ArticleStatus.draft,
+      currentVersion: 5,
+      reviewRequestedAt: null,
+      publishedAt: null,
+    })
+    prismaMock.tx.article.update.mockResolvedValue({
+      id: 'a1',
+      status: ArticleStatus.published,
+      reviewStatus: ArticleReviewStatus.approved,
+      currentVersion: 5,
+      approvedVersion: 5,
+    })
+
+    await approveAndPublishArticle({
+      id: 'a1',
+      reviewerUserId: 'user-1',
+      authorUserId: 'user-1',
+      expectedVersion: 5,
+    })
+
+    expect(prismaMock.tx.article.findFirst).toHaveBeenCalledWith({
+      where: { id: 'a1', authorUserId: 'user-1' },
+    })
+    expect(prismaMock.tx.article.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        status: ArticleStatus.published,
+        reviewStatus: ArticleReviewStatus.approved,
+        reviewerUserId: 'user-1',
+        approvedVersion: 5,
+      }),
+    }))
+  })
+
+  it('rejects a stale one-click publication', async () => {
+    prismaMock.tx.article.findFirst.mockResolvedValue({
+      id: 'a1',
+      status: ArticleStatus.draft,
+      currentVersion: 6,
+    })
+
+    await expect(approveAndPublishArticle({
+      id: 'a1',
+      reviewerUserId: 'user-1',
+      expectedVersion: 5,
+    })).rejects.toThrow('ERR_ARTICLE_VERSION_STALE')
+    expect(prismaMock.tx.article.update).not.toHaveBeenCalled()
   })
 
   it('lists published articles by default', async () => {

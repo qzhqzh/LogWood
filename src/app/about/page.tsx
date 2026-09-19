@@ -27,7 +27,7 @@ const entryLinks = [
   { href: '/candidates', label: '收集箱', detail: '收住还没想清楚的信号' },
   { href: '/skills', label: '提示库', detail: '查看可执行提示词、真实效果与证据' },
   { href: '/articles', label: '笔记', detail: '读整理后的长期记录' },
-  { href: '/forge', label: 'AI 整理', detail: '看人和 AI 如何生成草稿' },
+  { href: '/forge', label: '思想工作台', detail: '讨论、记录并整理成可发表文章' },
 ] as const
 
 function AuthorInspectorDetails() {

@@ -275,6 +275,7 @@ export async function organizeCandidate(input: {
   id: string
   tags?: string[]
   status?: CandidateStatus
+  visibility?: CandidateVisibility
 }) {
   const existing = await prisma.candidate.findUnique({ where: { id: input.id } })
   if (!existing) throw new Error('ERR_CANDIDATE_NOT_FOUND')
@@ -286,12 +287,13 @@ export async function organizeCandidate(input: {
   }
 
   const existingTags = parseTags(existing.tags)
+  const visibility = input.visibility ?? candidateVisibility(existingTags)
 
   return updateCandidateFromObservedState(input.id, existing.status, {
-    ...(input.tags ? {
+    ...(input.tags || input.visibility ? {
       tags: JSON.stringify(candidateTagsForStorage(
-        input.tags,
-        candidateVisibility(existingTags),
+        input.tags ?? existingTags,
+        visibility,
       )),
     } : {}),
     ...(input.status ? { status: input.status } : {}),

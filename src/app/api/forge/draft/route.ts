@@ -20,6 +20,7 @@ const forgeDraftSchema = z.object({
   type: z.nativeEnum(TargetType).optional(),
   sourceUrl: z.string().url().optional(),
   sourceCandidateId: z.string().min(1).optional(),
+  articleId: z.string().min(1).optional(),
   mode: z.enum(['ai', 'local']).optional(),
 })
 

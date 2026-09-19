@@ -8,7 +8,7 @@ import {
   TargetType,
 } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { createArticle } from '@/modules/article'
+import { addArticleSource, createArticle, updateArticle } from '@/modules/article'
 import { createSkill } from '@/modules/skill'
 import { ForgeProviderError, generateForgeDraft } from './provider'
 
@@ -24,6 +24,7 @@ export interface ForgeDraftInput {
   type?: TargetType
   sourceUrl?: string
   sourceCandidateId?: string
+  articleId?: string
   mode?: ForgeDraftMode
 }
 
@@ -79,6 +80,20 @@ export async function createForgeDraft(
 ): Promise<ForgeDraftResult> {
   const prompt = input.prompt.trim()
   if (prompt.length < 8) throw new Error('ERR_FORGE_PROMPT_TOO_SHORT')
+  if (input.articleId && input.kind !== 'article') {
+    throw new Error('ERR_FORGE_ARTICLE_TARGET_INVALID')
+  }
+  if (input.articleId) {
+    const ownedArticle = await prisma.article.findFirst({
+      where: {
+        id: input.articleId,
+        authorUserId,
+        status: { not: ArticleStatus.archived },
+      },
+      select: { id: true },
+    })
+    if (!ownedArticle) throw new Error('ERR_FORGE_ARTICLE_NOT_FOUND')
+  }
   const mode = input.mode ?? 'ai'
   const generated = mode === 'ai'
     ? await generateForgeDraft({ kind: input.kind, prompt, title: input.title })
@@ -92,21 +107,39 @@ export async function createForgeDraft(
   } : undefined
 
   if (input.kind === 'article') {
-    const article = await createArticle({
-      title: generated.title,
-      excerpt: generated.excerpt,
-      content: generated.content,
-      tags: [...generated.tags, '协作草稿'],
-      status: ArticleStatus.draft,
-      aiAttribution: attribution,
-      contributionRole: attribution ? 'AI drafting' : 'Local template',
-      changeSummary: attribution ? 'Forge AI draft' : 'Forge local template draft',
-      sources: input.sourceCandidateId ? [{
+    const article = input.articleId
+      ? await updateArticle(input.articleId, {
+          title: generated.title,
+          excerpt: generated.excerpt,
+          content: generated.content,
+          tags: [...generated.tags, '协作草稿'],
+          aiAttribution: attribution,
+          contributionRole: attribution ? 'AI drafting' : 'Local template',
+          changeSummary: attribution ? 'Forge AI draft update' : 'Forge local template update',
+        }, authorUserId)
+      : await createArticle({
+          title: generated.title,
+          excerpt: generated.excerpt,
+          content: generated.content,
+          tags: [...generated.tags, '协作草稿'],
+          status: ArticleStatus.draft,
+          aiAttribution: attribution,
+          contributionRole: attribution ? 'AI drafting' : 'Local template',
+          changeSummary: attribution ? 'Forge AI draft' : 'Forge local template draft',
+          sources: input.sourceCandidateId ? [{
+            kind: ArticleSourceKind.inspiration,
+            label: '造物台来源灵感',
+            candidateId: input.sourceCandidateId,
+          }] : undefined,
+        }, authorUserId)
+    if (!article) throw new Error('ERR_FORGE_ARTICLE_NOT_FOUND')
+    if (input.articleId && input.sourceCandidateId) {
+      await addArticleSource(article.id, {
         kind: ArticleSourceKind.inspiration,
         label: '造物台来源灵感',
         candidateId: input.sourceCandidateId,
-      }] : undefined,
-    }, authorUserId)
+      })
+    }
     return {
       kind: 'article',
       mode,
@@ -115,9 +148,11 @@ export async function createForgeDraft(
       excerpt: generated.excerpt,
       saved: { id: article.id, slug: article.slug, href: '/articles/manage' },
       attribution: resultAttribution,
-      note: attribution
-        ? 'AI 结果已带完整归属写入洞笔记草稿；需人工审核当前版本后才能发布。'
-        : '本地模板已写入洞笔记草稿；需人工补充并审核当前版本后才能发布。',
+      note: input.articleId
+        ? '讨论已整理为文章的新版本；当前版本需再次确认后才能发表。'
+        : attribution
+          ? 'AI 结果已带完整归属写入洞笔记草稿；需人工审核当前版本后才能发布。'
+          : '本地模板已写入洞笔记草稿；需人工补充并审核当前版本后才能发布。',
     }
   }
 
@@ -154,6 +189,7 @@ function requestIdentity(input: ForgeDraftInput, authorUserId: string) {
     type: input.type || null,
     sourceUrl: input.sourceUrl?.trim() || null,
     sourceCandidateId: input.sourceCandidateId || null,
+    ...(input.articleId ? { articleId: input.articleId } : {}),
     mode: input.mode ?? 'ai',
   })
   return createHash('sha256').update(normalized).digest('hex')
@@ -254,7 +290,14 @@ export function forgeErrorDetails(error: unknown) {
   if (error instanceof ForgeProviderError || error instanceof ForgeRequestError) {
     return { code: error.code, retryable: error.retryable }
   }
-  if (error instanceof Error && error.message === 'ERR_FORGE_PROMPT_TOO_SHORT') {
+  if (
+    error instanceof Error
+    && [
+      'ERR_FORGE_PROMPT_TOO_SHORT',
+      'ERR_FORGE_ARTICLE_TARGET_INVALID',
+      'ERR_FORGE_ARTICLE_NOT_FOUND',
+    ].includes(error.message)
+  ) {
     return { code: error.message, retryable: false }
   }
   return { code: 'ERR_FORGE_FAILED', retryable: true }

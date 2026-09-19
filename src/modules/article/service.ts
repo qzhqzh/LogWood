@@ -557,6 +557,54 @@ export async function reviewArticle(input: {
   })
 }
 
+export async function approveAndPublishArticle(input: {
+  id: string
+  reviewerUserId: string
+  expectedVersion: number
+  authorUserId?: string
+}) {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.article.findFirst({
+      where: {
+        id: input.id,
+        ...(input.authorUserId ? { authorUserId: input.authorUserId } : {}),
+      },
+    })
+    if (!existing) return null
+    if (existing.status === ArticleStatus.archived) {
+      throw new Error('ERR_ARTICLE_ARCHIVED')
+    }
+    if (existing.currentVersion !== input.expectedVersion) {
+      throw new Error('ERR_ARTICLE_VERSION_STALE')
+    }
+
+    const now = new Date()
+    return tx.article.update({
+      where: { id: input.id },
+      data: {
+        status: ArticleStatus.published,
+        reviewStatus: ArticleReviewStatus.approved,
+        reviewerUserId: input.reviewerUserId,
+        reviewRequestedAt: existing.reviewRequestedAt || now,
+        reviewedAt: now,
+        approvedVersion: existing.currentVersion,
+        publishedAt: existing.publishedAt || now,
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        reviewStatus: true,
+        currentVersion: true,
+        approvedVersion: true,
+        reviewedAt: true,
+        publishedAt: true,
+      },
+    })
+  })
+}
+
 export async function addArticleSource(articleId: string, input: ArticleSourceInput) {
   const [source] = normalizeSources([input])
   const article = await prisma.article.findUnique({ where: { id: articleId }, select: { id: true } })

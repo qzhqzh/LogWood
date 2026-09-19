@@ -54,8 +54,8 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
       ])} />
       <SiteNav
         active="articles"
-        actionLabel={isAdmin ? 'Manage Notes' : undefined}
-        actionHref={isAdmin ? '/articles/manage' : undefined}
+        actionLabel={isAdmin ? '开始讨论' : undefined}
+        actionHref={isAdmin ? '/forge' : undefined}
       />
 
       <header className="ascii-page-header ascii-record-header">
