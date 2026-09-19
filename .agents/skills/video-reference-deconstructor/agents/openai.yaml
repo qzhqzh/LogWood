@@ -1,0 +1,7 @@
+interface:
+  display_name: "参考视频拆镜"
+  short_description: "将参考视频拆成可核验镜头证据、Shotbook 与模型提示词包"
+  default_prompt: "Use $video-reference-deconstructor to analyze my reference video into a traceable shotbook and target-model prompt pack."
+
+policy:
+  allow_implicit_invocation: true

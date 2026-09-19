@@ -3273,6 +3273,62 @@ html[data-theme='light'] {
     gap: 1rem;
   }
 
+  .ascii-forge-shell--secondary {
+    padding-top: 1.5rem;
+  }
+
+  .ascii-forge-advanced {
+    border: 1px solid var(--color-divider);
+    background: var(--color-surface-panel);
+  }
+
+  .ascii-forge-advanced > summary {
+    display: flex;
+    min-height: 4.5rem;
+    padding: 0.85rem 1rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .ascii-forge-advanced > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .ascii-forge-advanced > summary::after {
+    color: var(--color-accent-1);
+    content: '[ + ]';
+    font-size: 0.7rem;
+  }
+
+  .ascii-forge-advanced[open] > summary::after {
+    content: '[ − ]';
+  }
+
+  .ascii-forge-advanced > summary span,
+  .ascii-forge-advanced > summary strong {
+    display: block;
+  }
+
+  .ascii-forge-advanced > summary span {
+    font-size: 0.66rem;
+  }
+
+  .ascii-forge-advanced > summary strong {
+    color: var(--color-text-strong);
+    font-size: 0.72rem;
+  }
+
+  .ascii-forge-advanced__body {
+    display: grid;
+    padding: 1rem;
+    gap: 1rem;
+    border-top: 1px solid var(--color-divider);
+  }
+
   .ascii-forge-flow {
     display: grid;
     margin: 0;

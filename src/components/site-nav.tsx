@@ -46,9 +46,10 @@ function normalizeActive(active: NavSection): PublicSection | 'home' {
   ) {
     return active
   }
-  if (active === 'coding' || active === 'forge') {
+  if (active === 'coding') {
     return 'skills'
   }
+  if (active === 'forge') return 'articles'
   if (active === 'app') return 'gallery'
   if (active === 'evaluations' || active === 'talk' || active === 'scraps') return 'articles'
   return 'home'

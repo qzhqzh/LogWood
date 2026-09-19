@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  confirmArticlePublicationSchema,
   publishReviewSchema,
   recordInspirationSchema,
   replyTaskPlanSchema,
@@ -14,6 +15,18 @@ describe('mcp/schemas', () => {
     })).toEqual({
       content: '研究一个更适合移动端的图片归档流程',
     })
+  })
+
+  it('accepts explicit private visibility for topic archives', () => {
+    expect(recordInspirationSchema.parse({
+      content: '归档一个待打磨的文章选题',
+      visibility: 'private',
+    })).toMatchObject({ visibility: 'private' })
+
+    expect(updateInspirationSchema.parse({
+      candidateId: 'candidate-1',
+      visibility: 'private',
+    })).toMatchObject({ visibility: 'private' })
   })
 
   it('requires an actual inspiration update', () => {
@@ -84,5 +97,23 @@ describe('mcp/schemas', () => {
         generatedAt: '2026-07-29T12:00:00Z',
       },
     }).aiAttribution.generatedAt).toEqual(new Date('2026-07-29T12:00:00Z'))
+  })
+
+  it('requires an exact article version and explicit publication confirmation', () => {
+    expect(() => confirmArticlePublicationSchema.parse({
+      articleId: 'article-1',
+      expectedVersion: 2,
+      confirmation: 'yes',
+    })).toThrow()
+
+    expect(confirmArticlePublicationSchema.parse({
+      articleId: 'article-1',
+      expectedVersion: 2,
+      confirmation: 'CONFIRM_PUBLISH_CURRENT_VERSION',
+    })).toEqual({
+      articleId: 'article-1',
+      expectedVersion: 2,
+      confirmation: 'CONFIRM_PUBLISH_CURRENT_VERSION',
+    })
   })
 })

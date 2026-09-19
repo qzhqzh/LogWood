@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import {
   claimMcpReplyTasks,
+  confirmMcpArticlePublication,
   contributeMcpReplyTask,
   createMcpArticle,
   createMcpReview,
@@ -18,6 +19,7 @@ import {
   updateMcpInspiration,
 } from '@/modules/mcp/actions'
 import {
+  confirmArticlePublicationSchema,
   inspirationToAppSchema,
   inspirationToSkillSchema,
   listInspirationsSchema,
@@ -86,7 +88,7 @@ export function createLogWoodMcpServer(
 
   server.registerTool('logwood_inspiration_record', {
     title: '记录灵感',
-    description: '即时记录一条文本灵感，可附来源、图片、标签和幂等键。',
+    description: '即时记录一条文本灵感，可附来源、图片、标签、可见性和幂等键。',
     inputSchema: recordInspirationSchema.shape,
     annotations: {
       readOnlyHint: false,
@@ -108,7 +110,7 @@ export function createLogWoodMcpServer(
 
   server.registerTool('logwood_inspiration_update', {
     title: '整理灵感',
-    description: '更新一条灵感的标签或状态。',
+    description: '更新一条灵感的标签、状态或可见性。',
     inputSchema: updateInspirationShape,
     annotations: {
       readOnlyHint: false,
@@ -160,6 +162,17 @@ export function createLogWoodMcpServer(
       idempotentHint: false,
     },
   }, (input) => runTool(() => createMcpArticle(input, authorUserId)))
+
+  server.registerTool('logwood_article_confirm_publish', {
+    title: '确认并发表文章',
+    description: '仅在作者已经审阅并明确确认后，公开指定文章的指定版本；版本变化或确认令牌缺失时拒绝发表。',
+    inputSchema: confirmArticlePublicationSchema.shape,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+    },
+  }, (input) => runTool(() => confirmMcpArticlePublication(input, authorUserId)))
 
   server.registerTool('logwood_reply_inbox_status', {
     title: '查看回复收件箱',

@@ -20,6 +20,7 @@ const optionalAssetUrl = z.union([
 const tagsSchema = z.array(z.string().trim().min(1).max(30)).max(12).optional()
 const leaseTokenSchema = z.string().trim().regex(/^[a-z0-9][a-z0-9._:-]{15,79}$/)
 const mutableCandidateStatusSchema = z.enum(['watching', 'evaluating', 'dropped'])
+const candidateVisibilitySchema = z.enum(['public', 'private'])
 
 export const aiAttributionSchema = z.object({
   provider: z.string().trim().min(1).max(80),
@@ -36,6 +37,7 @@ export const recordInspirationSchema = z.object({
   websiteUrl: optionalHttpUrl,
   previewImageUrl: optionalAssetUrl,
   tags: tagsSchema,
+  visibility: candidateVisibilitySchema.optional(),
   idempotencyKey: z.string().trim().min(8).max(160).optional(),
 })
 
@@ -50,11 +52,16 @@ export const updateInspirationShape = {
   candidateId: z.string().min(1),
   tags: tagsSchema,
   status: mutableCandidateStatusSchema.optional(),
+  visibility: candidateVisibilitySchema.optional(),
 }
 
 export const updateInspirationSchema = z.object(updateInspirationShape).refine(
-  (input) => input.tags !== undefined || input.status !== undefined,
-  '至少提供 tags 或 status',
+  (input) => (
+    input.tags !== undefined
+    || input.status !== undefined
+    || input.visibility !== undefined
+  ),
+  '至少提供 tags、status 或 visibility',
 )
 
 export const inspirationToSkillSchema = z.object({
@@ -117,6 +124,12 @@ export const publishArticleSchema = z.object({
     reviewId: z.string().min(1).optional(),
     sourceUrl: optionalHttpUrl,
   })).max(24).optional(),
+})
+
+export const confirmArticlePublicationSchema = z.object({
+  articleId: z.string().min(1),
+  expectedVersion: z.number().int().min(1),
+  confirmation: z.literal('CONFIRM_PUBLISH_CURRENT_VERSION'),
 })
 
 export const replyInboxClaimSchema = z.object({

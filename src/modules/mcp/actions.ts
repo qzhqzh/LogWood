@@ -10,9 +10,14 @@ import {
 import { prisma } from '@/lib/prisma'
 import { AiAttributionInput } from '@/modules/ai-attribution'
 import { CreateAppInput } from '@/modules/app'
-import { ArticleSourceInput, createArticle } from '@/modules/article'
+import {
+  approveAndPublishArticle,
+  ArticleSourceInput,
+  createArticle,
+} from '@/modules/article'
 import { getAiCapabilities } from '@/modules/ai-runtime'
 import {
+  CandidateVisibility,
   createCandidate,
   findCandidateDuplicate,
   listCandidates,
@@ -41,6 +46,7 @@ export interface RecordMcpInspirationInput {
   websiteUrl?: string
   previewImageUrl?: string
   tags?: string[]
+  visibility?: CandidateVisibility
   idempotencyKey?: string
 }
 
@@ -55,6 +61,7 @@ export interface UpdateMcpInspirationInput {
   candidateId: string
   tags?: string[]
   status?: CandidateStatus
+  visibility?: CandidateVisibility
 }
 
 export interface PromoteMcpInspirationToSkillInput {
@@ -102,6 +109,12 @@ export interface CreateMcpArticleInput {
   status?: ArticleStatus
   aiAttribution: AiAttributionInput
   sources?: ArticleSourceInput[]
+}
+
+export interface ConfirmMcpArticlePublicationInput {
+  articleId: string
+  expectedVersion: number
+  confirmation: 'CONFIRM_PUBLISH_CURRENT_VERSION'
 }
 
 export interface McpReplyPlanInput {
@@ -208,6 +221,7 @@ export async function recordMcpInspiration(
       websiteUrl: input.websiteUrl,
       previewImageUrl: input.previewImageUrl,
       tags: normalizeTags(input.tags),
+      visibility: input.visibility,
     }, authorUserId)
     await recordAdminAction({
       actorUserId: authorUserId,
@@ -247,7 +261,11 @@ export async function updateMcpInspiration(
   input: UpdateMcpInspirationInput,
   authorUserId: string,
 ) {
-  if (input.tags === undefined && input.status === undefined) {
+  if (
+    input.tags === undefined
+    && input.status === undefined
+    && input.visibility === undefined
+  ) {
     throw new Error('ERR_MCP_UPDATE_REQUIRED')
   }
   await assertOwnedCandidate(input.candidateId, authorUserId)
@@ -255,6 +273,7 @@ export async function updateMcpInspiration(
     id: input.candidateId,
     tags: input.tags ? normalizeTags(input.tags) : undefined,
     status: input.status,
+    visibility: input.visibility,
   })
   await recordAdminAction({
     actorUserId: authorUserId,
@@ -264,6 +283,7 @@ export async function updateMcpInspiration(
     metadata: {
       status: input.status,
       tags: input.tags,
+      visibility: input.visibility,
     },
   })
   return candidate
@@ -446,6 +466,39 @@ export async function createMcpArticle(
   return article
 }
 
+export async function confirmMcpArticlePublication(
+  input: ConfirmMcpArticlePublicationInput,
+  authorUserId: string,
+) {
+  if (input.confirmation !== 'CONFIRM_PUBLISH_CURRENT_VERSION') {
+    throw new Error('ERR_ARTICLE_PUBLICATION_CONFIRMATION_REQUIRED')
+  }
+
+  const article = await approveAndPublishArticle({
+    id: input.articleId,
+    expectedVersion: input.expectedVersion,
+    reviewerUserId: authorUserId,
+    authorUserId,
+  })
+  if (!article) throw new Error('ERR_ARTICLE_NOT_FOUND')
+
+  await recordAdminAction({
+    actorUserId: authorUserId,
+    action: 'mcp.article.publish_confirmed',
+    targetType: 'article',
+    targetId: article.id,
+    metadata: {
+      currentVersion: article.currentVersion,
+      approvedVersion: article.approvedVersion,
+    },
+  })
+
+  return {
+    ...article,
+    href: `/articles/${encodeURIComponent(article.slug)}`,
+  }
+}
+
 export async function getMcpCapabilities(authorUserId: string) {
   return {
     protocolVersion: '2026-08-12',
@@ -453,11 +506,13 @@ export async function getMcpCapabilities(authorUserId: string) {
     policies: {
       aiContentDefaultsToDraft: true,
       articlePublicationRequiresApprovedCurrentVersion: true,
+      articlePublicationConfirmation: 'CONFIRM_PUBLISH_CURRENT_VERSION',
       aiAttributionRequired: true,
       agentIdentityBoundToCredential: true,
       idempotency: {
         inspirationRecord: 'optional key or stable content hash',
         replyContribution: 'required key',
+        articleConfirmPublish: 'exact article id and current version',
       },
     },
     replyInbox: await getReplyInboxStatus(authorUserId),

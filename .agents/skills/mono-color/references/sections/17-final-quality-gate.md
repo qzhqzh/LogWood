@@ -1,0 +1,21 @@
+## Final Quality Gate
+
+- Is there one intentionally selected white, gray, or pale-beige substrate and no more than two printing inks?
+- Does the result read as contemporary editorial by default, with vintage or aged styling present only when requested?
+- If there are two inks, does each plate have a clear role and does the accent remain controlled?
+- Does 25%-55% of the page remain visibly empty?
+- Is the image reproduced through dots or mechanical print texture rather than a color filter?
+- Does one object occupy 45%-80% of the page, except for a justified information-heavy layout?
+- Does the headline visibly cross, cover, split around, or lock tightly to the dominant object?
+- Does exposed paper form a visible shape inside the image through highlights, gaps, fade-outs, or knockouts?
+- Is there exactly one manual gesture family rather than several decorative doodle styles?
+- Does the type hierarchy use a 5x-12x scale jump and no more than three type voices?
+- Does the page have exactly one immediately identifiable focal event?
+- Is there one visibly quieter release zone rather than evenly distributed emptiness?
+- For relaxed work, is energy concentrated in the focal event rather than reduced everywhere?
+- If no source image was supplied, does the figure feel observed in an ordinary in-between moment rather than posed as an advertisement?
+- If type is page-filling, is it the selected focal event while the remaining devices retreat?
+- Is the language terse, specific, and non-commercial?
+- Is the user's supplied subject preserved?
+- Are at least four structural features different from every supplied reference?
+- Did the run generate an image unless prompt-only was requested?

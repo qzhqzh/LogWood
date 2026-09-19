@@ -14,7 +14,7 @@ const publicLinks = [
 
 const workbenchLinks = [
   { label: '收集箱', href: '/candidates' },
-  { label: 'AI 整理', href: '/forge' },
+  { label: '思想工作台', href: '/forge' },
   { label: '归档', href: '/scraps' },
   { label: '历史资源', href: '/tools' },
 ] as const

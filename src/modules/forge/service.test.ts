@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ForgeRequestStatus, SkillStatus, TargetType } from '@prisma/client'
 
 const prismaMock = vi.hoisted(() => ({
+  article: { findFirst: vi.fn() },
   forgeDraftRequest: {
     findUnique: vi.fn(),
     create: vi.fn(),
@@ -10,14 +11,18 @@ const prismaMock = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
-vi.mock('@/modules/article', () => ({ createArticle: vi.fn() }))
+vi.mock('@/modules/article', () => ({
+  addArticleSource: vi.fn(),
+  createArticle: vi.fn(),
+  updateArticle: vi.fn(),
+}))
 vi.mock('@/modules/skill', () => ({ createSkill: vi.fn() }))
 vi.mock('./provider', () => ({
   ForgeProviderError: class ForgeProviderError extends Error {},
   generateForgeDraft: vi.fn(),
 }))
 
-import { createArticle } from '@/modules/article'
+import { addArticleSource, createArticle, updateArticle } from '@/modules/article'
 import { createSkill } from '@/modules/skill'
 import {
   createForgeDraft,
@@ -25,6 +30,8 @@ import {
 } from './service'
 
 const createArticleMock = vi.mocked(createArticle)
+const updateArticleMock = vi.mocked(updateArticle)
+const addArticleSourceMock = vi.mocked(addArticleSource)
 const createSkillMock = vi.mocked(createSkill)
 
 describe('forge/service', () => {
@@ -76,6 +83,33 @@ describe('forge/service', () => {
       category: 'workflow',
       status: SkillStatus.draft,
     }), 'u2')
+  })
+
+  it('updates the owned article and keeps the thought source attached', async () => {
+    prismaMock.article.findFirst.mockResolvedValue({ id: 'a1' })
+    updateArticleMock.mockResolvedValue({ id: 'a1', slug: 'existing-note' } as never)
+    addArticleSourceMock.mockResolvedValue({ created: false } as never)
+
+    const result = await createForgeDraft({
+      kind: 'article',
+      mode: 'local',
+      articleId: 'a1',
+      sourceCandidateId: 'thought-1',
+      title: '已有文章',
+      prompt: '把新的讨论内容整理进已有文章，并形成一个可审核的新版本。',
+    }, 'u1')
+
+    expect(prismaMock.article.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: 'a1', authorUserId: 'u1' }),
+    }))
+    expect(updateArticleMock).toHaveBeenCalledWith('a1', expect.objectContaining({
+      title: '已有文章',
+      contributionRole: 'Local template',
+    }), 'u1')
+    expect(addArticleSourceMock).toHaveBeenCalledWith('a1', expect.objectContaining({
+      candidateId: 'thought-1',
+    }))
+    expect(result.saved.id).toBe('a1')
   })
 
   it('replays a completed idempotent request without creating duplicate content', async () => {

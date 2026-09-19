@@ -1,6 +1,6 @@
 ---
 name: scientific-cover-forge
-description: Create policy-aware, traceable scientific journal cover concept art from a redacted research brief, including concept exploration, image generation, critique, human selection, safe-area previews, and technical export checks. Use for journal cover artwork; do not use for experimental data figures, primary research images, graphical abstracts, or manuscript figure editing.
+description: "Create scientific journal cover artwork; exclude research data figures, graphical abstracts and manuscript figure edits."
 metadata:
   short-description: Policy-aware scientific journal cover concepts
 ---

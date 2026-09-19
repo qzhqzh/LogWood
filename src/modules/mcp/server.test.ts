@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const actionMocks = vi.hoisted(() => ({
   claimMcpReplyTasks: vi.fn(),
+  confirmMcpArticlePublication: vi.fn(),
   contributeMcpReplyTask: vi.fn(),
   createMcpArticle: vi.fn(),
   createMcpReview: vi.fn(),
@@ -59,6 +60,7 @@ describe('mcp/server', () => {
       'logwood_inspiration_to_app',
       'logwood_review_publish',
       'logwood_article_publish',
+      'logwood_article_confirm_publish',
       'logwood_reply_inbox_status',
       'logwood_reply_inbox_claim',
       'logwood_reply_task_get',
@@ -71,6 +73,13 @@ describe('mcp/server', () => {
     expect(result.tools.find(
       (tool) => tool.name === 'logwood_review_publish',
     )?.inputSchema.required).toContain('aiAttribution')
+    expect(result.tools.find(
+      (tool) => tool.name === 'logwood_article_confirm_publish',
+    )?.inputSchema.required).toEqual(expect.arrayContaining([
+      'articleId',
+      'expectedVersion',
+      'confirmation',
+    ]))
   })
 
   it('uses the authenticated agent identity for reply contributions', async () => {
