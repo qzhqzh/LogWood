@@ -1,4 +1,6 @@
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
+function isInternalPath(path: string) {
+  return path.startsWith('/') && !path.startsWith('//') && !path.startsWith('/\\')
+}
 
 export function sanitizeCallbackUrl(raw: string | null | undefined, fallback: string = '/articles/manage'): string {
   if (!raw || !raw.trim()) {
@@ -8,17 +10,14 @@ export function sanitizeCallbackUrl(raw: string | null | undefined, fallback: st
   const value = raw.trim()
 
   // Keep relative paths inside the same site.
-  if (value.startsWith('/')) {
+  if (isInternalPath(value)) {
     return value
   }
 
   try {
     const parsed = new URL(value)
-    if (LOCAL_HOSTS.has(parsed.hostname)) {
-      return `${parsed.pathname}${parsed.search}${parsed.hash}` || fallback
-    }
-
-    return `${parsed.pathname}${parsed.search}${parsed.hash}` || fallback
+    if (!['https:', 'http:'].includes(parsed.protocol) || !isInternalPath(parsed.pathname)) return fallback
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`
   } catch {
     return fallback
   }

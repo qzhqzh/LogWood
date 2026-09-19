@@ -212,6 +212,10 @@ model User {
   articleContributions ArticleContribution[] @relation("ArticleContributionActor")
   forgeDraftRequests   ForgeDraftRequest[]
   candidateInterests   CandidateInterest[]
+  ownedAgentSkills             AgentSkillPackage[] @relation("AgentSkillPackageOwner")
+  submittedAgentSkillReleases  AgentSkillRelease[] @relation("AgentSkillReleaseSubmitter")
+  reviewedAgentSkillReleases   AgentSkillRelease[] @relation("AgentSkillReleaseReviewer")
+  agentSkillTokens             AgentSkillPublishToken[]
 
   @@map("users")
 }
@@ -698,6 +702,79 @@ model CandidateInterest {
   @@index([userId])
   @@index([anonymousUserId])
   @@map("candidate_interests")
+}
+
+enum AgentSkillReleaseStatus {
+  pending
+  published
+  rejected
+}
+
+/// Hosted Agent Skills are immutable file bundles, separate from the external
+/// research entries stored in Candidate and the executable Prompt Skill model.
+model AgentSkillPackage {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  license     String?
+  ownerUserId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner    User                @relation("AgentSkillPackageOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  releases AgentSkillRelease[]
+
+  @@unique([ownerUserId, name])
+  @@index([updatedAt])
+  @@map("agent_skill_packages")
+}
+
+model AgentSkillRelease {
+  id              String                  @id @default(cuid())
+  packageId       String
+  submitterUserId String
+  reviewerUserId  String?
+  version         String
+  description     String
+  license         String?
+  status          AgentSkillReleaseStatus @default(pending)
+  sourceHash      String
+  archiveHash     String
+  archive         Bytes
+  archiveSize     Int
+  fileManifest    String
+  instructions    String
+  changelog       String?
+  reviewNote      String?
+  createdAt       DateTime                @default(now())
+  publishedAt     DateTime?
+
+  package   AgentSkillPackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  submitter User              @relation("AgentSkillReleaseSubmitter", fields: [submitterUserId], references: [id], onDelete: Restrict)
+  reviewer  User?             @relation("AgentSkillReleaseReviewer", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+
+  @@unique([packageId, version])
+  @@index([packageId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([submitterUserId, createdAt])
+  @@map("agent_skill_releases")
+}
+
+model AgentSkillPublishToken {
+  id         String    @id @default(cuid())
+  userId     String
+  label      String
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("agent_skill_publish_tokens")
 }
 
 model App {

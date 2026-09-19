@@ -145,6 +145,12 @@ MCP 的鉴权、工具参数、AI 来源字段和 Agent 配置方式见 [`docs/M
 | [`docs/STYLE_GUIDE.md`](./docs/STYLE_GUIDE.md) | 视觉系统与组件样式规范 |
 | [`docs/modules/`](./docs/modules/) | 各业务模块契约与测试清单 |
 
+## Agent Skill Hub
+
+`/awesome/skills` 同时展示本站托管的可下载 Agent Skill、只记录来源的外部 Skill 目录；`/skills` 则是另一套可执行 Prompt 档案。登录用户可在 `/awesome/skills/hub` 提交符合 Agent Skills 规范的文件夹，管理员审核后才会发布不可变版本和 ZIP 下载。命令行支持从本地单向同步新增或变化的 Skill，不会在站点或下载者设备上自动安装、解压或执行文件。
+
+操作步骤见 [`docs/SKILL_HUB_USAGE.md`](./docs/SKILL_HUB_USAGE.md)，模型边界、权限与部署前提见 [`docs/SKILL_CATALOG.md`](./docs/SKILL_CATALOG.md)。本功能新增 Prisma 表，合并代码不等于升级线上数据库或完成部署。
+
 ## 技术栈
 
 - Frontend：Next.js 14 App Router、React 18、TypeScript、Tailwind CSS

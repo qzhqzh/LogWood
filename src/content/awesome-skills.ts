@@ -1350,7 +1350,10 @@ export function backfillAwesomeSkillTags(
 
     const next = [...parsed]
     for (const tag of awesomeSkillCandidateTags(skill)) {
-      if (!next.includes(tag)) next.push(tag)
+      const prefix = tag.includes(':') ? `${tag.split(':')[0]}:` : null
+      if (!next.includes(tag) && !next.some((current) => (
+        prefix && typeof current === 'string' && current.startsWith(prefix)
+      ))) next.push(tag)
     }
     return next.length === parsed.length ? rawTags : JSON.stringify(next)
   } catch {

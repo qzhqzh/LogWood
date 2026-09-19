@@ -1,0 +1,57 @@
+.page { min-height: 100vh; color: var(--color-fg); background: var(--color-bg); }
+.shell { border-top: 1px solid var(--color-border-strong); }
+.hero { padding: clamp(1.5rem, 4vw, 4rem); border-bottom: 1px solid var(--color-border-strong); }
+.hero > p, .sectionTitle p { margin: 0 0 .5rem; color: var(--color-accent-1); font-size: .68rem; font-weight: 700; letter-spacing: .13em; }
+.hero h1 { margin: 0 0 .7rem; color: var(--color-text-strong); font-size: clamp(2.6rem, 6vw, 5rem); line-height: 1; }
+.hero span { display: block; color: var(--color-text-muted); font-size: .85rem; max-width: 55rem; line-height: 1.8; }
+.hero > div { display: flex; gap: 1.5rem; margin-top: 1.3rem; }
+.shell a { color: var(--color-accent-1); text-decoration: none; }
+.shell a:hover { text-decoration: underline; }
+.discovery { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem 2rem; padding: 1.3rem clamp(1rem, 3vw, 2rem); border-bottom: 1px solid var(--color-border-strong); }
+.discovery p { margin: 0; color: var(--color-text-muted); font-size: .72rem; }
+.discovery label, .form label, .tokenForm label, .reviewCard label { display: grid; gap: .4rem; color: var(--color-text-muted); font-size: .73rem; }
+.discovery label { min-width: min(100%, 21rem); }
+.shell input:not([type='checkbox']), .shell textarea { width: 100%; min-height: 2.6rem; border: 1px solid var(--color-border-strong); border-radius: 0; padding: .6rem .7rem; background: var(--color-bg); color: var(--color-text-strong); font: inherit; font-size: .82rem; }
+.shell input[type='file'] { max-width: 100%; }
+.shell button { min-height: 2.6rem; padding: .55rem 1rem; border: 1px solid var(--color-border-strong); border-radius: 0; background: var(--color-surface-2); color: var(--color-accent-1); font: inherit; font-size: .76rem; cursor: pointer; }
+.shell button:disabled { opacity: .5; cursor: wait; }
+.shell :is(a, button, input, textarea, summary):focus-visible { outline: 2px solid var(--color-accent-1); outline-offset: 3px; }
+.shelf, .panel { border-bottom: 1px solid var(--color-border-strong); }
+.sectionTitle { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; min-height: 5rem; padding: 1rem clamp(1rem, 3vw, 2rem); border-bottom: 1px solid var(--color-border); background: var(--color-surface-panel); }
+.sectionTitle h2 { margin: 0; color: var(--color-text-strong); font-size: clamp(1.15rem, 2.3vw, 1.65rem); }
+.sectionTitle a { font-size: .75rem; }
+.cards, .reviewGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); }
+.card, .reviewCard { min-width: 0; display: flex; flex-direction: column; gap: .75rem; padding: 1.4rem; border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+.card .eyebrow { margin: 0; color: var(--color-accent-1); font-size: .65rem; text-transform: uppercase; overflow-wrap: anywhere; }
+.card h3, .reviewCard h3 { margin: 0; color: var(--color-text-strong); font-size: 1.12rem; overflow-wrap: anywhere; }
+.card > p:not(.eyebrow), .reviewCard > p { margin: 0; color: var(--color-text-muted); line-height: 1.6; font-size: .8rem; }
+.card small, .reviewCard small { color: var(--color-text-soft); font-size: .67rem; overflow-wrap: anywhere; }
+.card > a { align-self: start; margin-top: auto; border: 1px solid var(--color-border-strong); padding: .55rem .8rem; font-size: .72rem; }
+.empty { margin: 0; padding: 1.4rem clamp(1rem, 3vw, 2rem); color: var(--color-text-muted); font-size: .8rem; }
+.panel > p { margin: 0; padding: 1.15rem clamp(1rem, 3vw, 2rem); color: var(--color-text-muted); line-height: 1.7; font-size: .8rem; }
+.form { display: grid; gap: 1rem; padding: 1.4rem clamp(1rem, 3vw, 2rem); max-width: 52rem; }
+.form > p { margin: 0; color: var(--color-text-muted); line-height: 1.7; font-size: .8rem; }
+.form small { color: var(--color-text-soft); font-size: .7rem; }
+.form .consent { display: flex; align-items: start; gap: .7rem; line-height: 1.6; }
+.consent input { margin-top: .2rem; accent-color: var(--color-accent-1); }
+.form > button, .reviewActions button:first-child { justify-self: start; color: var(--color-bg); background: var(--color-accent-1); }
+.rows { display: grid; }
+.row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem 1.3rem; padding: .9rem clamp(1rem, 3vw, 2rem); border-bottom: 1px solid var(--color-border); font-size: .78rem; }
+.row strong { color: var(--color-text-strong); }
+.row span, .row small { color: var(--color-text-muted); }
+.row a { margin-left: auto; }
+.tokenForm { display: flex; align-items: end; gap: .65rem; padding: 0 clamp(1rem, 3vw, 2rem) 1rem; flex-wrap: wrap; }
+.tokenForm label { min-width: min(100%, 18rem); }
+.tokenRow { display: flex; align-items: center; gap: 1rem; justify-content: space-between; padding: .7rem clamp(1rem, 3vw, 2rem); border-top: 1px solid var(--color-border); font-size: .75rem; }
+.oneTime { display: grid; gap: .6rem; padding: 1rem clamp(1rem, 3vw, 2rem); color: var(--color-accent-1); font-size: .76rem; }
+.oneTime code { display: block; overflow-wrap: anywhere; padding: .8rem; border: 1px solid var(--color-border-strong); color: var(--color-text-strong); }
+.code { margin: 0 0 1rem; padding: 1rem clamp(1rem, 3vw, 2rem); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--color-surface-panel); color: var(--color-text-muted); font-size: .72rem; }
+.reviewCard details { border-top: 1px solid var(--color-border); padding-top: .7rem; }
+.reviewCard summary { color: var(--color-accent-1); cursor: pointer; font-size: .76rem; }
+.reviewCard pre { max-height: 19rem; overflow: auto; padding: .7rem; background: var(--color-surface-panel); color: var(--color-text-muted); white-space: pre-wrap; overflow-wrap: anywhere; font-size: .7rem; }
+.reviewCard a { font-size: .73rem; }
+.reviewActions { display: flex; gap: .6rem; flex-wrap: wrap; }
+.error, .success { position: sticky; bottom: 0; z-index: 5; margin: 0; padding: 1rem clamp(1rem, 3vw, 2rem); background: var(--color-surface-panel); border-top: 1px solid var(--color-border-strong); font-size: .8rem; }
+.error { color: #f59b92; }
+.success { color: var(--color-accent-1); }
+@media (max-width: 37rem) { .discovery label { width: 100%; } .row a { margin-left: 0; } }
